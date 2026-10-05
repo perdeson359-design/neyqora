@@ -74,6 +74,21 @@ function isProjectRequest(message) {
   return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
 }
 
+function formatToolResult(result) {
+  if (!result) return "";
+  if (result.tool === "calculator") return result.ok && result.value !== null ? "Hesap sonucu: " + result.value : "Hesaplama yapılamadı.";
+  if (result.tool === "weather") return result.ok
+    ? result.city + " için hava: " + result.description + ", " + result.temperature + "°C, hissedilen " + result.apparentTemperature + "°C."
+    : "Hava verisi alınamadı.";
+  if (result.tool === "web") return result.ok
+    ? "Web araması " + result.results.length + " sonuç döndürdü."
+    : "Web araması başarısız.";
+  if (result.tool === "project") return result.ok
+    ? "Proje üretildi: " + result.files.length + " dosya."
+    : "Proje üretilemedi.";
+  return "";
+}
+
 async function executeAgentPlan(env, plan, message) {
   const results = [];
   for (const step of plan.steps) {
@@ -546,6 +561,7 @@ export default {
         const agentPlan = buildAgentPlan(message);
         const intent = agentPlan.intent;
         const agentResults = await executeAgentPlan(env, agentPlan, message);
+        const successfulToolResults = agentResults.filter(item => item && item.ok);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -662,7 +678,11 @@ export default {
         }
 
         const codingInstructions = intent === "coding" ? " KODLAMA GÖREVİ. Sadece kullanıcının istediği programı üret. Hesap makinesi istenirse yalnızca toplama, çıkarma, çarpma ve bölme özelliklerini ekle; başka özellik ekleme. Geçerli Python 3.10+ sözdizimi kullan. eval kullanma. Fonksiyon ve değişken adlarında Türkçe karakter kullanma; yalnızca ASCII İngilizce adlar kullan. Python kodunu göndermeden önce zihinsel bir derleme kontrolü yap: tüm çağrılan metotlar tanımlı mı, parantez ve girintiler doğru mu, menü seçenekleri ile dallar eşleşiyor mu, değişkenler tanımlı mı, program akışı tamam mı. Özellikle çıkarma için subtraction, çarpma için multiplication, bölme için division gibi tutarlı adlar kullan; outirma gibi uydurma isimler ASLA kullanma. Tanımsız fonksiyon, yanlış menü seçeneği, alakasız işlem, sahte test veya uydurma özellik bırakma. Kod bloğunu eksiksiz kapat. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz kod bloğu, 3) 4 temel işlem için kısa testler. Kod çalıştırmadıysan çalıştırmış gibi davranma." : "";
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText;
+        const toolContext = successfulToolResults.length
+          ? "\n\nKullanılan araçların doğrulanmış sonuçları:\n" +
+            successfulToolResults.map(formatToolResult).filter(Boolean).join("\n")
+          : "";
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText + toolContext;
 
         const modelMessages = [{ role: "system", content: system }];
         for (const item of history) {
