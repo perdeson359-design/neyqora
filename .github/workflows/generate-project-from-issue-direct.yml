@@ -130,6 +130,14 @@ jobs:
           - Güvenlik: $SAFETY
           EOF
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
+      - name: Verify CI result through NEYQORA
+        if: steps.final.outcome == 'success'
+        run: |
+          set -e
+          result=$(curl -sS -A "Mozilla/5.0 (NEYQORA GitHub Actions)" "$NEYQORA_URL/api/project/ci?issue=$ISSUE_NUMBER")
+          echo "$result"
+          echo "$result" | grep -q '"status":"passed"'
+
       - name: Commit successful project
         if: steps.final.outcome == 'success' && steps.syntax.outcome == 'success' && steps.safety.outcome == 'success'
         run: |
