@@ -10,6 +10,9 @@ Kişisel yapay zekâ asistanı.
 - /api/chat
 - /api/health
 
+## Dağıtım
+Cloudflare Workers Builds, `main` dalındaki değişiklikleri otomatik olarak dağıtacak şekilde bağlandı.
+
 ## Sonraki aşamalar
 - Kalıcı hafıza
 - AI Router
