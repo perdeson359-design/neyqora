@@ -865,7 +865,7 @@ export default {
       return Response.json({
         ok: true,
         name: "NEYQORA",
-        version: "4.1",
+        version: "4.3",
         model: MODEL,
         memory: !!env.DB,
         router: true,
