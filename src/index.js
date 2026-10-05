@@ -74,6 +74,48 @@ function isProjectRequest(message) {
   return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
 }
 
+async function executeAgentPlan(env, plan, message) {
+  const results = [];
+  for (const step of plan.steps) {
+    if (step.tool === "calculator") {
+      const value = safeCalculate(message);
+      results.push({ tool: "calculator", ok: value !== null, value });
+      continue;
+    }
+    if (step.tool === "weather") {
+      const match =
+        message.match(/\b([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(?:hava(?: durumu)?|sıcaklık|yağmur)\b/i) ||
+        message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
+      const city = match?.[1] || "Ankara";
+      try {
+        results.push({ tool: "weather", ...(await getWeather(city)) });
+      } catch (error) {
+        results.push({ tool: "weather", ok: false, error: error?.message || "Hava verisi alınamadı." });
+      }
+      continue;
+    }
+    if (step.tool === "web") {
+      try {
+        results.push({ tool: "web", ok: true, results: await webSearch(message) });
+      } catch (error) {
+        results.push({ tool: "web", ok: false, error: error?.message || "Web araması başarısız." });
+      }
+      continue;
+    }
+    if (step.tool === "project") {
+      try {
+        const files = await generateProjectFiles(env, message);
+        results.push({ tool: "project", ok: !!files, files: files || [] });
+      } catch (error) {
+        results.push({ tool: "project", ok: false, error: error?.message || "Proje üretilemedi." });
+      }
+      continue;
+    }
+    results.push({ tool: step.tool, ok: true, action: step.action });
+  }
+  return results;
+}
+
 function buildAgentPlan(message) {
   const intent = routeMessage(message);
   const steps = [];
@@ -503,6 +545,7 @@ export default {
 
         const agentPlan = buildAgentPlan(message);
         const intent = agentPlan.intent;
+        const agentResults = await executeAgentPlan(env, agentPlan, message);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -683,6 +726,7 @@ export default {
           reply,
           intent,
           plan: agentPlan,
+          toolResults: agentResults,
           memorySaved: !!(env.DB && shouldRemember(message))
         });
       } catch (error) {
