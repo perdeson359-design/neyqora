@@ -592,87 +592,73 @@ export default {
           : "";
 
         if (intent === "project") {
-          try {
-            const files = await generateProjectFiles(env, message);
-            if (!files) {
-              return Response.json({
-                reply: "Projeyi güvenli biçimde üretemedim. İsteği biraz daha açık tarif et.",
-                intent,
-                project: null
-              });
-            }
-            const project = sanitizeProjectName(message);
+          const result = agentResults.find(item => item.tool === "project");
+          const files = result?.files || [];
+          if (!result?.ok || !files.length) {
             return Response.json({
-              reply: "Proje taslağını oluşturdum: " + project + ". " + files.length + " dosya hazır. GitHub'a kaydetmek için GitHub Actions proje workflow'u kullanılabilir.",
+              reply: "Projeyi güvenli biçimde üretemedim. İsteği biraz daha açık tarif et.",
               intent,
-              project,
-              files,
-              testable: files.some(file => /^test_.*\\.py$/i.test(file.path))
-            });
-          } catch (error) {
-            return Response.json({
-              reply: "Proje oluşturulurken hata oluştu: " + (error?.message || "Bilinmeyen hata"),
-              intent,
-              project: null
+              project: null,
+              plan: agentPlan,
+              toolResults: agentResults
             });
           }
+          const project = sanitizeProjectName(message);
+          return Response.json({
+            reply: "Proje taslağını oluşturdum: " + project + ". " + files.length + " dosya hazır. GitHub'a kaydetmek için GitHub Actions proje workflow'u kullanılabilir.",
+            intent,
+            project,
+            files,
+            testable: files.some(file => /^test_.*\\.py$/i.test(file.path)),
+            plan: agentPlan,
+            toolResults: agentResults
+          });
         }
 
         if (intent === "web_search") {
-          try {
-            const results = await webSearch(message);
-            if (!results.length) {
-              return Response.json({
-                reply: "Güncel web aramasında sonuç bulunamadı.",
-                intent,
-                sources: []
-              });
-            }
-
-            const reply = "Güncel web araştırması sonuçları:\n\n" +
-              results.map((r, i) =>
-                (i + 1) + ". " + r.title +
-                (r.pubDate ? "\n   Tarih: " + r.pubDate : "") +
-                "\n   Kaynak: " + r.link
-              ).join("\n\n") +
-              "\n\nNot: Bu sonuçlar doğrudan web aramasından alındı; NEYQORA bunları haber diye uydurmadı.";
-
-            return Response.json({ reply, intent, sources: results });
-          } catch (error) {
+          const result = agentResults.find(item => item.tool === "web");
+          const results = result?.results || [];
+          if (!result?.ok || !results.length) {
             return Response.json({
-              reply: "Web araştırması şu anda kullanılamadı: " + (error?.message || "Bilinmeyen hata"),
+              reply: "Güncel web araştırması şu anda kullanılamadı.",
               intent,
-              sources: []
+              sources: [],
+              plan: agentPlan,
+              toolResults: agentResults
             });
           }
+
+          const reply = "Güncel web araştırması sonuçları:\n\n" +
+            results.map((r, i) =>
+              (i + 1) + ". " + r.title +
+              (r.pubDate ? "\n   Tarih: " + r.pubDate : "") +
+              "\n   Kaynak: " + r.link
+            ).join("\n\n") +
+            "\n\nNot: Bu sonuçlar doğrudan web aramasından alındı; NEYQORA bunları haber diye uydurmadı.";
+
+          return Response.json({ reply, intent, sources: results, plan: agentPlan, toolResults: agentResults });
         }
 
         let researchText = "";
         if (intent === "weather") {
-          const weatherMatch =
-            message.match(/\b([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(?:hava(?: durumu)?|sıcaklık|yağmur)\b/i) ||
-            message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
-          const city = weatherMatch?.[1] || "Ankara";
-          try {
-            const weather = await getWeather(city);
-            if (!weather.ok) {
-              return Response.json({ reply: weather.error, intent: "weather" });
-            }
-            researchText = "\n\nGüncel hava verisi: " +
-              weather.city + ", " + weather.country +
-              " | " + weather.description +
-              " | sıcaklık " + weather.temperature + "°C" +
-              " | hissedilen " + weather.apparentTemperature + "°C" +
-              " | nem " + weather.humidity + "%" +
-              " | rüzgar " + weather.windSpeed + " km/sa" +
-              " | yağış " + weather.precipitation + " mm" +
-              " | veri zamanı " + weather.time + " (" + weather.timezone + ").";
-          } catch (error) {
+          const weather = agentResults.find(item => item.tool === "weather");
+          if (!weather?.ok) {
             return Response.json({
-              reply: "Güncel hava verisi alınamadı: " + (error?.message || "Bilinmeyen hata"),
-              intent: "weather"
+              reply: "Güncel hava verisi alınamadı: " + (weather?.error || "Bilinmeyen hata"),
+              intent: "weather",
+              plan: agentPlan,
+              toolResults: agentResults
             }, { status: 502 });
           }
+          researchText = "\n\nGüncel hava verisi: " +
+            weather.city + ", " + weather.country +
+            " | " + weather.description +
+            " | sıcaklık " + weather.temperature + "°C" +
+            " | hissedilen " + weather.apparentTemperature + "°C" +
+            " | nem " + weather.humidity + "%" +
+            " | rüzgar " + weather.windSpeed + " km/sa" +
+            " | yağış " + weather.precipitation + " mm" +
+            " | veri zamanı " + weather.time + " (" + weather.timezone + ").";
         }
 
         const codingInstructions = intent === "coding" ? " KODLAMA GÖREVİ. Sadece kullanıcının istediği programı üret. Hesap makinesi istenirse yalnızca toplama, çıkarma, çarpma ve bölme özelliklerini ekle; başka özellik ekleme. Geçerli Python 3.10+ sözdizimi kullan. eval kullanma. Fonksiyon ve değişken adlarında Türkçe karakter kullanma; yalnızca ASCII İngilizce adlar kullan. Python kodunu göndermeden önce zihinsel bir derleme kontrolü yap: tüm çağrılan metotlar tanımlı mı, parantez ve girintiler doğru mu, menü seçenekleri ile dallar eşleşiyor mu, değişkenler tanımlı mı, program akışı tamam mı. Özellikle çıkarma için subtraction, çarpma için multiplication, bölme için division gibi tutarlı adlar kullan; outirma gibi uydurma isimler ASLA kullanma. Tanımsız fonksiyon, yanlış menü seçeneği, alakasız işlem, sahte test veya uydurma özellik bırakma. Kod bloğunu eksiksiz kapat. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz kod bloğu, 3) 4 temel işlem için kısa testler. Kod çalıştırmadıysan çalıştırmış gibi davranma." : "";
