@@ -1,0 +1,15 @@
+name: Generate Issue Trigger Test
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  test:
+    if: ${{ github.event_name == 'issues' && github.actor == 'perdeson359-design' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      issues: read
+    steps:
+      - run: echo "Generate issue trigger received issue #${{ github.event.issue.number }}"
