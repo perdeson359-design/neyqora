@@ -38,11 +38,25 @@ jobs:
           code=$(curl -sS -o /tmp/project-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/project-request.json "$NEYQORA_URL/api/project")
           echo "NEYQORA project HTTP status: $code"
           cat /tmp/project-response.json
-          [ "$code" = "200" ]
+          if [ "$code" != "200" ]; then
+            echo "Direct /api/project başarısız; aynı isteği /api/chat üzerinden deniyorum."
+            code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/project-request.json "$NEYQORA_URL/api/chat")
+            echo "NEYQORA chat HTTP status: $code"
+            cat /tmp/chat-response.json
+            [ "$code" = "200" ]
+            python - <<'PY'
+            import json
+            data=json.load(open("/tmp/chat-response.json",encoding="utf-8"))
+            if not data.get("files"):
+                raise SystemExit("NEYQORA chat fallback project generation failed: "+str(data))
+            data["ok"]=True
+            json.dump(data, open("/tmp/project-response.json","w",encoding="utf-8"), ensure_ascii=False)
+            PY
+          fi
           python - <<'PY'
           import json
           data=json.load(open("/tmp/project-response.json",encoding="utf-8"))
-          if not data.get("ok"):
+          if not data.get("ok") or not data.get("files"):
               raise SystemExit("NEYQORA project generation failed: "+str(data))
           json.dump(data, open("/tmp/project.json","w",encoding="utf-8"), ensure_ascii=False)
           PY
