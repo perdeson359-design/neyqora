@@ -90,9 +90,13 @@ $ISSUE_BODY"
           if [ -z "$test_files" ]; then
             echo "No Python tests were generated."
           else
+            : > /tmp/test-output.txt
             while IFS= read -r test_file; do
-              echo "Testing $test_file"
-              timeout 30s python "$test_file"
+              echo "Testing $test_file" | tee -a /tmp/test-output.txt
+              if ! timeout 30s python "$test_file" 2>&1 | tee -a /tmp/test-output.txt; then
+                echo "TEST_FAILED=1" >> "$GITHUB_OUTPUT"
+                exit 1
+              fi
             done <<< "$test_files"
           fi
 
