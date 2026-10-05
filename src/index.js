@@ -1,4 +1,4 @@
-const MODEL = "@cf/meta/llama-3.1-8b-instruct";
+const MODEL = "@cf/meta/llama-3.2-3b-instruct";
 
 const HTML = `<!doctype html>
 <html lang="tr">
@@ -45,7 +45,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA" });
+      return Response.json({ ok: true, name: "NEYQORA", model: MODEL });
     }
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
