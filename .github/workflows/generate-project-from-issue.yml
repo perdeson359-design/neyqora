@@ -13,4 +13,4 @@ jobs:
     uses: ./.github/workflows/generate-project.yml
     with:
       request: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
-      issue_number: ${{ github.event.issue.number }}
+      issue_number: ${{ format('{0}', github.event.issue.number) }}
