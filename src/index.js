@@ -337,6 +337,10 @@ async function executeAgentPlan(env, plan, message) {
     result.durationMs = Date.now() - toolStartedAt;
     results.push(result);
 
+    if (!result.ok && step.action !== "answer") {
+      break;
+    }
+
     if (isRetryableTool(step.tool, result)) {
       const retryStartedAt = Date.now();
       const retry = await executeToolStep(env, step, message);
