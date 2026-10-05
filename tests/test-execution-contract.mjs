@@ -7,6 +7,6 @@ assert.match(source, /basicPythonValidation/);
 assert.match(source, /Kodu çalıştırmadıysan çalıştırmış gibi davranma/);
 assert.match(source, /eval ve exec kullanma/);
 assert.match(source, /validation/);
-assert.match(source, /ok: !!reply && validation\.ok/);
+assert.match(source, /ok: !!reply && validation\.ok/);\nassert.match(source, /execution:\s*\{/);\nassert.match(source, /attempted:\s*false/);\nassert.match(source, /status:\s*"not_run"/);
 
 console.log("NEYQORA execution safety contract: PASS");
