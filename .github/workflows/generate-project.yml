@@ -11,8 +11,10 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.issue.user.login == 'perdeson359-design' }}
     permissions:
       contents: write
+      issues: write
 
     steps:
       - name: Checkout
