@@ -225,6 +225,21 @@ $ISSUE_BODY"
           if-no-files-found: ignore
           retention-days: 3
 
+      - name: Final project gate
+        shell: bash
+        run: |
+          set -e
+          test_files=$(find projects -type f -name 'test_*.py' | sort)
+          if [ -z "$test_files" ]; then
+            echo "No tests found; refusing to publish."
+            exit 1
+          fi
+          while IFS= read -r test_file; do
+            echo "Final gate: $test_file"
+            timeout 30s python "$test_file"
+          done <<< "$test_files"
+          echo "NEYQORA final project gate: PASS"
+
       - name: Commit generated project
         run: |
           git config user.name "NEYQORA"
