@@ -17,7 +17,7 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </head>
 <body>
 <div class="app">
-<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V3.1</p></header>
+<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
 <form id="form"><input id="input" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button>Gönder</button></form>
 </div>
@@ -149,7 +149,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA", version: "3.1", model: MODEL, memory: !!env.DB, router: true, web: true });
+      return Response.json({ ok: true, name: "NEYQORA", version: "4.0", model: MODEL, memory: !!env.DB, router: true, web: true });
     }
 
     if (request.method === "GET" && url.pathname === "/api/search") {
@@ -230,7 +230,8 @@ export default {
           researchText = "\n\nKullanıcı hava durumu soruyor. Güncel veri sağlayan bir hava aracı henüz bağlı değil; güncel sıcaklık veya tahmin uydurma.";
         }
 
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + memoryText + researchText;
+        const codingInstructions = intent === "coding" ? " Kodlama ajanı gibi davran: önce problemi kısa analiz et, sonra çözüm yaklaşımını belirt, gerekiyorsa dosya yapısını çıkar, çalışabilir kod üret ve test örneği ekle. Hata ayıklamada olası nedeni ve düzeltmeyi açıkla. Kod çalıştırdığını iddia etme; gerçekten çalıştırmadıysan bunu açıkça belirt." : "";
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + researchText;
 
         const result = await env.AI.run(MODEL, {
           messages: [
