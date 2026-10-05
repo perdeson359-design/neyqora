@@ -82,9 +82,7 @@ function buildProjectFiles(request) {
   const text = String(request || "").toLocaleLowerCase("tr-TR");
   if (text.includes("hesap makinesi")) {
     return [
-      {
-        path: "hesap_makinesi.py",
-        content: `def calculate(num1, operator, num2):
+      { path: "hesap_makinesi.py", content: `def calculate(num1, operator, num2):
     if operator == "+":
         return num1 + num2
     if operator == "-":
@@ -99,17 +97,11 @@ function buildProjectFiles(request) {
 
 def main():
     print("Hesap Makinesi")
-    print("1. Toplama")
-    print("2. Çıkarma")
-    print("3. Çarpma")
-    print("4. Bölme")
-
     choice = input("Seçiminiz: ").strip()
-    if choice not in {"1", "2", "3", "4"}:
+    operators = {"1": "+", "2": "-", "3": "*", "4": "/"}
+    if choice not in operators:
         print("Geçersiz seçim.")
         return
-
-    operators = {"1": "+", "2": "-", "3": "*", "4": "/"}
     try:
         num1 = float(input("İlk sayı: "))
         num2 = float(input("İkinci sayı: "))
@@ -119,11 +111,8 @@ def main():
 
 if __name__ == "__main__":
     main()
-`
-      },
-      {
-        path: "test_hesap_makinesi.py",
-        content: `from hesap_makinesi import calculate
+` },
+      { path: "test_hesap_makinesi.py", content: `from hesap_makinesi import calculate
 
 def test_operations():
     assert calculate(10, "+", 5) == 15
@@ -142,17 +131,42 @@ if __name__ == "__main__":
     test_operations()
     test_zero_division()
     print("Tüm testler başarılı.")
-`
-      },
-      {
-        path: "README.md",
-        content: "# Hesap Makinesi\n\nPython 3.10+ için basit hesap makinesi.\n\n## Çalıştırma\n\`python hesap_makinesi.py\`\n\n## Test\n\`python test_hesap_makinesi.py\`\n"
-      }
+` },
+      { path: "README.md", content: "# Hesap Makinesi\n\nPython 3.10+ için basit hesap makinesi.\n\n## Test\n`python test_hesap_makinesi.py`\n" }
     ];
   }
   return null;
 }
 
+function sanitizeProjectFiles(files) {
+  if (!Array.isArray(files) || files.length < 1 || files.length > 12) return null;
+  const safe = [];
+  for (const file of files) {
+    const path = String(file?.path || "").trim();
+    const content = String(file?.content || "");
+    if (!path || !content || path.length > 180 || content.length > 50000) return null;
+    if (path.startsWith("/") || path.includes("..") || path.includes("\\") || !/^[A-Za-z0-9._/-]+$/.test(path)) return null;
+    safe.push({ path, content });
+  }
+  const hasMain = safe.some(f => /^(main|app|index)\.(py|js|ts|html)$/.test(f.path.split("/").pop() || ""));
+  if (!hasMain) return null;
+  return safe;
+}
+
+async function generateProjectFiles(env, request) {
+  const result = await env.AI.run(MODEL, {
+    messages: [
+      { role: "system", content: "Sen NEYQORA proje üreticisisin. Kullanıcının istediği programı üret. Yalnızca istenen özellikleri ekle. Varsayılan olarak Python 3.10+ kullan. Çıktıyı SADECE geçerli JSON ver: {\"files\":[{\"path\":\"main.py\",\"content\":\"...\"}]}. En fazla 8 dosya. En az bir ana dosya ve mümkünse test_*.py dosyası üret. Python tanımlayıcılarında yalnızca ASCII kullan. eval ve exec kullanma. Testler gerçek kodu çağırmalı. Açıklama ekleme." },
+      { role: "user", content: String(request || "").trim() }
+    ],
+    max_tokens: 5000,
+    temperature: 0.2
+  });
+  const raw = result?.response || result?.choices?.[0]?.message?.content || "";
+  const match = raw.match(/\{[\s\S]*\}/);
+  if (!match) return null;
+  try { return sanitizeProjectFiles(JSON.parse(match[0]).files); } catch { return null; }
+}
 function extractPythonCode(text) {
   const match = text.match(/\`\`\`python\s*([\\s\\S]*?)\`\`\`/i) || text.match(/\`\`\`\s*([\\s\\S]*?)\`\`\`/);
   return match ? match[1].trim() : "";
@@ -271,13 +285,20 @@ export default {
         const body = await request.json();
         const requestText = String(body?.request || "").trim();
         if (!requestText) return Response.json({ error: "request gerekli." }, { status: 400 });
-        const files = buildProjectFiles(requestText);
-        if (!files) return Response.json({ ok: false, error: "Bu proje şablonu henüz desteklenmiyor." }, { status: 400 });
+        let files = buildProjectFiles(requestText);
+        let generator = "template";
+        if (!files) {
+          files = await generateProjectFiles(env, requestText);
+          generator = "ai";
+        }
+        if (!files) return Response.json({ ok: false, error: "Proje üretilemedi. İsteği biraz daha açık tarif et." }, { status: 502 });
         return Response.json({
           ok: true,
           project: "generated",
+          generator,
           files,
-          note: "Dosyalar NEYQORA tarafından oluşturuldu. GitHub'a doğrudan yazmak için güvenli GitHub yetkilendirmesi ayrıca bağlanmalıdır."
+          testable: files.some(file => /^test_.*\.py$/i.test(file.path)),
+          note: "NEYQORA proje dosyalarını üretti. GitHub yazma işlemi bu endpointte bağlı değil."
         });
       } catch (error) {
         return Response.json({ ok: false, error: error?.message || "Proje oluşturulamadı." }, { status: 500 });
