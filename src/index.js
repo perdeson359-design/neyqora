@@ -18,7 +18,7 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 <body>
 <div class="app">
 <header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4</p></header>
-<div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
+<div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
 <form id="form"><input id="input" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button>Gönder</button></form>
 </div>
 <script>
@@ -31,7 +31,7 @@ form.addEventListener("submit",async e=>{
  add(message,"user");input.value="";const pending=add("NEYQORA düşünüyor...","ai");
  try{
   const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message,userId})});
-  const data=await r.json();pending.textContent=data.reply||data.error||"Yanıt alınamadı.";
+  const data=await r.json();pending.textContent=data.reply||data.error||"Yanıt alınamadı."; if(data.intent==="project" && data.files){const panel=document.querySelector("#project-panel");const title=document.querySelector("#project-title");const files=document.querySelector("#project-files");title.textContent="Proje: "+(data.project||"NEYQORA projesi")+" · "+data.files.length+" dosya";files.textContent=data.files.map(f=>"--- "+f.path+" ---\n"+f.content).join("\n\n");panel.hidden=false;panel.scrollIntoView({behavior:"smooth",block:"end"});}
  }catch(err){pending.textContent="Bağlantı hatası. Lütfen tekrar dene."}
 });
 </script>
