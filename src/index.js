@@ -78,6 +78,32 @@ function safeCalculate(message) {
   } catch { return null; }
 }
 
+function extractPythonCode(text) {
+  const match = text.match(/\`\`\`python\s*([\\s\\S]*?)\`\`\`/i) || text.match(/\`\`\`\s*([\\s\\S]*?)\`\`\`/);
+  return match ? match[1].trim() : "";
+}
+
+function basicPythonValidation(code) {
+  if (!code) return { ok: false, errors: ["Python kod bloğu bulunamadı."] };
+  const errors = [];
+  if (/\bself\.[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_]/.test(code)) {
+    errors.push("Olası geçersiz Python ifade kullanımı.");
+  }
+  if (/\b(if|elif|else|for|while|def|class|try|except|with)\b[^\n:]*\n/.test(code)) {
+    const lines = code.split("\n");
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i].trim();
+      if (/^(if|elif|else|for|while|def|class|try|except|with)\b/.test(line) && !line.endsWith(":")) {
+        errors.push("Satır " + (i + 1) + ": Python blok satırı ':' ile bitmiyor.");
+      }
+    }
+  }
+  const opens = (code.match(/[([{]/g) || []).length;
+  const closes = (code.match(/[)\\]}]/g) || []).length;
+  if (opens !== closes) errors.push("Parantez/braket dengesi hatalı.");
+  return { ok: errors.length === 0, errors };
+}
+
 function decodeHtml(s) {
   return s
     .replace(/&amp;/g, "&")
@@ -242,7 +268,30 @@ export default {
           temperature: intent === "coding" ? 0.2 : 0.7
         });
 
-        const reply = result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi.";
+        let reply = result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi.";
+
+        if (intent === "coding") {
+          const code = extractPythonCode(reply);
+          const validation = basicPythonValidation(code);
+          if (!validation.ok) {
+            const repair = await env.AI.run(MODEL, {
+              messages: [
+                { role: "system", content: "Sen bir Python kod düzelticisisin. Yalnızca verilen Python kodundaki sözdizimi ve bariz isim/çağrı hatalarını düzelt. Yeni özellik ekleme. Kod eksiksiz ve Python 3.10+ uyumlu olsun. Yalnızca düzeltilmiş tek Python kod bloğu döndür." },
+                { role: "user", content: "Kod:\n" + code + "\n\nHatalar:\n" + validation.errors.join("\n") }
+              ],
+              max_tokens: 3072,
+              temperature: 0.1
+            });
+            const repaired = repair?.response || repair?.choices?.[0]?.message?.content || "";
+            const repairedCode = extractPythonCode(repaired);
+            const second = basicPythonValidation(repairedCode);
+            if (second.ok) {
+              reply = repaired;
+            } else {
+              reply += "\n\n[NEYQORA doğrulama uyarısı: Kod ilk otomatik kontrolden geçmedi.]";
+            }
+          }
+        }
 
         if (env.DB && shouldRemember(message)) {
           const memory = extractMemory(message);
