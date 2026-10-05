@@ -59,6 +59,16 @@ function isNameQuestion(message) {
   return /\b(adım ne|benim adım ne|ismim ne|ben kimim)\b/i.test(message);
 }
 
+function forgetRequest(message) {
+  const t = String(message || "").toLocaleLowerCase("tr-TR").trim();
+  if (/\b(adımı|ismimi)\s+unut\b/.test(t)) return { type: "name" };
+  if (/\b(bunu|şunu)\s+unut\b/.test(t)) {
+    const detail = t.replace(/^.*?\b(bunu|şunu)\s+unut\b[\s:,-]*/i, "").trim();
+    return { type: detail ? "text" : "latest", detail };
+  }
+  return null;
+}
+
 function isProjectRequest(message) {
   const t = String(message || "").toLocaleLowerCase("tr-TR");
   return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
@@ -385,6 +395,22 @@ export default {
         if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
 
         const intent = routeMessage(message);
+
+        if (env.DB) {
+          const forget = forgetRequest(message);
+          if (forget) {
+            if (forget.type === "name") {
+              await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content LIKE 'Kullanıcının adı:%'").bind(userId).run();
+              return Response.json({ reply: "Adınla ilgili kayıtlı bilgiyi unuttum.", intent: "memory" });
+            }
+            if (forget.type === "text") {
+              await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content LIKE ?").bind(userId, "%" + forget.detail + "%").run();
+              return Response.json({ reply: "İstediğin bilgiyle eşleşen kayıtları unuttum.", intent: "memory" });
+            }
+            await env.DB.prepare("DELETE FROM memories WHERE id = (SELECT id FROM memories WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 1)").bind(userId).run();
+            return Response.json({ reply: "Son kaydettiğim bilgiyi unuttum.", intent: "memory" });
+          }
+        }
 
         if (intent === "calculator") {
           const value = safeCalculate(message);
