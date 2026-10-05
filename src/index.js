@@ -85,30 +85,38 @@ async function webSearch(query) {
     return [{ title, link: clean }];
   }
 
-  const url = "https://news.google.com/rss/search?q=" +
-    encodeURIComponent(clean) + "&hl=tr&gl=TR&ceid=TR:tr";
+  const sources = [
+    "https://news.google.com/rss/search?q=" + encodeURIComponent(clean) + "&hl=tr&gl=TR&ceid=TR:tr",
+    "https://www.bing.com/news/search?q=" + encodeURIComponent(clean) + "&format=rss"
+  ];
 
-  const response = await fetch(url, {
-    headers: { "user-agent": "Mozilla/5.0 NEYQORA/1.0" }
-  });
-  if (!response.ok) throw new Error("Güncel haber araması kullanılamıyor.");
+  for (const url of sources) {
+    try {
+      const response = await fetch(url, {
+        headers: { "user-agent": "Mozilla/5.0 NEYQORA/1.0", "accept": "application/rss+xml, application/xml, text/xml" }
+      });
+      if (!response.ok) continue;
 
-  const xml = await response.text();
-  const results = [];
-  const itemRe = /<item>([\s\S]*?)<\/item>/gi;
-  let item;
+      const xml = await response.text();
+      const results = [];
+      const itemRe = /<item>([\s\S]*?)<\/item>/gi;
+      let item;
 
-  while ((item = itemRe.exec(xml)) && results.length < 6) {
-    const block = item[1];
-    const title = decodeHtml((block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "")
-      .replace(/<!\[CDATA\[|\]\]>/g, "").trim());
-    const link = decodeHtml((block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "").trim());
-    const pubDate = decodeHtml((block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "").trim());
+      while ((item = itemRe.exec(xml)) && results.length < 6) {
+        const block = item[1];
+        const title = decodeHtml((block.match(/<title>([\s\S]*?)<\/title>/i)?.[1] || "")
+          .replace(/<!\[CDATA\[|\]\]>/g, "").trim());
+        const link = decodeHtml((block.match(/<link>([\s\S]*?)<\/link>/i)?.[1] || "").trim());
+        const pubDate = decodeHtml((block.match(/<pubDate>([\s\S]*?)<\/pubDate>/i)?.[1] || "").trim());
 
-    if (title && link) results.push({ title, link, pubDate });
+        if (title && link) results.push({ title, link, pubDate });
+      }
+
+      if (results.length) return results;
+    } catch {}
   }
 
-  return results;
+  throw new Error("Güncel haber araması kullanılamıyor.");
 }
 
 export default {
