@@ -47,6 +47,16 @@ function shouldRemember(message) {
   ].some(key => text.includes(key));
 }
 
+function extractMemory(message) {
+  const name = message.match(/\\bbenim adım\\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\\b/i)?.[1];
+  if (name) return "Kullanıcının adı: " + name;
+  return message;
+}
+
+function isNameQuestion(message) {
+  return /\\b(adım ne|benim adım ne|ismim ne|ben kimim)\\b/i.test(message);
+}
+
 function routeMessage(message) {
   const t = message.toLocaleLowerCase("tr-TR");
   if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
@@ -176,6 +186,11 @@ export default {
           memories = result.results || [];
         }
 
+        const nameMemory = memories.find(m => String(m.content || "").startsWith("Kullanıcının adı:"));
+        if (isNameQuestion(message) && nameMemory) {
+          return Response.json({ reply: String(nameMemory.content).replace("Kullanıcının adı: ", "") + ".", intent: "memory" });
+        }
+
         const memoryText = memories.length
           ? "\n\nKullanıcı hakkında daha önce kaydedilmiş bilgiler:\n" +
             memories.reverse().map(m => "- " + m.content).join("\n")
@@ -227,9 +242,10 @@ export default {
         const reply = result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi.";
 
         if (env.DB && shouldRemember(message)) {
+          const memory = extractMemory(message);
           await env.DB.prepare(
             "INSERT INTO memories (user_id, content) VALUES (?, ?)"
-          ).bind(userId, message).run();
+          ).bind(userId, memory).run();
         }
 
         return Response.json({ reply, intent, memorySaved: !!(env.DB && shouldRemember(message)) });
