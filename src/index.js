@@ -223,6 +223,20 @@ function shouldFallbackToChat(intent, results) {
   return !results.some(result => result && result.ok);
 }
 
+function getFailureMessage(intent, results) {
+  const failed = results.find(result => result && !result.ok);
+  if (!failed) return null;
+  const labels = {
+    web: "Web araması",
+    weather: "Hava durumu",
+    project: "Proje üretimi",
+    calculator: "Hesaplama",
+    coding: "Kodlama"
+  };
+  const label = labels[failed.tool] || "Araç";
+  return label + " şu anda başarısız oldu: " + (failed.error || "Bilinmeyen hata") + ".";
+}
+
 function summarizeAgentStatus(plan, results) {
   const successful = results.filter(result => result?.ok).length;
   const failed = results.filter(result => result && !result.ok).length;
@@ -706,6 +720,7 @@ export default {
         const needsChatFallback = shouldFallbackToChat(intent, agentResults);
         const agentTrace = buildAgentTrace(agentPlan, agentResults);
         const agentStatus = summarizeAgentStatus(agentPlan, agentResults);
+        const toolFailureMessage = getFailureMessage(intent, agentResults);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -832,7 +847,10 @@ export default {
         const fallbackContext = needsChatFallback
           ? "\n\nAraç sonucu alınamadı. Araçtan gelmeyen güncel veya doğrulanmamış bilgi uydurma; kullanıcıya aracın başarısız olduğunu açıkça söyle."
           : "";
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText + toolContext + fallbackContext;
+        const failureContext = toolFailureMessage
+          ? "\n\nAraç hata özeti: " + toolFailureMessage
+          : "";
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText + toolContext + fallbackContext + failureContext;
 
         const modelMessages = [{ role: "system", content: system }];
         for (const item of history) {
