@@ -138,6 +138,17 @@ if __name__ == "__main__":
   return null;
 }
 
+function sanitizeProjectName(request) {
+  const words = String(request || "")
+    .toLocaleLowerCase("tr-TR")
+    .normalize("NFKD")
+    .replace(/[\\u0300-\\u036f]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 48);
+  return words || "neyqora-proje";
+}
+
 function sanitizeProjectFiles(files) {
   if (!Array.isArray(files) || files.length < 1 || files.length > 12) return null;
   const safe = [];
@@ -294,11 +305,12 @@ export default {
         if (!files) return Response.json({ ok: false, error: "Proje üretilemedi. İsteği biraz daha açık tarif et." }, { status: 502 });
         return Response.json({
           ok: true,
-          project: "generated",
+          project: sanitizeProjectName(requestText),
           generator,
           files,
           testable: files.some(file => /^test_.*\.py$/i.test(file.path)),
-          note: "NEYQORA proje dosyalarını üretti. GitHub yazma işlemi bu endpointte bağlı değil."
+          fileCount: files.length,
+          note: "NEYQORA proje dosyalarını üretti. GitHub'a yazma işlemi GitHub Actions workflow'u üzerinden yapılır."
         });
       } catch (error) {
         return Response.json({ ok: false, error: error?.message || "Proje oluşturulamadı." }, { status: 500 });
