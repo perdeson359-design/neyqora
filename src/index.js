@@ -89,6 +89,12 @@ function basicPythonValidation(code) {
   if (/\bself\.[A-Za-z_][A-Za-z0-9_]*\s+[A-Za-z_]/.test(code)) {
     errors.push("Olası geçersiz Python ifade kullanımı.");
   }
+  if (/[A-Za-z_][A-Za-z0-9_]*[ÇĞİÖŞÜçğıöşü]/.test(code)) {
+    errors.push("Python tanımlayıcılarında Türkçe karakter kullanılmış.");
+  }
+  if (/\b(seçenik|seçenek|sayi|sayı)\b/.test(code)) {
+    errors.push("Kodda tutarsız veya hatalı değişken adı kullanılmış.");
+  }
   if (/\b(if|elif|else|for|while|def|class|try|except|with)\b[^\n:]*\n/.test(code)) {
     const lines = code.split("\n");
     for (let i = 0; i < lines.length; i++) {
@@ -276,7 +282,7 @@ export default {
           if (!validation.ok) {
             const repair = await env.AI.run(MODEL, {
               messages: [
-                { role: "system", content: "Sen bir Python kod düzelticisisin. Yalnızca verilen Python kodundaki sözdizimi ve bariz isim/çağrı hatalarını düzelt. Yeni özellik ekleme. Kod eksiksiz ve Python 3.10+ uyumlu olsun. Yalnızca düzeltilmiş tek Python kod bloğu döndür." },
+                { role: "system", content: "Sen bir Python kod düzelticisisin. Yalnızca verilen Python kodundaki sözdizimi, tanımlayıcı ve bariz isim/çağrı hatalarını düzelt. Yeni özellik ekleme. Python tanımlayıcılarında yalnızca ASCII harfleri, rakamları ve alt çizgiyi kullan. Örneğin secim, sayi1, sayi2 kullan; seçenik gibi isimleri kullanma. Kod eksiksiz ve Python 3.10+ uyumlu olsun. Yalnızca düzeltilmiş tek Python kod bloğu döndür." },
                 { role: "user", content: "Kod:\n" + code + "\n\nHatalar:\n" + validation.errors.join("\n") }
               ],
               max_tokens: 3072,
