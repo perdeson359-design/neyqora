@@ -230,14 +230,16 @@ export default {
           researchText = "\n\nKullanıcı hava durumu soruyor. Güncel veri sağlayan bir hava aracı henüz bağlı değil; güncel sıcaklık veya tahmin uydurma.";
         }
 
-        const codingInstructions = intent === "coding" ? " Kodlama ajanı gibi davran: önce problemi kısa analiz et, sonra çözüm yaklaşımını belirt, gerekiyorsa dosya yapısını çıkar, çalışabilir kod üret ve test örneği ekle. Hata ayıklamada olası nedeni ve düzeltmeyi açıkla. Kod çalıştırdığını iddia etme; gerçekten çalıştırmadıysan bunu açıkça belirt." : "";
+        const codingInstructions = intent === "coding" ? " Kodlama ajanı gibi davran. Kullanıcı kod istiyorsa TAM ve çalışabilir bir çözüm üret; cevabı yarıda kesme. Önce kısa analiz, sonra çözüm, sonra test örneği ver. Programlama dili ve sürüm belirtilmişse ona kesin uy. Python kodunda geçerli Python sözdizimi kullan; Türkçe kelimeleri fonksiyon adı olarak kullanmak yerine açık ve doğru İngilizce isimler tercih et. Kullanıcının yazım hatalarını kod mantığına taşıma. Kod bloğunu tamamla ve giriş/çıkış akışını eksiksiz ver. Kod çalıştırdığını iddia etme; gerçekten çalıştırmadıysan bunu açıkça belirt." : "";
         const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + researchText;
 
         const result = await env.AI.run(MODEL, {
           messages: [
             { role: "system", content: system },
             { role: "user", content: message }
-          ]
+          ],
+          max_tokens: intent === "coding" ? 3072 : 1024,
+          temperature: intent === "coding" ? 0.2 : 0.7
         });
 
         const reply = result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi.";
