@@ -80,11 +80,25 @@ $ISSUE_BODY"
           print("Generated project:", root)
           PY
 
+      - name: Run generated Python tests
+        shell: bash
+        run: |
+          set -e
+          test_files=$(find projects -type f -name 'test_*.py' | sort)
+          if [ -z "$test_files" ]; then
+            echo "No Python tests were generated."
+            exit 0
+          fi
+          while IFS= read -r test_file; do
+            echo "Testing $test_file"
+            python "$test_file"
+          done <<< "$test_files"
+
       - name: Commit generated project
         run: |
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add projects/
           git diff --cached --quiet && echo "No changes to commit." && exit 0
-          git commit -m "Generate project with NEYQORA"
+          git commit -m "Generate and test project with NEYQORA"
           git push
