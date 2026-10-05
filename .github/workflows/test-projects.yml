@@ -1,0 +1,25 @@
+name: Test Projects
+
+on:
+  push:
+    paths:
+      - "projects/**"
+  pull_request:
+    paths:
+      - "projects/**"
+
+jobs:
+  python-tests:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Run calculator tests
+        working-directory: projects/hesap-makinesi
+        run: python test_hesap_makinesi.py
