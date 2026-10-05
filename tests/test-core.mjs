@@ -25,4 +25,8 @@ assert.match(source, /Response\.json\(\{ ok: true/);
 assert.match(source, /memory:!!env\.DB/);
 assert.match(source, /toolResults: agentResults/);
 assert.match(source, /agentStatus/);
+assert.match(source, /executeToolStep/);
+assert.match(source, /async function generateCodingResponse/);
+assert.match(source, /tool: "coding"/);
+assert.match(source, /ok: !!reply && validation.ok/);
 console.log("NEYQORA core contract tests: PASS");
