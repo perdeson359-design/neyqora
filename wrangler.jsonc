@@ -8,5 +8,12 @@
   },
   "ai": {
     "binding": "AI"
-  }
+  },
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "neyqora-memory",
+      "database_id": "1fd23168-d954-4989-b90b-c3bd00ec0ea9"
+    }
+  ]
 }
