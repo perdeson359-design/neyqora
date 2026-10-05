@@ -90,17 +90,22 @@ function formatToolResult(result) {
 }
 
 function buildAgentTrace(plan, results) {
+  const retries = results.filter(result => result?.retry).length;
   return {
     version: "1",
     createdAt: new Date().toISOString(),
     intent: plan.intent,
     stepCount: plan.steps.length,
+    resultCount: results.length,
     completedSteps: results.filter(result => result && result.ok).length,
     failedSteps: results.filter(result => result && !result.ok).length,
+    retries,
+    success: results.length > 0 && results.some(result => result.ok),
     steps: results.map((result, index) => ({
       index: index + 1,
       tool: result.tool,
       ok: !!result.ok,
+      retry: !!result.retry,
       durationMs: result.durationMs ?? null,
       error: result.ok ? null : (result.error || "Bilinmeyen araç hatası")
     }))
@@ -114,10 +119,10 @@ function buildAgentAudit(plan, results) {
       index: index + 1,
       tool: step.tool,
       action: step.action,
-      ok: !!results[index]?.ok,
+      ok: results[index]?.ok ?? false,
       durationMs: results[index]?.durationMs ?? null
     })),
-    success: results.length > 0 && results.every(result => result.ok)
+    success: results.length > 0 && results.some(result => result.ok)
   };
 }
 
