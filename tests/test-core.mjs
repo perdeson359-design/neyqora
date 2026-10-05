@@ -46,4 +46,5 @@ assert.match(source, /path\.startsWith\("\/"\)|path\.includes\("\\\\"\)|unsafe/i
 assert.match(source, /if \(intent === "coding"\) \{[\s\S]*?result = agentResults\.find\(item => item\.tool === "coding"\)/);
 assert.match(source, /validation: result\.validation \|\| null/);
 assert.match(source, /reply: result\.reply/);
-\nconsole.log("NEYQORA core contract tests: PASS");
+
+console.log("NEYQORA core contract tests: PASS");
