@@ -74,6 +74,18 @@ function isProjectRequest(message) {
   return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
 }
 
+function buildAgentPlan(message) {
+  const intent = routeMessage(message);
+  const steps = [];
+  if (intent === "project") steps.push({ tool: "project", action: "generate_project" });
+  else if (intent === "web_search") steps.push({ tool: "web", action: "search_web" });
+  else if (intent === "weather") steps.push({ tool: "weather", action: "get_current_weather" });
+  else if (intent === "calculator") steps.push({ tool: "calculator", action: "calculate" });
+  else if (intent === "coding") steps.push({ tool: "coding", action: "generate_or_repair_code" });
+  else steps.push({ tool: "chat", action: "answer" });
+  return { intent, steps };
+}
+
 function routeMessage(message) {
   const t = String(message || "").toLocaleLowerCase("tr-TR").trim();
 
@@ -489,7 +501,8 @@ export default {
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
         if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
 
-        const intent = routeMessage(message);
+        const agentPlan = buildAgentPlan(message);
+        const intent = agentPlan.intent;
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -666,7 +679,12 @@ export default {
           ).bind(userId, memory).run();
         }
 
-        return Response.json({ reply, intent, memorySaved: !!(env.DB && shouldRemember(message)) });
+        return Response.json({
+          reply,
+          intent,
+          plan: agentPlan,
+          memorySaved: !!(env.DB && shouldRemember(message))
+        });
       } catch (error) {
         return Response.json({ error: "NEYQORA hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
       }
