@@ -99,9 +99,11 @@ async function executeAgentPlan(env, plan, message) {
       break;
     }
 
+    const toolStartedAt = Date.now();
+
     if (step.tool === "calculator") {
       const value = safeCalculate(message);
-      results.push({ tool: "calculator", ok: value !== null, value });
+      results.push({ tool: "calculator", ok: value !== null, value, durationMs: Date.now() - toolStartedAt });
       continue;
     }
     if (step.tool === "weather") {
@@ -110,30 +112,30 @@ async function executeAgentPlan(env, plan, message) {
         message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
       const city = match?.[1] || "Ankara";
       try {
-        results.push({ tool: "weather", ...(await getWeather(city)) });
+        results.push({ tool: "weather", ...(await getWeather(city)), durationMs: Date.now() - toolStartedAt });
       } catch (error) {
-        results.push({ tool: "weather", ok: false, error: error?.message || "Hava verisi alınamadı." });
+        results.push({ tool: "weather", ok: false, error: error?.message || "Hava verisi alınamadı.", durationMs: Date.now() - toolStartedAt });
       }
       continue;
     }
     if (step.tool === "web") {
       try {
-        results.push({ tool: "web", ok: true, results: await webSearch(message) });
+        results.push({ tool: "web", ok: true, results: await webSearch(message), durationMs: Date.now() - toolStartedAt });
       } catch (error) {
-        results.push({ tool: "web", ok: false, error: error?.message || "Web araması başarısız." });
+        results.push({ tool: "web", ok: false, error: error?.message || "Web araması başarısız.", durationMs: Date.now() - toolStartedAt });
       }
       continue;
     }
     if (step.tool === "project") {
       try {
         const files = await generateProjectFiles(env, message);
-        results.push({ tool: "project", ok: !!files, files: files || [] });
+        results.push({ tool: "project", ok: !!files, files: files || [], durationMs: Date.now() - toolStartedAt });
       } catch (error) {
-        results.push({ tool: "project", ok: false, error: error?.message || "Proje üretilemedi." });
+        results.push({ tool: "project", ok: false, error: error?.message || "Proje üretilemedi.", durationMs: Date.now() - toolStartedAt });
       }
       continue;
     }
-    results.push({ tool: step.tool, ok: true, action: step.action });
+    results.push({ tool: step.tool, ok: true, action: step.action, durationMs: Date.now() - toolStartedAt });
   }
 
   return results;
@@ -535,7 +537,17 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA", version: "4.0", model: MODEL, memory: !!env.DB, router: true, web: true });
+      return Response.json({
+        ok: true,
+        name: "NEYQORA",
+        version: "4.1",
+        model: MODEL,
+        memory: !!env.DB,
+        router: true,
+        agent: true,
+        tools: ["calculator", "weather", "web", "coding", "project"],
+        web: true
+      });
     }
 
     if (request.method === "POST" && url.pathname === "/api/project") {
