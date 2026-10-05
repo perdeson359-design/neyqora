@@ -322,7 +322,18 @@ async function executeAgentPlan(env, plan, message) {
     }
 
     const toolStartedAt = Date.now();
-    let result = await executeToolStep(env, step, message);
+    let result;
+    if (step.tool === "project" && step.action === "package_generated_project") {
+      const codingResult = results.find(result => result?.tool === "coding");
+      const files = codingResult?.code ? sanitizeProjectFiles([
+        { path: "main.py", content: codingResult.code },
+        { path: "README.md", content: "# NEYQORA generated project\n\nKod NEYQORA Coding Agent tarafından üretildi ve güvenlik doğrulamasından geçirildi.\n" }
+      ]) : null;
+      const validation = files ? validateGeneratedProject(files) : { ok: false, errors: ["Kod sonucu paketlenemedi."] };
+      result = { tool: "project", ok: validation.ok, files: files || [], validation, action: step.action };
+    } else {
+      result = await executeToolStep(env, step, message);
+    }
     result.durationMs = Date.now() - toolStartedAt;
     results.push(result);
 
