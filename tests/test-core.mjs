@@ -17,7 +17,7 @@ assert.match(source, /temperature: 0\.1/);
 assert.match(source, /120000/);
 assert.match(source, /retry/);
 
-assert.match(source, /\/api\/health/);
+assert.match(source, /\/api\/health/);\nassert.match(source, /version:\s*"4\\.3"/);
 assert.match(source, /\/api\/chat/);
 assert.match(source, /\/api\/project/);
 assert.match(source, /\/api\/search/);
