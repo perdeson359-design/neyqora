@@ -25,13 +25,15 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 const chat=document.querySelector("#chat"),form=document.querySelector("#form"),input=document.querySelector("#input");
 let userId=localStorage.getItem("neyqora_user_id");
 if(!userId){userId=crypto.randomUUID();localStorage.setItem("neyqora_user_id",userId);}
+let conversation=[];
 function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el}
+function rememberTurn(role,content){conversation.push({role,content:String(content||"")});if(conversation.length>10)conversation=conversation.slice(-10);}
 document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});form.addEventListener("submit",async e=>{
  e.preventDefault();const message=input.value.trim();if(!message)return;
- add(message,"user");input.value="";const pending=add("NEYQORA düşünüyor...","ai");
+ add(message,"user");rememberTurn("user",message);input.value="";const pending=add("NEYQORA düşünüyor...","ai");
  try{
-  const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message,userId})});
-  const data=await r.json();pending.textContent=data.reply||data.error||"Yanıt alınamadı."; if(data.intent==="project" && data.files){const panel=document.querySelector("#project-panel");const title=document.querySelector("#project-title");const files=document.querySelector("#project-files");title.textContent="Proje: "+(data.project||"NEYQORA projesi")+" · "+data.files.length+" dosya";files.textContent=data.files.map(f=>"--- "+f.path+" ---\n"+f.content).join("\n\n");panel.hidden=false;panel.scrollIntoView({behavior:"smooth",block:"end"});}
+  const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message,userId,history:conversation.slice(-10)})});
+  const data=await r.json();pending.textContent=data.reply||data.error||"Yanıt alınamadı.";if(data.reply)rememberTurn("assistant",data.reply); if(data.intent==="project" && data.files){const panel=document.querySelector("#project-panel");const title=document.querySelector("#project-title");const files=document.querySelector("#project-files");title.textContent="Proje: "+(data.project||"NEYQORA projesi")+" · "+data.files.length+" dosya";files.textContent=data.files.map(f=>"--- "+f.path+" ---\n"+f.content).join("\n\n");panel.hidden=false;panel.scrollIntoView({behavior:"smooth",block:"end"});}
  }catch(err){pending.textContent="Bağlantı hatası. Lütfen tekrar dene."}
 });
 </script>
@@ -374,6 +376,11 @@ export default {
         const body = await request.json();
         const message = String(body?.message || "").trim();
         const userId = String(body?.userId || "").trim();
+        const rawHistory = Array.isArray(body?.history) ? body.history : [];
+        const history = rawHistory
+          .filter(item => item && (item.role === "user" || item.role === "assistant"))
+          .map(item => ({ role: item.role, content: String(item.content || "").slice(0, 4000) }))
+          .slice(-10);
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
         if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
 
@@ -466,11 +473,14 @@ export default {
         const codingInstructions = intent === "coding" ? " KODLAMA GÖREVİ. Sadece kullanıcının istediği programı üret. Hesap makinesi istenirse yalnızca toplama, çıkarma, çarpma ve bölme özelliklerini ekle; başka özellik ekleme. Geçerli Python 3.10+ sözdizimi kullan. eval kullanma. Fonksiyon ve değişken adlarında Türkçe karakter kullanma; yalnızca ASCII İngilizce adlar kullan. Python kodunu göndermeden önce zihinsel bir derleme kontrolü yap: tüm çağrılan metotlar tanımlı mı, parantez ve girintiler doğru mu, menü seçenekleri ile dallar eşleşiyor mu, değişkenler tanımlı mı, program akışı tamam mı. Özellikle çıkarma için subtraction, çarpma için multiplication, bölme için division gibi tutarlı adlar kullan; outirma gibi uydurma isimler ASLA kullanma. Tanımsız fonksiyon, yanlış menü seçeneği, alakasız işlem, sahte test veya uydurma özellik bırakma. Kod bloğunu eksiksiz kapat. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz kod bloğu, 3) 4 temel işlem için kısa testler. Kod çalıştırmadıysan çalıştırmış gibi davranma." : "";
         const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + researchText;
 
+        const modelMessages = [{ role: "system", content: system }];
+        for (const item of history) {
+          if (item.content && item.content !== message) modelMessages.push(item);
+        }
+        modelMessages.push({ role: "user", content: message });
+
         const result = await env.AI.run(MODEL, {
-          messages: [
-            { role: "system", content: system },
-            { role: "user", content: message }
-          ],
+          messages: modelMessages,
           max_tokens: intent === "coding" ? 3072 : 1024,
           temperature: intent === "coding" ? 0.2 : 0.7
         });
