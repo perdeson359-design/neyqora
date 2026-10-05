@@ -19,12 +19,16 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 <div class="app">
 <header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
-<form id="form"><input id="input" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button">Gönder</button></form>
+<form id="form" onsubmit="return false"><input id="input" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="sendMessage()">Gönder</button></form>
 </div>
 <script>
 const chat=document.querySelector("#chat"),form=document.querySelector("#form"),input=document.querySelector("#input");
-let userId=localStorage.getItem("neyqora_user_id");
-if(!userId){try{userId=crypto.randomUUID();}catch{userId="user-"+Date.now();}localStorage.setItem("neyqora_user_id",userId);}
+let userId="";
+try{userId=localStorage.getItem("neyqora_user_id")||"";}catch{}
+if(!userId){
+  try{userId=crypto.randomUUID();}catch{userId="user-"+Date.now()+"-"+Math.random().toString(36).slice(2);}
+  try{localStorage.setItem("neyqora_user_id",userId);}catch{}
+}
 let conversation=[];
 function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el;}
 function rememberTurn(role,content){conversation.push({role,content:String(content||"")});if(conversation.length>10)conversation=conversation.slice(-10);}
