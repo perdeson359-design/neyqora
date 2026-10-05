@@ -80,7 +80,60 @@ $ISSUE_BODY"
           print("Generated project:", root)
           PY
 
-      - name: Run generated Python tests
+      - name: Run generated Python tests (first pass)
+        id: first_test
+        continue-on-error: true
+        shell: bash
+        run: |
+          set -e
+          test_files=$(find projects -type f -name 'test_*.py' | sort)
+          if [ -z "$test_files" ]; then
+            echo "No Python tests were generated."
+          else
+            while IFS= read -r test_file; do
+              echo "Testing $test_file"
+              timeout 30s python "$test_file"
+            done <<< "$test_files"
+          fi
+
+      - name: Repair project once after test failure
+        if: steps.first_test.outcome == 'failure'
+        env:
+          NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
+          PROJECT_REQUEST: ${{ github.event.inputs.request }}
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          import json, os, pathlib
+          from urllib.request import Request, urlopen
+
+          url = os.environ["NEYQORA_URL"] + "/api/project"
+          body = json.dumps({
+              "request": os.environ["PROJECT_REQUEST"] + " Testleri başarısız olan projeyi düzelt ve test edilebilir şekilde yeniden üret."
+          }).encode()
+          req = Request(url, data=body, headers={"content-type": "application/json"}, method="POST")
+
+          with urlopen(req, timeout=120) as response:
+              data = json.load(response)
+          if not data.get("ok"):
+              raise SystemExit("NEYQORA repair failed: " + str(data))
+
+          request = os.environ["PROJECT_REQUEST"]
+          safe_name = "".join(c.lower() if c.isalnum() else "-" for c in request).strip("-")[:40] or "project"
+          root = pathlib.Path("projects") / safe_name
+          root.mkdir(parents=True, exist_ok=True)
+
+          for item in data["files"]:
+              path = pathlib.Path(item["path"])
+              if path.is_absolute() or ".." in path.parts or "\" in str(path):
+                  raise SystemExit("Unsafe repaired path: " + str(path))
+              target = root / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(item["content"], encoding="utf-8")
+          PY
+
+      - name: Run generated Python tests (final pass)
         shell: bash
         run: |
           set -e
