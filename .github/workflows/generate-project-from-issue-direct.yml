@@ -51,7 +51,7 @@ jobs:
           root.mkdir(parents=True,exist_ok=True)
           for item in data["files"]:
               p=pathlib.Path(item["path"])
-              if p.is_absolute() or ".." in p.parts or "\" in str(p):
+              if p.is_absolute() or ".." in p.parts or "\\" in str(p):
                   raise SystemExit("Unsafe generated path: "+str(p))
               target=root/p
               target.parent.mkdir(parents=True,exist_ok=True)
