@@ -57,11 +57,17 @@ function isNameQuestion(message) {
   return /\b(adım ne|benim adım ne|ismim ne|ben kimim)\b/i.test(message);
 }
 
+function isProjectRequest(message) {
+  const t = String(message || "").toLocaleLowerCase("tr-TR");
+  return /\\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\\b/.test(t);
+}
+
 function routeMessage(message) {
   const t = message.toLocaleLowerCase("tr-TR");
   if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
   if (/\d/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl/.test(t)) return "calculator";
   if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu")) return "weather";
+  if (isProjectRequest(message)) return "project";
   if (t.includes("kod") || t.includes("javascript") || t.includes("python") || t.includes("bug") || t.includes("hata veriyor") || t.includes("program")) return "coding";
   return "chat";
 }
@@ -391,10 +397,37 @@ export default {
           return Response.json({ reply: String(nameMemory.content).replace("Kullanıcının adı: ", "") + ".", intent: "memory" });
         }
 
-        const memoryText = intent === "coding" ? "" : (memories.length
+        const memoryText = (intent === "coding" || intent === "project") ? "" : (memories.length
           ? "\n\nKullanıcı hakkında daha önce kaydedilmiş bilgiler:\n" +
             memories.reverse().map(m => "- " + m.content).join("\n")
           : "");
+
+        if (intent === "project") {
+          try {
+            const files = await generateProjectFiles(env, message);
+            if (!files) {
+              return Response.json({
+                reply: "Projeyi güvenli biçimde üretemedim. İsteği biraz daha açık tarif et.",
+                intent,
+                project: null
+              });
+            }
+            const project = sanitizeProjectName(message);
+            return Response.json({
+              reply: "Proje taslağını oluşturdum: " + project + ". " + files.length + " dosya hazır. GitHub'a kaydetmek için GitHub Actions proje workflow'u kullanılabilir.",
+              intent,
+              project,
+              files,
+              testable: files.some(file => /^test_.*\\.py$/i.test(file.path))
+            });
+          } catch (error) {
+            return Response.json({
+              reply: "Proje oluşturulurken hata oluştu: " + (error?.message || "Bilinmeyen hata"),
+              intent,
+              project: null
+            });
+          }
+        }
 
         if (intent === "web_search") {
           try {
