@@ -131,6 +131,48 @@ function isRetryableTool(tool, result) {
   return tool === "web" || tool === "weather";
 }
 
+async function generateCodingResponse(env, message) {
+  const prompt = "Kullanıcının istediği Python programını üret. Yalnızca istenen özellikleri ekle. Python 3.10+ kullan. Kod eksiksiz ve çalıştırılabilir olmalı. Python tanımlayıcılarında yalnızca ASCII kullan. eval ve exec kullanma. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz Python kod bloğu, 3) 4 temel test. Kodu çalıştırmadıysan çalıştırmış gibi davranma.";
+  const result = await env.AI.run(MODEL, {
+    messages: [
+      { role: "system", content: prompt },
+      { role: "user", content: String(message || "").trim() }
+    ],
+    max_tokens: 3072,
+    temperature: 0.2
+  });
+  let reply = result?.response || result?.choices?.[0]?.message?.content || "";
+  let code = extractPythonCode(reply);
+  let validation = basicPythonValidation(code);
+
+  if (!validation.ok) {
+    const repair = await env.AI.run(MODEL, {
+      messages: [
+        { role: "system", content: "Sen bir Python kod düzelticisisin. Yalnızca verilen Python kodundaki sözdizimi, tanımlayıcı ve bariz isim/çağrı hatalarını düzelt. Yeni özellik ekleme. Python tanımlayıcılarında yalnızca ASCII kullan. Kod eksiksiz ve Python 3.10+ uyumlu olsun. Yalnızca düzeltilmiş tek Python kod bloğu döndür." },
+        { role: "user", content: "Kod:\n" + code + "\n\nHatalar:\n" + validation.errors.join("\n") }
+      ],
+      max_tokens: 3072,
+      temperature: 0.1
+    });
+    const repaired = repair?.response || repair?.choices?.[0]?.message?.content || "";
+    const repairedCode = extractPythonCode(repaired);
+    const second = basicPythonValidation(repairedCode);
+    if (second.ok) {
+      reply = repaired;
+      code = repairedCode;
+      validation = second;
+    }
+  }
+
+  return {
+    tool: "coding",
+    ok: !!reply && validation.ok,
+    reply,
+    code,
+    validation
+  };
+}
+
 async function executeToolStep(env, step, message) {
   if (step.tool === "calculator") {
     const value = safeCalculate(message);
@@ -160,6 +202,13 @@ async function executeToolStep(env, step, message) {
       return { tool: "project", ok: !!files, files: files || [] };
     } catch (error) {
       return { tool: "project", ok: false, error: error?.message || "Proje üretilemedi." };
+    }
+  }
+  if (step.tool === "coding") {
+    try {
+      return await generateCodingResponse(env, message);
+    } catch (error) {
+      return { tool: "coding", ok: false, error: error?.message || "Kod üretimi başarısız." };
     }
   }
   return { tool: step.tool, ok: true, action: step.action };
