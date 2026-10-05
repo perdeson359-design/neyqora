@@ -78,6 +78,81 @@ function safeCalculate(message) {
   } catch { return null; }
 }
 
+function buildProjectFiles(request) {
+  const text = String(request || "").toLocaleLowerCase("tr-TR");
+  if (text.includes("hesap makinesi")) {
+    return [
+      {
+        path: "hesap_makinesi.py",
+        content: `def calculate(num1, operator, num2):
+    if operator == "+":
+        return num1 + num2
+    if operator == "-":
+        return num1 - num2
+    if operator == "*":
+        return num1 * num2
+    if operator == "/":
+        if num2 == 0:
+            raise ValueError("Sıfıra bölme yapılamaz.")
+        return num1 / num2
+    raise ValueError("Geçersiz işlem.")
+
+def main():
+    print("Hesap Makinesi")
+    print("1. Toplama")
+    print("2. Çıkarma")
+    print("3. Çarpma")
+    print("4. Bölme")
+
+    choice = input("Seçiminiz: ").strip()
+    if choice not in {"1", "2", "3", "4"}:
+        print("Geçersiz seçim.")
+        return
+
+    operators = {"1": "+", "2": "-", "3": "*", "4": "/"}
+    try:
+        num1 = float(input("İlk sayı: "))
+        num2 = float(input("İkinci sayı: "))
+        print("Sonuç:", calculate(num1, operators[choice], num2))
+    except ValueError as error:
+        print("Hata:", error)
+
+if __name__ == "__main__":
+    main()
+`
+      },
+      {
+        path: "test_hesap_makinesi.py",
+        content: `from hesap_makinesi import calculate
+
+def test_operations():
+    assert calculate(10, "+", 5) == 15
+    assert calculate(10, "-", 5) == 5
+    assert calculate(10, "*", 5) == 50
+    assert calculate(10, "/", 5) == 2
+
+def test_zero_division():
+    try:
+        calculate(10, "/", 0)
+    except ValueError:
+        return
+    raise AssertionError("Sıfıra bölme ValueError vermeli.")
+
+if __name__ == "__main__":
+    test_operations()
+    test_zero_division()
+    print("Tüm testler başarılı.")
+`
+      },
+      {
+        path: "README.md",
+        content: "# Hesap Makinesi\n\nPython 3.10+ için basit hesap makinesi.\n\n## Çalıştırma\n\`python hesap_makinesi.py\`\n\n## Test\n\`python test_hesap_makinesi.py\`\n"
+      }
+    ];
+  }
+  return null;
+}
+
 function extractPythonCode(text) {
   const match = text.match(/\`\`\`python\s*([\\s\\S]*?)\`\`\`/i) || text.match(/\`\`\`\s*([\\s\\S]*?)\`\`\`/);
   return match ? match[1].trim() : "";
@@ -189,6 +264,24 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/health") {
       return Response.json({ ok: true, name: "NEYQORA", version: "4.0", model: MODEL, memory: !!env.DB, router: true, web: true });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/project") {
+      try {
+        const body = await request.json();
+        const requestText = String(body?.request || "").trim();
+        if (!requestText) return Response.json({ error: "request gerekli." }, { status: 400 });
+        const files = buildProjectFiles(requestText);
+        if (!files) return Response.json({ ok: false, error: "Bu proje şablonu henüz desteklenmiyor." }, { status: 400 });
+        return Response.json({
+          ok: true,
+          project: "generated",
+          files,
+          note: "Dosyalar NEYQORA tarafından oluşturuldu. GitHub'a doğrudan yazmak için güvenli GitHub yetkilendirmesi ayrıca bağlanmalıdır."
+        });
+      } catch (error) {
+        return Response.json({ ok: false, error: error?.message || "Proje oluşturulamadı." }, { status: 500 });
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/search") {
