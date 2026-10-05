@@ -95,6 +95,13 @@ function basicPythonValidation(code) {
   if (/\b(seçenik|seçenek|sayi|sayı)\b/.test(code)) {
     errors.push("Kodda tutarsız veya hatalı değişken adı kullanılmış.");
   }
+  const definedMethods = [...code.matchAll(/^\s*def\s+([A-Za-z_][A-Za-z0-9_]*)\s*\(/gm)].map(m => m[1]);
+  const calledMethods = [...code.matchAll(/\b(?:self|hesap)\.([A-Za-z_][A-Za-z0-9_]*)\s*\(/g)].map(m => m[1]);
+  for (const name of calledMethods) {
+    if (name !== "__init__" && !definedMethods.includes(name)) {
+      errors.push("Tanımsız metot çağrısı: " + name);
+    }
+  }
   if (/\b(if|elif|else|for|while|def|class|try|except|with)\b[^\n:]*\n/.test(code)) {
     const lines = code.split("\n");
     for (let i = 0; i < lines.length; i++) {
