@@ -20,6 +20,16 @@ jobs:
         with:
           python-version: "3.12"
 
-      - name: Run calculator tests
-        working-directory: projects/hesap-makinesi
-        run: python test_hesap_makinesi.py
+      - name: Run all Python project tests
+        shell: bash
+        run: |
+          set -e
+          test_files=$(find projects -type f -name 'test_*.py' | sort)
+          if [ -z "$test_files" ]; then
+            echo "No Python test files found."
+            exit 0
+          fi
+          while IFS= read -r test_file; do
+            echo "Running $test_file"
+            python "$test_file"
+          done <<< "$test_files"
