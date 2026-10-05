@@ -17,7 +17,7 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </head>
 <body>
 <div class="app">
-<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın</p></header>
+<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V3.1</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
 <form id="form"><input id="input" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button>Gönder</button></form>
 </div>
@@ -120,7 +120,18 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA", model: MODEL, memory: !!env.DB, router: true, web: true });
+      return Response.json({ ok: true, name: "NEYQORA", version: "3.1", model: MODEL, memory: !!env.DB, router: true, web: true });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/search") {
+      const q = (url.searchParams.get("q") || "").trim();
+      if (!q) return Response.json({ error: "q parametresi gerekli." }, { status: 400 });
+      try {
+        const results = await webSearch(q);
+        return Response.json({ ok: true, query: q, results });
+      } catch (error) {
+        return Response.json({ ok: false, error: error?.message || "Arama başarısız." }, { status: 502 });
+      }
     }
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
