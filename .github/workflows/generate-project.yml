@@ -177,6 +177,26 @@ $ISSUE_BODY"
             timeout 30s python -m py_compile "$python_file"
           done <<< "$python_files"
 
+      - name: Write project test status
+        if: always()
+        shell: bash
+        run: |
+          set -e
+          mkdir -p requests/generated
+          if [ "${{ steps.first_test.outcome }}" = "success" ]; then
+            status="passed"
+          else
+            status="repaired_or_failed"
+          fi
+          cat > requests/generated/latest-test-status.json <<EOF
+          {
+            "status": "$status",
+            "first_test": "${{ steps.first_test.outcome }}",
+            "workflow": "${{ github.workflow }}",
+            "run_id": "${{ github.run_id }}"
+          }
+          EOF
+
       - name: Commit generated project
         run: |
           git config user.name "NEYQORA"
