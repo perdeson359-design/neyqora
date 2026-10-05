@@ -914,3 +914,16 @@ export default {
     return new Response("NEYQORA", { status: 404 });
   }
 };
+
+// Testable pure-core helpers are kept independent from Cloudflare runtime APIs.
+export const __test = {
+  routeMessage,
+  isProjectRequest,
+  sanitizeProjectName,
+  validateAgentPlan,
+  buildAgentPlan,
+  shouldFallbackToChat,
+  summarizeAgentStatus,
+  safeCalculate,
+  basicPythonValidation
+};
