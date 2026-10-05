@@ -28,6 +28,7 @@ jobs:
           PROJECT_REQUEST: ${{ github.event_name == 'issues' && github.event.issue.title || inputs.request }}
           ISSUE_BODY: ${{ github.event_name == 'issues' && github.event.issue.body || '' }}
           ISSUE_AUTHOR: ${{ github.event_name == 'issues' && github.event.issue.user.login || '' }}
+          ISSUE_NUMBER: ${{ github.event_name == 'issues' && github.event.issue.number || '' }}
         run: |
           set -e
           if [ "${{ github.event_name }}" = "issues" ]; then
@@ -47,7 +48,7 @@ $ISSUE_BODY"
           from urllib.request import Request, urlopen
 
           url = os.environ["NEYQORA_URL"] + "/api/project"
-          body = json.dumps({"request": os.environ["PROJECT_REQUEST"]}).encode()
+          body = json.dumps({"request": os.environ["PROJECT_REQUEST"], "issueNumber": os.environ.get("ISSUE_NUMBER")}).encode()
           req = Request(url, data=body, headers={"content-type": "application/json"}, method="POST")
 
           with urlopen(req, timeout=120) as response:
@@ -260,6 +261,30 @@ $ISSUE_BODY"
             timeout 30s python "$test_file"
           done <<< "$test_files"
           echo "NEYQORA final project gate: PASS"
+
+      - name: Publish CI result to issue
+        if: always() && github.event_name == 'issues'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ISSUE_NUMBER: ${{ github.event.issue.number }}
+          FINAL_GATE: ${{ steps.final_gate.outcome }}
+          FIRST_TEST: ${{ steps.first_test.outcome }}
+        shell: bash
+        run: |
+          set -e
+          if [ "$FINAL_GATE" = "success" ]; then
+            STATUS="passed"
+          else
+            STATUS="failed"
+          fi
+          cat > /tmp/ci-comment.md <<EOF
+          <!-- NEYQORA_CI_RESULT {"status":"$STATUS","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"$FIRST_TEST","final_gate":"$FINAL_GATE"} -->
+          NEYQORA CI sonucu: **$STATUS**
+          - Run: ${{ github.run_id }}
+          - İlk test: $FIRST_TEST
+          - Final test: $FINAL_GATE
+          EOF
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci-comment.md
 
       - name: Commit generated project
         if: steps.final_gate.outcome == 'success'
