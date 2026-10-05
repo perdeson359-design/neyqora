@@ -974,5 +974,6 @@ export const __test = {
   shouldFallbackToChat,
   summarizeAgentStatus,
   safeCalculate,
-  basicPythonValidation
+  basicPythonValidation,
+  executeToolStep
 };
