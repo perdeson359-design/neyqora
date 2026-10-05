@@ -73,24 +73,41 @@ function decodeHtml(s) {
 }
 
 async function webSearch(query) {
-  const q = query.replace(/^https?:\/\//i, "").trim();
-  const url = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q);
-  const response = await fetch(url, { headers: { "user-agent": "NEYQORA/1.0" } });
-  if (!response.ok) throw new Error("Web araması kullanılamıyor.");
-  const html = await response.text();
-  const results = [];
-  const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\\s\\S]*?)<\/a>/gi;
-  let m;
-  while ((m = re.exec(html)) && results.length < 5) {
-    const title = decodeHtml(m[2].replace(/<[^>]+>/g, "").trim());
-    let link = m[1];
-    try {
-      const u = new URL(link, "https://html.duckduckgo.com");
-      const target = u.searchParams.get("uddg");
-      if (target) link = target;
-    } catch {}
-    results.push({ title, link });
+  const clean = query.trim();
+  const isUrl = /^https?:\/\//i.test(clean);
+
+  if (isUrl) {
+    const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" } });
+    if (!response.ok) throw new Error("Sayfa açılamadı.");
+    const html = await response.text();
+    const title = (html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || clean)
+      .replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
+    return [{ title, link: clean }];
   }
+
+  const url = "https://news.google.com/rss/search?q=" +
+    encodeURIComponent(clean) + "&hl=tr&gl=TR&ceid=TR:tr";
+
+  const response = await fetch(url, {
+    headers: { "user-agent": "Mozilla/5.0 NEYQORA/1.0" }
+  });
+  if (!response.ok) throw new Error("Güncel haber araması kullanılamıyor.");
+
+  const xml = await response.text();
+  const results = [];
+  const itemRe = /<item>([\\s\\S]*?)<\\/item>/gi;
+  let item;
+
+  while ((item = itemRe.exec(xml)) && results.length < 6) {
+    const block = item[1];
+    const title = decodeHtml((block.match(/<title>([\\s\\S]*?)<\\/title>/i)?.[1] || "")
+      .replace(/<!\\[CDATA\\[|\\]\\]>/g, "").trim());
+    const link = decodeHtml((block.match(/<link>([\\s\\S]*?)<\\/link>/i)?.[1] || "").trim());
+    const pubDate = decodeHtml((block.match(/<pubDate>([\\s\\S]*?)<\\/pubDate>/i)?.[1] || "").trim());
+
+    if (title && link) results.push({ title, link, pubDate });
+  }
+
   return results;
 }
 
@@ -139,8 +156,8 @@ export default {
           try {
             const results = await webSearch(message);
             if (results.length) {
-              researchText = "\n\nGüncel web araştırması sonuçları. Bunları kaynak olarak kullan; kaynak uydurma:\n" +
-                results.map((r, i) => (i + 1) + ". " + r.title + " — " + r.link).join("\n");
+              researchText = "\n\nGüncel web araştırması sonuçları. Yalnızca bunlara dayan ve mümkünse haber tarihiyle birlikte kaynakları belirt:\n" +
+                results.map((r, i) => (i + 1) + ". " + r.title + (r.pubDate ? " (" + r.pubDate + ")" : "") + " — " + r.link).join("\n");
             } else {
               researchText = "\n\nWeb aramasında sonuç bulunamadı. Bunu açıkça belirt.";
             }
@@ -149,7 +166,7 @@ export default {
           }
         }
 
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. İstek türü: " + intent + "." + memoryText + researchText;
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel haber sorularında yalnızca verilen araştırma sonuçlarına dayan. Tarihleri kontrol et; eski bir haberi güncelmiş gibi sunma. İstek türü: " + intent + "." + memoryText + researchText;
 
         const result = await env.AI.run(MODEL, {
           messages: [
