@@ -7,6 +7,8 @@ on:
         description: "Describe the project to generate"
         required: true
         type: string
+  issues:
+    types: [opened]
 
 jobs:
   generate:
@@ -21,9 +23,20 @@ jobs:
       - name: Generate project from NEYQORA
         env:
           NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-          PROJECT_REQUEST: ${{ inputs.request }}
+          PROJECT_REQUEST: ${{ github.event_name == 'issues' && github.event.issue.title || inputs.request }}
+          ISSUE_BODY: ${{ github.event_name == 'issues' && github.event.issue.body || '' }}
+          ISSUE_AUTHOR: ${{ github.event_name == 'issues' && github.event.issue.user.login || '' }}
         run: |
           set -e
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            if [ "$ISSUE_AUTHOR" != "perdeson359-design" ]; then
+              echo "Ignoring issue from non-owner."
+              exit 0
+            fi
+            PROJECT_REQUEST="$PROJECT_REQUEST
+
+$ISSUE_BODY"
+          fi
           mkdir -p requests/generated
 
           python - <<'PY'
