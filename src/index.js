@@ -22,6 +22,48 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
+window.neyqoraSend=async function(){
+  const input=document.querySelector("#input");
+  const chat=document.querySelector("#chat");
+  const button=document.querySelector("#send");
+  const message=(input?.value||"").trim();
+  if(!message)return false;
+  if(button)button.disabled=true;
+  const user=document.createElement("div");
+  user.className="msg user";
+  user.textContent=message;
+  chat.appendChild(user);
+  input.value="";
+  const pending=document.createElement("div");
+  pending.className="msg ai";
+  pending.textContent="NEYQORA düşünüyor...";
+  chat.appendChild(pending);
+  try{
+    let userId="";
+    try{userId=localStorage.getItem("neyqora_user_id")||"";}catch{}
+    if(!userId){
+      try{userId=crypto.randomUUID();}catch{userId="user-"+Date.now();}
+      try{localStorage.setItem("neyqora_user_id",userId);}catch{}
+    }
+    const response=await fetch("/api/chat",{
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify({message,userId,history:[]})
+    });
+    const raw=await response.text();
+    let data={};
+    try{data=JSON.parse(raw);}catch{data={error:raw};}
+    if(!response.ok)throw new Error(data.error||("Sunucu hatası: "+response.status));
+    pending.textContent=data.reply||data.error||"Yanıt alınamadı.";
+  }catch(error){
+    pending.textContent="Hata: "+(error?.message||"Bağlantı kurulamadı.");
+  }finally{
+    if(button)button.disabled=false;
+  }
+  return false;
+};
+</script>
+<script>
 const chat=document.querySelector("#chat"),form=document.querySelector("#form"),input=document.querySelector("#input");
 let userId="";
 try{userId=localStorage.getItem("neyqora_user_id")||"";}catch{}
