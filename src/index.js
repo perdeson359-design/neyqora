@@ -899,6 +899,48 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/api/project/ci") {
+      const issueNumber = Number(url.searchParams.get("issue") || "0");
+      if (!Number.isInteger(issueNumber) || issueNumber < 1) {
+        return Response.json({ ok: false, error: "issue parametresi gerekli." }, { status: 400 });
+      }
+      try {
+        const response = await fetch(
+          "https://api.github.com/repos/perdeson359-design/neyqora/issues/" + issueNumber + "/comments",
+          { headers: { "accept": "application/vnd.github+json", "user-agent": "NEYQORA" } }
+        );
+        if (!response.ok) {
+          return Response.json({ ok: false, status: "pending", tested: false, error: "GitHub CI sonucu henüz okunamadı." }, { status: 502 });
+        }
+        const comments = await response.json();
+        const marker = comments
+          .slice()
+          .reverse()
+          .map(item => String(item?.body || ""))
+          .find(body => body.includes("NEYQORA_CI_RESULT"));
+        if (!marker) {
+          return Response.json({ ok: true, status: "pending", tested: false, issue: issueNumber });
+        }
+        const match = marker.match(/NEYQORA_CI_RESULT\s+({[^\n]+\})/);
+        if (!match) {
+          return Response.json({ ok: true, status: "pending", tested: false, issue: issueNumber });
+        }
+        const result = JSON.parse(match[1]);
+        return Response.json({
+          ok: true,
+          status: result.status === "passed" ? "passed" : "failed",
+          tested: true,
+          issue: issueNumber,
+          runId: result.run_id || null,
+          sha: result.sha || null,
+          firstTest: result.first_test || null,
+          finalGate: result.final_gate || null
+        });
+      } catch (error) {
+        return Response.json({ ok: false, status: "pending", tested: false, error: error?.message || "CI sonucu okunamadı." }, { status: 502 });
+      }
+    }
+
     if (request.method === "POST" && url.pathname === "/api/project") {
       try {
         const body = await request.json();
