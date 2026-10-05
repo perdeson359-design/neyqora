@@ -6,7 +6,10 @@ for (const name of ["routeMessage","isProjectRequest","sanitizeProjectName","val
   assert.match(source, new RegExp("function " + name + "\\s*\\("), "missing function: " + name);
 }
 assert.match(source, /export const __test = \{/);
-assert.match(source, /generate_project/);\nassert.match(source, /package_generated_project/);\nassert.match(source, /codingResult\\?\\.code/);\nassert.match(source, /main\\.py/);
+assert.match(source, /generate_project/);
+assert.match(source, /package_generated_project/);
+assert.match(source, /codingResult\\?\\.code/);
+assert.match(source, /main\\.py/);
 assert.match(source, /search_web/);
 assert.match(source, /get_current_weather/);
 assert.match(source, /generate_or_repair_code/);
@@ -17,7 +20,8 @@ assert.match(source, /temperature: 0\.1/);
 assert.match(source, /120000/);
 assert.match(source, /retry/);
 
-assert.match(source, /\/api\/health/);\nassert.match(source, /version:\s*"4\\.3"/);
+assert.match(source, /\/api\/health/);
+assert.match(source, /version:\s*"4\\.3"/);
 assert.match(source, /\/api\/chat/);
 assert.match(source, /\/api\/project/);
 assert.match(source, /\/api\/project\/ci/);
