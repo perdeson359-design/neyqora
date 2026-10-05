@@ -59,7 +59,7 @@ function isNameQuestion(message) {
 
 function isProjectRequest(message) {
   const t = String(message || "").toLocaleLowerCase("tr-TR");
-  return /\\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\\b/.test(t);
+  return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
 }
 
 function routeMessage(message) {
