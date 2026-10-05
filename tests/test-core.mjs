@@ -16,4 +16,13 @@ assert.match(source, /basicPythonValidation\(code\)/);
 assert.match(source, /temperature: 0\.1/);
 assert.match(source, /120000/);
 assert.match(source, /retry/);
+
+assert.match(source, /\/api\/health/);
+assert.match(source, /\/api\/chat/);
+assert.match(source, /\/api\/project/);
+assert.match(source, /\/api\/search/);
+assert.match(source, /Response\.json\(\{ ok: true/);
+assert.match(source, /memory:!!env\.DB/);
+assert.match(source, /toolResults: agentResults/);
+assert.match(source, /agentStatus/);
 console.log("NEYQORA core contract tests: PASS");
