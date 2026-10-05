@@ -593,8 +593,10 @@ export default {
 
         let researchText = "";
         if (intent === "weather") {
-          const weatherMatch = message.match(/(?:hava(?: durumu)?|sıcaklık|yağmur|meteoroloji)(?:\s+)(?:[a-zçğıöşü]+\s+)?(?:için|nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)?/i);
-          const city = weatherMatch?.[1] || "";
+          const weatherMatch =
+            message.match(/\b([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(?:hava(?: durumu)?|sıcaklık|yağmur)\b/i) ||
+            message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
+          const city = weatherMatch?.[1] || "Ankara";
           try {
             const weather = await getWeather(city);
             if (!weather.ok) {
