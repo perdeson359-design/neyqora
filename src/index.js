@@ -75,12 +75,45 @@ function isProjectRequest(message) {
 }
 
 function routeMessage(message) {
-  const t = message.toLocaleLowerCase("tr-TR");
-  if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
-  if (/\d/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl/.test(t)) return "calculator";
-  if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu")) return "weather";
+  const t = String(message || "").toLocaleLowerCase("tr-TR").trim();
+
   if (isProjectRequest(message)) return "project";
-  if (t.includes("kod") || t.includes("javascript") || t.includes("python") || t.includes("bug") || t.includes("hata veriyor") || t.includes("program")) return "coding";
+
+  const webSignals = [
+    /^https?:\/\//i.test(t),
+    t.includes("internetten"),
+    t.includes("web'den"),
+    t.includes("webden"),
+    t.includes("araştır"),
+    t.includes("güncel"),
+    t.includes("son durum"),
+    t.includes("haber"),
+    t.includes("kaynak bul"),
+    t.includes("link bul")
+  ];
+  if (webSignals.some(Boolean)) return "web_search";
+
+  const calculatorSignals = [
+    /\d/.test(t),
+    /kaç eder|hesapla|hesap|topla|çıkar|çarp|böl|\b\d+\s*[+\-*/^%]\s*\d+\b/.test(t)
+  ];
+  if (calculatorSignals.every(Boolean)) return "calculator";
+
+  if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu") || t.includes("meteoroloji")) {
+    return "weather";
+  }
+
+  if (
+    t.includes("kod") ||
+    t.includes("javascript") ||
+    t.includes("python") ||
+    t.includes("typescript") ||
+    t.includes("bug") ||
+    t.includes("hata veriyor") ||
+    t.includes("hata ayıkla") ||
+    t.includes("debug")
+  ) return "coding";
+
   return "chat";
 }
 
