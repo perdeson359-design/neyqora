@@ -223,6 +223,19 @@ function shouldFallbackToChat(intent, results) {
   return !results.some(result => result && result.ok);
 }
 
+function summarizeAgentStatus(plan, results) {
+  const successful = results.filter(result => result?.ok).length;
+  const failed = results.filter(result => result && !result.ok).length;
+  const retries = results.filter(result => result?.retry).length;
+  return {
+    intent: plan.intent,
+    status: successful > 0 ? (failed > 0 ? "partial" : "success") : "failed",
+    successful,
+    failed,
+    retries
+  };
+}
+
 function validateAgentPlan(plan) {
   const allowed = new Set(["project", "web", "weather", "calculator", "coding", "chat"]);
   const limits = { project: 1, web: 1, weather: 1, calculator: 1, coding: 1, chat: 1 };
@@ -692,6 +705,7 @@ export default {
         const agentAudit = buildAgentAudit(agentPlan, agentResults);
         const needsChatFallback = shouldFallbackToChat(intent, agentResults);
         const agentTrace = buildAgentTrace(agentPlan, agentResults);
+        const agentStatus = summarizeAgentStatus(agentPlan, agentResults);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -710,8 +724,11 @@ export default {
         }
 
         if (intent === "calculator") {
-          const value = safeCalculate(message);
-          if (value !== null) return Response.json({ reply: "Sonuç: " + value, intent });
+          const result = agentResults.find(item => item.tool === "calculator");
+          const value = result?.value;
+          if (result?.ok && value !== null) {
+            return Response.json({ reply: "Sonuç: " + value, intent, plan: agentPlan, toolResults: agentResults, audit: agentAudit, trace: agentTrace, agentStatus });
+          }
         }
 
         let memories = [];
@@ -868,6 +885,7 @@ export default {
           toolResults: agentResults,
           audit: agentAudit,
           trace: agentTrace,
+          agentStatus,
           memorySaved: !!(env.DB && shouldRemember(message))
         });
       } catch (error) {
