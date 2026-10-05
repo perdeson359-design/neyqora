@@ -164,6 +164,33 @@ function sanitizeProjectFiles(files) {
   return safe;
 }
 
+function validateGeneratedProject(files) {
+  const errors = [];
+  if (!Array.isArray(files) || files.length === 0) return { ok: false, errors: ["Dosya listesi boş."] };
+
+  const names = new Set(files.map(file => file.path));
+  const pythonFiles = files.filter(file => /\.py$/i.test(file.path));
+
+  for (const file of pythonFiles) {
+    const code = file.content;
+    if (/\beval\s*\(/.test(code) || /\bexec\s*\(/.test(code)) {
+      errors.push(file.path + ": eval/exec kullanımı yasak.");
+    }
+    if (/[A-Za-z_][A-Za-z0-9_]*[ÇĞİÖŞÜçğıöşü]/.test(code)) {
+      errors.push(file.path + ": Python tanımlayıcılarında Türkçe karakter var.");
+    }
+    const opens = (code.match(/[([{]/g) || []).length;
+    const closes = (code.match(/[)\\]}]/g) || []).length;
+    if (opens !== closes) errors.push(file.path + ": parantez/braket dengesi hatalı.");
+  }
+
+  const hasMain = files.some(file => /^(main|app|index)\.(py|js|ts|html)$/i.test(file.path.split("/").pop() || ""));
+  if (!hasMain) errors.push("Ana giriş dosyası bulunamadı.");
+
+  const hasTest = files.some(file => /^test_.*\.py$/i.test(file.path.split("/").pop() || ""));
+  return { ok: errors.length === 0, errors, hasTest, fileCount: files.length, names: [...names] };
+}
+
 async function generateProjectFiles(env, request) {
   const result = await env.AI.run(MODEL, {
     messages: [
@@ -176,7 +203,15 @@ async function generateProjectFiles(env, request) {
   const raw = result?.response || result?.choices?.[0]?.message?.content || "";
   const match = raw.match(/\{[\s\S]*\}/);
   if (!match) return null;
-  try { return sanitizeProjectFiles(JSON.parse(match[0]).files); } catch { return null; }
+  try {
+    const files = sanitizeProjectFiles(JSON.parse(match[0]).files);
+    if (!files) return null;
+    const validation = validateGeneratedProject(files);
+    if (!validation.ok) return null;
+    return files;
+  } catch {
+    return null;
+  }
 }
 function extractPythonCode(text) {
   const match = text.match(/\`\`\`python\s*([\\s\\S]*?)\`\`\`/i) || text.match(/\`\`\`\s*([\\s\\S]*?)\`\`\`/);
