@@ -988,19 +988,24 @@ export default {
 
         if (intent === "coding") {
           const result = agentResults.find(item => item.tool === "coding");
-          if (!result?.ok || !result.reply) {
+          if (!result?.reply) {
             return Response.json({
-              reply: "Kod üretimi doğrulanamadı. Lütfen isteği biraz daha açık tarif et.",
+              reply: "Kod üretimi sırasında sunucu hatası oluştu. Lütfen tekrar dene.",
               intent,
               plan: agentPlan,
               toolResults: agentResults,
               audit: agentAudit,
               trace: agentTrace,
               agentStatus
-            }, { status: 502 });
+            }, { status: 500 });
           }
+
+          const codingReply = result.validation?.ok
+            ? result.reply
+            : result.reply + "\n\n[NEYQORA notu: Kod otomatik doğrulamadan tam geçmedi; çalıştırmadan önce kontrol et.]";
+
           return Response.json({
-            reply: result.reply,
+            reply: codingReply,
             intent,
             code: result.code || "",
             validation: result.validation || null,
