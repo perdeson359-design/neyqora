@@ -986,6 +986,32 @@ export default {
             history.map(item => (item.role === "user" ? "Kullanıcı: " : "NEYQORA: ") + item.content).join("\n")
           : "";
 
+        if (intent === "coding") {
+          const result = agentResults.find(item => item.tool === "coding");
+          if (!result?.ok || !result.reply) {
+            return Response.json({
+              reply: "Kod üretimi doğrulanamadı. Lütfen isteği biraz daha açık tarif et.",
+              intent,
+              plan: agentPlan,
+              toolResults: agentResults,
+              audit: agentAudit,
+              trace: agentTrace,
+              agentStatus
+            }, { status: 502 });
+          }
+          return Response.json({
+            reply: result.reply,
+            intent,
+            code: result.code || "",
+            validation: result.validation || null,
+            plan: agentPlan,
+            toolResults: agentResults,
+            audit: agentAudit,
+            trace: agentTrace,
+            agentStatus
+          });
+        }
+
         if (intent === "project") {
           const result = agentResults.find(item => item.tool === "project");
           const files = result?.files || [];
