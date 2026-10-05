@@ -339,10 +339,19 @@ async function executeAgentPlan(env, plan, message) {
 }
 
 function buildAgentPlan(message) {
+  const text = String(message || "").toLocaleLowerCase("tr-TR");
   const intent = routeMessage(message);
   const steps = [];
 
-  if (intent === "project") {
+  const wantsProject = isProjectRequest(message);
+  const wantsCodeAndProject = wantsProject && /kod|python|javascript|uygulama|program/.test(text);
+  const wantsCodeTests = /test(lerini|leri)?|doğrula|kontrol et/.test(text);
+
+  if (wantsCodeAndProject) {
+    steps.push({ tool: "coding", action: "generate_or_repair_code" });
+    if (wantsCodeTests) steps.push({ tool: "project", action: "package_generated_project" });
+    else steps.push({ tool: "project", action: "generate_project" });
+  } else if (intent === "project") {
     steps.push({ tool: "project", action: "generate_project" });
   } else if (intent === "web_search") {
     steps.push({ tool: "web", action: "search_web" });
@@ -358,7 +367,7 @@ function buildAgentPlan(message) {
 
   return {
     intent,
-    steps,
+    steps: steps.slice(0, 3),
     maxSteps: Math.min(3, Math.max(1, steps.length)),
     requiresTool: intent !== "chat"
   };
