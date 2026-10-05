@@ -39,8 +39,14 @@ jobs:
           echo "NEYQORA project HTTP status: $code"
           cat /tmp/project-response.json
           if [ "$code" != "200" ]; then
-            echo "Direct /api/project başarısız; aynı isteği /api/chat üzerinden deniyorum."
-            code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/project-request.json "$NEYQORA_URL/api/chat")
+            echo "Direct /api/project başarısız; /api/chat fallback deneniyor."
+            python - <<'PY'
+            import json
+            data=json.load(open("/tmp/project-request.json",encoding="utf-8"))
+            data={"message": data["request"], "userId": "github-actions", "history": []}
+            json.dump(data,open("/tmp/chat-request.json","w",encoding="utf-8"),ensure_ascii=False)
+            PY
+            code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/chat-request.json "$NEYQORA_URL/api/chat")
             echo "NEYQORA chat HTTP status: $code"
             cat /tmp/chat-response.json
             [ "$code" = "200" ]
