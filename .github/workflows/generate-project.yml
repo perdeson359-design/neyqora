@@ -1,0 +1,77 @@
+name: Generate Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      request:
+        description: "Describe the project to generate"
+        required: true
+        type: string
+
+jobs:
+  generate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Generate project from NEYQORA
+        env:
+          NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
+          PROJECT_REQUEST: ${{ inputs.request }}
+        run: |
+          set -e
+          mkdir -p requests/generated
+
+          python - <<'PY'
+          import json
+          import os
+          from urllib.request import Request, urlopen
+
+          url = os.environ["NEYQORA_URL"] + "/api/project"
+          body = json.dumps({"request": os.environ["PROJECT_REQUEST"]}).encode()
+          req = Request(url, data=body, headers={"content-type": "application/json"}, method="POST")
+
+          with urlopen(req, timeout=120) as response:
+              data = json.load(response)
+
+          if not data.get("ok"):
+              raise SystemExit("NEYQORA project generation failed: " + str(data))
+
+          with open("/tmp/project.json", "w", encoding="utf-8") as f:
+              json.dump(data, f, ensure_ascii=False)
+          PY
+
+          python - <<'PY'
+          import json
+          import os
+          import pathlib
+
+          data = json.load(open("/tmp/project.json", encoding="utf-8"))
+          request = os.environ["PROJECT_REQUEST"]
+          safe_name = "".join(c.lower() if c.isalnum() else "-" for c in request).strip("-")[:40] or "project"
+          root = pathlib.Path("projects") / safe_name
+          root.mkdir(parents=True, exist_ok=True)
+
+          for item in data["files"]:
+              path = pathlib.Path(item["path"])
+              if path.is_absolute() or ".." in path.parts:
+                  raise SystemExit("Unsafe generated path: " + str(path))
+              target = root / path
+              target.parent.mkdir(parents=True, exist_ok=True)
+              target.write_text(item["content"], encoding="utf-8")
+
+          print("Generated project:", root)
+          PY
+
+      - name: Commit generated project
+        run: |
+          git config user.name "NEYQORA"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add projects/
+          git diff --cached --quiet && echo "No changes to commit." && exit 0
+          git commit -m "Generate project with NEYQORA"
+          git push
