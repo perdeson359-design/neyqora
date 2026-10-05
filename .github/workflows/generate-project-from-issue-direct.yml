@@ -1,0 +1,131 @@
+name: Generate Project From Issue Direct
+
+on:
+  issues:
+    types: [opened]
+
+jobs:
+  generate:
+    if: ${{ github.actor == 'perdeson359-design' }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      issues: write
+    env:
+      NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
+      PROJECT_REQUEST: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      - name: Generate project
+        shell: bash
+        run: |
+          set -e
+          python - <<'PY'
+          import json, os
+          from urllib.request import Request, urlopen
+          body = json.dumps({"request": os.environ["PROJECT_REQUEST"]}).encode()
+          req = Request(os.environ["NEYQORA_URL"] + "/api/project", data=body, headers={"content-type":"application/json"}, method="POST")
+          with urlopen(req, timeout=120) as response:
+              data = json.load(response)
+          if not data.get("ok"):
+              raise SystemExit("NEYQORA project generation failed: " + str(data))
+          json.dump(data, open("/tmp/project.json","w",encoding="utf-8"), ensure_ascii=False)
+          PY
+          python - <<'PY'
+          import json, os, pathlib
+          data=json.load(open("/tmp/project.json",encoding="utf-8"))
+          name="".join(c.lower() if c.isalnum() else "-" for c in os.environ["PROJECT_REQUEST"]).strip("-")[:40] or "project"
+          root=pathlib.Path("projects")/name
+          root.mkdir(parents=True,exist_ok=True)
+          for item in data["files"]:
+              p=pathlib.Path(item["path"])
+              if p.is_absolute() or ".." in p.parts or "\" in str(p):
+                  raise SystemExit("Unsafe generated path: "+str(p))
+              target=root/p
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_text(item["content"],encoding="utf-8")
+          PY
+      - name: First test
+        id: first
+        continue-on-error: true
+        run: |
+          set -e
+          files=$(find projects -type f -name 'test_*.py' | sort)
+          [ -n "$files" ] || exit 1
+          while IFS= read -r f; do timeout 30s python "$f"; done <<< "$files"
+      - name: Repair
+        if: steps.first.outcome == 'failure'
+        run: |
+          set -e
+          python - <<'PY'
+          import json, os, pathlib
+          from urllib.request import Request, urlopen
+          log=""
+          p=pathlib.Path("/tmp/test-output.txt")
+          if p.exists(): log=p.read_text(encoding="utf-8",errors="replace")[-12000:]
+          reqtext=os.environ["PROJECT_REQUEST"]+"\n\nTestleri düzelt. Gerçek hata çıktısı:\n"+log
+          body=json.dumps({"request":reqtext}).encode()
+          req=Request(os.environ["NEYQORA_URL"]+"/api/project",data=body,headers={"content-type":"application/json"},method="POST")
+          with urlopen(req,timeout=120) as response: data=json.load(response)
+          if not data.get("ok"): raise SystemExit("Repair failed")
+          name="".join(c.lower() if c.isalnum() else "-" for c in os.environ["PROJECT_REQUEST"]).strip("-")[:40] or "project"
+          root=pathlib.Path("projects")/name
+          for item in data["files"]:
+              p=pathlib.Path(item["path"])
+              if p.is_absolute() or ".." in p.parts or "\" in str(p): raise SystemExit("Unsafe path")
+              target=root/p
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_text(item["content"],encoding="utf-8")
+          PY
+      - name: Final test
+        id: final
+        continue-on-error: true
+        run: |
+          set -e
+          files=$(find projects -type f -name 'test_*.py' | sort)
+          [ -n "$files" ] || exit 1
+          while IFS= read -r f; do timeout 30s python "$f"; done <<< "$files"
+      - name: Syntax
+        id: syntax
+        continue-on-error: true
+        run: |
+          set -e
+          files=$(find projects -type f -name '*.py' | sort)
+          while IFS= read -r f; do timeout 30s python -m py_compile "$f"; done <<< "$files"
+      - name: Safety
+        id: safety
+        continue-on-error: true
+        run: |
+          set -e
+          ! grep -R -nE '\b(eval|exec)[[:space:]]*\(' projects --include='*.py'
+      - name: Publish result
+        if: always()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          FIRST: ${{ steps.first.outcome }}
+          FINAL: ${{ steps.final.outcome }}
+          SYNTAX: ${{ steps.syntax.outcome }}
+          SAFETY: ${{ steps.safety.outcome }}
+        run: |
+          if [ "$FINAL" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then STATUS="passed"; else STATUS="failed"; fi
+          cat > /tmp/ci.md <<EOF
+          <!-- NEYQORA_CI_RESULT {"status":"$STATUS","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"$FIRST","final_gate":"$FINAL"} -->
+          NEYQORA CI sonucu: **$STATUS**
+          - Run: ${{ github.run_id }}
+          - İlk test: $FIRST
+          - Final test: $FINAL
+          - Sözdizimi: $SYNTAX
+          - Güvenlik: $SAFETY
+          EOF
+          gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
+      - name: Commit successful project
+        if: steps.final.outcome == 'success' && steps.syntax.outcome == 'success' && steps.safety.outcome == 'success'
+        run: |
+          git config user.name "NEYQORA"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add projects/
+          git diff --cached --quiet && exit 0
+          git commit -m "Generate and test project from issue"
+          git push
