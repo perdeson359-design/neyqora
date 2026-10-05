@@ -80,7 +80,7 @@ async function webSearch(query) {
     const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" } });
     if (!response.ok) throw new Error("Sayfa açılamadı.");
     const html = await response.text();
-    const title = (html.match(/<title[^>]*>([\\s\\S]*?)<\\/title>/i)?.[1] || clean)
+    const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || clean)
       .replace(/<[^>]+>/g, " ").replace(/\\s+/g, " ").trim();
     return [{ title, link: clean }];
   }
@@ -95,15 +95,15 @@ async function webSearch(query) {
 
   const xml = await response.text();
   const results = [];
-  const itemRe = /<item>([\\s\\S]*?)<\\/item>/gi;
+  const itemRe = /<item>([\s\S]*?)<\/item>/gi;
   let item;
 
   while ((item = itemRe.exec(xml)) && results.length < 6) {
     const block = item[1];
     const title = decodeHtml((block.match(/<title>([\\s\\S]*?)<\\/title>/i)?.[1] || "")
       .replace(/<!\\[CDATA\\[|\\]\\]>/g, "").trim());
-    const link = decodeHtml((block.match(/<link>([\\s\\S]*?)<\\/link>/i)?.[1] || "").trim());
-    const pubDate = decodeHtml((block.match(/<pubDate>([\\s\\S]*?)<\\/pubDate>/i)?.[1] || "").trim());
+    const link = decodeHtml((block.match(/<link>([\s\S]*?)<\\/link>/i)?.[1] || "").trim());
+    const pubDate = decodeHtml((block.match(/<pubDate>([\s\S]*?)<\\/pubDate>/i)?.[1] || "").trim());
 
     if (title && link) results.push({ title, link, pubDate });
   }
