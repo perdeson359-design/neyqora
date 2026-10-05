@@ -314,6 +314,68 @@ function decodeHtml(s) {
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 }
 
+async function getWeather(city) {
+  const place = String(city || "").trim();
+  if (!place) return { ok: false, error: "Hava durumu için şehir adı gerekli." };
+
+  const geoUrl = "https://geocoding-api.open-meteo.com/v1/search?name=" +
+    encodeURIComponent(place) + "&count=1&language=tr&format=json";
+  const geoResponse = await fetch(geoUrl, { headers: { "user-agent": "NEYQORA/1.0" } });
+  if (!geoResponse.ok) throw new Error("Şehir aranamadı.");
+  const geo = await geoResponse.json();
+  const location = geo?.results?.[0];
+  if (!location) return { ok: false, error: "Şehir bulunamadı." };
+
+  const weatherUrl = "https://api.open-meteo.com/v1/forecast?latitude=" +
+    encodeURIComponent(location.latitude) +
+    "&longitude=" + encodeURIComponent(location.longitude) +
+    "&current=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,weather_code,wind_speed_10m" +
+    "&timezone=auto";
+  const weatherResponse = await fetch(weatherUrl, { headers: { "user-agent": "NEYQORA/1.0" } });
+  if (!weatherResponse.ok) throw new Error("Hava verisi alınamadı.");
+  const weather = await weatherResponse.json();
+  const current = weather?.current;
+  if (!current) return { ok: false, error: "Hava verisi bulunamadı." };
+
+  const descriptions = {
+    0: "Açık",
+    1: "Çoğunlukla açık",
+    2: "Parçalı bulutlu",
+    3: "Kapalı",
+    45: "Sisli",
+    48: "Kırağılı sis",
+    51: "Hafif çiseleme",
+    53: "Çiseleme",
+    55: "Yoğun çiseleme",
+    61: "Hafif yağmur",
+    63: "Yağmur",
+    65: "Kuvvetli yağmur",
+    71: "Hafif kar",
+    73: "Kar",
+    75: "Yoğun kar",
+    80: "Hafif sağanak",
+    81: "Sağanak",
+    82: "Kuvvetli sağanak",
+    95: "Gök gürültülü fırtına",
+    96: "Dolu ihtimalli fırtına",
+    99: "Kuvvetli dolu ihtimalli fırtına"
+  };
+
+  return {
+    ok: true,
+    city: location.name,
+    country: location.country,
+    temperature: current.temperature_2m,
+    apparentTemperature: current.apparent_temperature,
+    humidity: current.relative_humidity_2m,
+    precipitation: current.precipitation,
+    windSpeed: current.wind_speed_10m,
+    description: descriptions[current.weather_code] || "Bilinmeyen hava durumu",
+    time: current.time,
+    timezone: weather.timezone
+  };
+}
+
 async function webSearch(query) {
   const clean = query.trim();
   const searchQuery = clean
@@ -531,7 +593,28 @@ export default {
 
         let researchText = "";
         if (intent === "weather") {
-          researchText = "\n\nKullanıcı hava durumu soruyor. Güncel veri sağlayan bir hava aracı henüz bağlı değil; güncel sıcaklık veya tahmin uydurma.";
+          const weatherMatch = message.match(/(?:hava(?: durumu)?|sıcaklık|yağmur|meteoroloji)(?:\s+)(?:[a-zçğıöşü]+\s+)?(?:için|nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)?/i);
+          const city = weatherMatch?.[1] || "";
+          try {
+            const weather = await getWeather(city);
+            if (!weather.ok) {
+              return Response.json({ reply: weather.error, intent: "weather" });
+            }
+            researchText = "\n\nGüncel hava verisi: " +
+              weather.city + ", " + weather.country +
+              " | " + weather.description +
+              " | sıcaklık " + weather.temperature + "°C" +
+              " | hissedilen " + weather.apparentTemperature + "°C" +
+              " | nem " + weather.humidity + "%" +
+              " | rüzgar " + weather.windSpeed + " km/sa" +
+              " | yağış " + weather.precipitation + " mm" +
+              " | veri zamanı " + weather.time + " (" + weather.timezone + ").";
+          } catch (error) {
+            return Response.json({
+              reply: "Güncel hava verisi alınamadı: " + (error?.message || "Bilinmeyen hata"),
+              intent: "weather"
+            }, { status: 502 });
+          }
         }
 
         const codingInstructions = intent === "coding" ? " KODLAMA GÖREVİ. Sadece kullanıcının istediği programı üret. Hesap makinesi istenirse yalnızca toplama, çıkarma, çarpma ve bölme özelliklerini ekle; başka özellik ekleme. Geçerli Python 3.10+ sözdizimi kullan. eval kullanma. Fonksiyon ve değişken adlarında Türkçe karakter kullanma; yalnızca ASCII İngilizce adlar kullan. Python kodunu göndermeden önce zihinsel bir derleme kontrolü yap: tüm çağrılan metotlar tanımlı mı, parantez ve girintiler doğru mu, menü seçenekleri ile dallar eşleşiyor mu, değişkenler tanımlı mı, program akışı tamam mı. Özellikle çıkarma için subtraction, çarpma için multiplication, bölme için division gibi tutarlı adlar kullan; outirma gibi uydurma isimler ASLA kullanma. Tanımsız fonksiyon, yanlış menü seçeneği, alakasız işlem, sahte test veya uydurma özellik bırakma. Kod bloğunu eksiksiz kapat. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz kod bloğu, 3) 4 temel işlem için kısa testler. Kod çalıştırmadıysan çalıştırmış gibi davranma." : "";
