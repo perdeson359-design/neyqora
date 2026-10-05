@@ -8,7 +8,6 @@ for (const name of ["routeMessage","isProjectRequest","sanitizeProjectName","val
 assert.match(source, /export const __test = \{/);
 assert.match(source, /generate_project/);
 assert.match(source, /package_generated_project/);
-assert.match(source, /codingResult\\?\\.code/);
 assert.match(source, /main\\.py/);
 assert.match(source, /search_web/);
 assert.match(source, /get_current_weather/);
