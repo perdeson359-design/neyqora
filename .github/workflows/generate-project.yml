@@ -87,12 +87,26 @@ $ISSUE_BODY"
           test_files=$(find projects -type f -name 'test_*.py' | sort)
           if [ -z "$test_files" ]; then
             echo "No Python tests were generated."
+          else
+            while IFS= read -r test_file; do
+              echo "Testing $test_file"
+              python "$test_file"
+            done <<< "$test_files"
+          fi
+
+      - name: Validate generated Python syntax
+        shell: bash
+        run: |
+          set -e
+          python_files=$(find projects -type f -name '*.py' | sort)
+          if [ -z "$python_files" ]; then
+            echo "No Python files found."
             exit 0
           fi
-          while IFS= read -r test_file; do
-            echo "Testing $test_file"
-            python "$test_file"
-          done <<< "$test_files"
+          while IFS= read -r python_file; do
+            echo "Compiling $python_file"
+            python -m py_compile "$python_file"
+          done <<< "$python_files"
 
       - name: Commit generated project
         run: |
