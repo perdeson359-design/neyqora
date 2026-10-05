@@ -43,8 +43,9 @@ assert.match(source, /eval|exec/);
 assert.match(source, /max 8 files|En fazla 8 dosya/);
 assert.match(source, /path\.startsWith\("\/"\)|path\.includes\("\\\\"\)|unsafe/i);
 
-assert.match(source, /if \(intent === "coding"\) \{[\s\S]*?result = agentResults\.find\(item => item\.tool === "coding"\)/);
-assert.match(source, /validation: result\.validation \|\| null/);
-assert.match(source, /reply: result\.reply/);
+assert.match(source, /if \(intent === "coding"\) \{/);
+assert.match(source, /codingReply = result\?\.reply/);
+assert.match(source, /codingValidation = result\?\.validation/);
+assert.match(source, /validation: codingValidation/);
 
 console.log("NEYQORA core contract tests: PASS");
