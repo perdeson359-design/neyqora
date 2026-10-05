@@ -1,0 +1,32 @@
+name: UI Script Test
+
+on:
+  push:
+    paths:
+      - "src/index.js"
+      - ".github/workflows/test-ui.yml"
+  pull_request:
+    paths:
+      - "src/index.js"
+      - ".github/workflows/test-ui.yml"
+
+jobs:
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Check worker
+        run: node --check src/index.js
+      - name: Extract and check browser script
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          html=Path("src/index.js").read_text(encoding="utf-8")
+          start=html.index("<script>")+len("<script>")
+          end=html.index("</script>", start)
+          Path("/tmp/browser.js").write_text(html[start:end], encoding="utf-8")
+          PY
+          node --check /tmp/browser.js
