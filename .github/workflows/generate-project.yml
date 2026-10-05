@@ -225,6 +225,17 @@ $ISSUE_BODY"
           if-no-files-found: ignore
           retention-days: 3
 
+      - name: Validate repaired Python safety
+        if: steps.first_test.outcome == 'failure'
+        shell: bash
+        run: |
+          set -e
+          if grep -R -nE '\\b(eval|exec)[[:space:]]*\\(' projects --include='*.py'; then
+            echo "Forbidden Python execution primitive found."
+            exit 1
+          fi
+          echo "Repaired project safety check: PASS"
+
       - name: Final project gate
         shell: bash
         run: |
