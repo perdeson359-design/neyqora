@@ -18,6 +18,14 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+      - name: Check NEYQORA health from runner
+        run: |
+          set -e
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" "$NEYQORA_URL/api/health")
+          echo "NEYQORA health HTTP status: $code"
+          cat /tmp/health.json
+          [ "$code" = "200" ]
+
       - name: Generate project
         shell: bash
         run: |
