@@ -918,6 +918,11 @@ export default {
           files,
           testable: files.some(file => /^test_.*\.py$/i.test(file.path)),
           fileCount: files.length,
+          ci: {
+            status: "pending",
+            tested: false,
+            reason: "Gerçek proje testi GitHub Actions workflow'u tarafından yapılır."
+          },
           note: "NEYQORA proje dosyalarını üretti. GitHub'a yazma işlemi GitHub Actions workflow'u üzerinden yapılır."
         });
       } catch (error) {
