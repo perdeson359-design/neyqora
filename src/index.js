@@ -89,6 +89,20 @@ function formatToolResult(result) {
   return "";
 }
 
+function buildAgentAudit(plan, results) {
+  return {
+    intent: plan.intent,
+    steps: plan.steps.map((step, index) => ({
+      index: index + 1,
+      tool: step.tool,
+      action: step.action,
+      ok: !!results[index]?.ok,
+      durationMs: results[index]?.durationMs ?? null
+    })),
+    success: results.length > 0 && results.every(result => result.ok)
+  };
+}
+
 async function executeAgentPlan(env, plan, message) {
   const results = [];
   const startedAt = Date.now();
@@ -619,6 +633,7 @@ export default {
         const intent = agentPlan.intent;
         const agentResults = await executeAgentPlan(env, agentPlan, message);
         const successfulToolResults = agentResults.filter(item => item && item.ok);
+        const agentAudit = buildAgentAudit(agentPlan, agentResults);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -790,6 +805,7 @@ export default {
           intent,
           plan: agentPlan,
           toolResults: agentResults,
+          audit: agentAudit,
           memorySaved: !!(env.DB && shouldRemember(message))
         });
       } catch (error) {
