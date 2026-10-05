@@ -91,7 +91,14 @@ function formatToolResult(result) {
 
 async function executeAgentPlan(env, plan, message) {
   const results = [];
+  const startedAt = Date.now();
+
   for (const step of plan.steps) {
+    if (Date.now() - startedAt > 120000) {
+      results.push({ tool: "agent", ok: false, error: "Agent çalışma süresi sınırına ulaşıldı." });
+      break;
+    }
+
     if (step.tool === "calculator") {
       const value = safeCalculate(message);
       results.push({ tool: "calculator", ok: value !== null, value });
@@ -128,6 +135,7 @@ async function executeAgentPlan(env, plan, message) {
     }
     results.push({ tool: step.tool, ok: true, action: step.action });
   }
+
   return results;
 }
 
@@ -145,15 +153,21 @@ function buildAgentPlan(message) {
 
 function validateAgentPlan(plan) {
   const allowed = new Set(["project", "web", "weather", "calculator", "coding", "chat"]);
+  const limits = { project: 1, web: 1, weather: 1, calculator: 1, coding: 1, chat: 1 };
   if (!plan || !Array.isArray(plan.steps) || plan.steps.length === 0) {
     return { ok: false, error: "Agent planı boş." };
   }
   if (plan.steps.length > 3) {
     return { ok: false, error: "Agent planı çok uzun." };
   }
+  const counts = {};
   for (const step of plan.steps) {
     if (!step || !allowed.has(step.tool) || typeof step.action !== "string") {
       return { ok: false, error: "Geçersiz agent aracı." };
+    }
+    counts[step.tool] = (counts[step.tool] || 0) + 1;
+    if (counts[step.tool] > limits[step.tool]) {
+      return { ok: false, error: "Aynı araç gereğinden fazla çağrılmış." };
     }
   }
   return { ok: true };
