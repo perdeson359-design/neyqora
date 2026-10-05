@@ -17,7 +17,7 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </head>
 <body>
 <div class="app">
-<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4.2</p></header>
+<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4.3</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
@@ -988,9 +988,27 @@ export default {
 
         if (intent === "coding") {
           const result = agentResults.find(item => item.tool === "coding");
-          if (!result?.reply) {
+          let codingReply = result?.reply || "";
+          let codingCode = result?.code || "";
+          let codingValidation = result?.validation || null;
+
+          if (!codingReply) {
+            const fallback = await env.AI.run(MODEL, {
+              messages: [
+                { role: "system", content: "Python 3.10+ ile istenen programı üret. Yalnızca kısa açıklama ve tek eksiksiz Python kod bloğu ver. eval veya exec kullanma. Tanımlayıcılarda ASCII kullan." },
+                { role: "user", content: message }
+              ],
+              max_tokens: 2048,
+              temperature: 0.2
+            });
+            codingReply = fallback?.response || fallback?.choices?.[0]?.message?.content || "";
+            codingCode = extractPythonCode(codingReply);
+            codingValidation = basicPythonValidation(codingCode);
+          }
+
+          if (!codingReply) {
             return Response.json({
-              reply: "Kod üretimi sırasında sunucu hatası oluştu. Lütfen tekrar dene.",
+              reply: "Kod üretilemedi. Lütfen tekrar dene.",
               intent,
               plan: agentPlan,
               toolResults: agentResults,
@@ -1000,15 +1018,15 @@ export default {
             }, { status: 500 });
           }
 
-          const codingReply = result.validation?.ok
-            ? result.reply
-            : result.reply + "\n\n[NEYQORA notu: Kod otomatik doğrulamadan tam geçmedi; çalıştırmadan önce kontrol et.]";
+          const finalReply = codingValidation?.ok
+            ? codingReply
+            : codingReply + "\n\n[NEYQORA notu: Kod otomatik doğrulamadan tam geçmedi; çalıştırmadan önce kontrol et.]";
 
           return Response.json({
-            reply: codingReply,
+            reply: finalReply,
             intent,
-            code: result.code || "",
-            validation: result.validation || null,
+            code: codingCode,
+            validation: codingValidation,
             plan: agentPlan,
             toolResults: agentResults,
             audit: agentAudit,
