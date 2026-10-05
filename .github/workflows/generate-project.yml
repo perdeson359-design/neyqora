@@ -88,7 +88,7 @@ $ISSUE_BODY"
           else
             while IFS= read -r test_file; do
               echo "Testing $test_file"
-              python "$test_file"
+              timeout 30s python "$test_file"
             done <<< "$test_files"
           fi
 
@@ -103,7 +103,7 @@ $ISSUE_BODY"
           fi
           while IFS= read -r python_file; do
             echo "Compiling $python_file"
-            python -m py_compile "$python_file"
+            timeout 30s python -m py_compile "$python_file"
           done <<< "$python_files"
 
       - name: Commit generated project
