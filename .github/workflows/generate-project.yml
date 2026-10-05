@@ -13,7 +13,7 @@ on:
 jobs:
   generate:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event.issue.user.login == 'perdeson359-design' }}
+    if: ${{ github.event_name == 'workflow_dispatch' || (github.event_name == 'issues' && github.actor == 'perdeson359-design') }}
     permissions:
       contents: write
       issues: write
@@ -106,10 +106,15 @@ $ISSUE_BODY"
         if: steps.first_test.outcome == 'failure'
         env:
           NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-          PROJECT_REQUEST: ${{ github.event.inputs.request }}
+          PROJECT_REQUEST: ${{ github.event_name == 'issues' && github.event.issue.title || inputs.request }}
+          ISSUE_BODY: ${{ github.event_name == 'issues' && github.event.issue.body || '' }}
         shell: bash
         run: |
           set -e
+          if [ "${{ github.event_name }}" = "issues" ]; then
+            PROJECT_REQUEST="$PROJECT_REQUEST\n\n$ISSUE_BODY"
+            export PROJECT_REQUEST
+          fi
           python - <<'PY'
           import json, os, pathlib
           from urllib.request import Request, urlopen
@@ -144,7 +149,7 @@ $ISSUE_BODY"
 
           for item in data["files"]:
               path = pathlib.Path(item["path"])
-              if path.is_absolute() or ".." in path.parts or "\" in str(path):
+              if path.is_absolute() or ".." in path.parts or "\\" in str(path):
                   raise SystemExit("Unsafe repaired path: " + str(path))
               target = root / path
               target.parent.mkdir(parents=True, exist_ok=True)
@@ -185,15 +190,16 @@ $ISSUE_BODY"
         run: |
           set -e
           mkdir -p requests/generated
-          if [ "${{ steps.first_test.outcome }}" = "success" ]; then
+          if [ "${{ steps.final_gate.outcome }}" = "success" ]; then
             status="passed"
           else
-            status="repaired_or_failed"
+            status="failed"
           fi
           cat > requests/generated/latest-test-status.json <<EOF
           {
             "status": "$status",
             "first_test": "${{ steps.first_test.outcome }}",
+            "final_gate": "${{ steps.final_gate.outcome }}",
             "workflow": "${{ github.workflow }}",
             "run_id": "${{ github.run_id }}"
           }
@@ -210,6 +216,7 @@ $ISSUE_BODY"
           {
             "schema": "neyqora.project-test.v1",
             "first_test": "$first",
+            "final_gate": "${{ steps.final_gate.outcome }}",
             "run_id": "${{ github.run_id }}",
             "repository": "${{ github.repository }}",
             "sha": "${{ github.sha }}"
@@ -239,6 +246,7 @@ $ISSUE_BODY"
           echo "Repaired project safety check: PASS"
 
       - name: Final project gate
+        id: final_gate
         shell: bash
         run: |
           set -e
@@ -254,10 +262,11 @@ $ISSUE_BODY"
           echo "NEYQORA final project gate: PASS"
 
       - name: Commit generated project
+        if: steps.final_gate.outcome == 'success'
         run: |
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add projects/
+          git add projects/ requests/generated/
           git diff --cached --quiet && echo "No changes to commit." && exit 0
           git commit -m "Generate and test project with NEYQORA"
           git push
