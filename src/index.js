@@ -50,7 +50,7 @@ function shouldRemember(message) {
 function routeMessage(message) {
   const t = message.toLocaleLowerCase("tr-TR");
   if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
-  if (/[0-9][0-9\\s+\\-*/().,^%]*[0-9]/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl|\\d+\\s*[+\\-*/^%]/.test(t)) return "calculator";
+  if (/\\d/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl|\\d+\\s*[+\\-*/^%]/.test(t)) return "calculator";
   if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu")) return "weather";
   if (t.includes("kod") || t.includes("javascript") || t.includes("python") || t.includes("bug") || t.includes("hata veriyor") || t.includes("program")) return "coding";
   return "chat";
