@@ -16,3 +16,4 @@ jobs:
           node-version: "20"
       - run: node --check src/index.js
       - run: node tests/test-core.mjs
+      - run: node tests/test-execution-contract.mjs
