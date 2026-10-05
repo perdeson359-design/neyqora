@@ -12,5 +12,5 @@ jobs:
       issues: write
     uses: ./.github/workflows/generate-project.yml
     with:
-      request: ${{ github.event.issue.title }}
+      request: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
       issue_number: ${{ github.event.issue.number }}
