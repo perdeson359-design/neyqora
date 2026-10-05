@@ -89,6 +89,24 @@ function formatToolResult(result) {
   return "";
 }
 
+function buildAgentTrace(plan, results) {
+  return {
+    version: "1",
+    createdAt: new Date().toISOString(),
+    intent: plan.intent,
+    stepCount: plan.steps.length,
+    completedSteps: results.filter(result => result && result.ok).length,
+    failedSteps: results.filter(result => result && !result.ok).length,
+    steps: results.map((result, index) => ({
+      index: index + 1,
+      tool: result.tool,
+      ok: !!result.ok,
+      durationMs: result.durationMs ?? null,
+      error: result.ok ? null : (result.error || "Bilinmeyen araç hatası")
+    }))
+  };
+}
+
 function buildAgentAudit(plan, results) {
   return {
     intent: plan.intent,
@@ -634,6 +652,7 @@ export default {
         const agentResults = await executeAgentPlan(env, agentPlan, message);
         const successfulToolResults = agentResults.filter(item => item && item.ok);
         const agentAudit = buildAgentAudit(agentPlan, agentResults);
+        const agentTrace = buildAgentTrace(agentPlan, agentResults);
 
         if (env.DB) {
           const forget = forgetRequest(message);
@@ -806,6 +825,7 @@ export default {
           plan: agentPlan,
           toolResults: agentResults,
           audit: agentAudit,
+          trace: agentTrace,
           memorySaved: !!(env.DB && shouldRemember(message))
         });
       } catch (error) {
