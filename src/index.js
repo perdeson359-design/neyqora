@@ -191,10 +191,10 @@ export default {
           return Response.json({ reply: String(nameMemory.content).replace("Kullanıcının adı: ", "") + ".", intent: "memory" });
         }
 
-        const memoryText = memories.length
+        const memoryText = intent === "coding" ? "" : (memories.length
           ? "\n\nKullanıcı hakkında daha önce kaydedilmiş bilgiler:\n" +
             memories.reverse().map(m => "- " + m.content).join("\n")
-          : "";
+          : "");
 
         if (intent === "web_search") {
           try {
@@ -230,7 +230,7 @@ export default {
           researchText = "\n\nKullanıcı hava durumu soruyor. Güncel veri sağlayan bir hava aracı henüz bağlı değil; güncel sıcaklık veya tahmin uydurma.";
         }
 
-        const codingInstructions = intent === "coding" ? " Kodlama ajanı gibi davran. Kullanıcının istediği görevi birebir yerine getir ve kapsam dışı özellik ekleme. Örneğin hesap makinesi istenirse sadece hesap makinesi üret; favori renk, kişisel bilgi, alakasız sınıf veya özellik EKLEME. Kullanıcı özellikle istemedikçe hafızadaki kişisel bilgileri kodun içine taşıma. TAM ve çalışabilir bir çözüm üret; cevabı yarıda kesme. Önce kısa analiz, sonra eksiksiz çözüm, sonra test örneği ver. Programlama dili ve sürüm belirtilmişse ona kesin uy. Python kodunda geçerli Python sözdizimi kullan; açık ve doğru İngilizce fonksiyon/değişken isimleri tercih et. Kullanıcının yazım hatalarını kod mantığına taşıma. Kod bloğunu tamamla ve giriş/çıkış akışını eksiksiz ver. Kod çalıştırdığını iddia etme; gerçekten çalıştırmadıysan bunu açıkça belirt." : "";
+        const codingInstructions = intent === "coding" ? " KODLAMA GÖREVİ. Sadece kullanıcının istediği programı üret. Hesap makinesi istenirse yalnızca toplama, çıkarma, çarpma ve bölme özelliklerini ekle; başka özellik ekleme. Geçerli Python 3.10+ sözdizimi kullan. eval kullanma. Fonksiyon ve değişken adlarını açık ve doğru seç. Her fonksiyonun gerçekten çağrıldığından emin ol. Tanımsız fonksiyon, yanlış menü seçeneği, alakasız işlem, sahte test veya uydurma özellik bırakma. Kod bloğunu eksiksiz kapat. Cevap formatı: 1) kısa açıklama, 2) tek bir eksiksiz kod bloğu, 3) 4 temel işlem için kısa testler. Kod çalıştırmadıysan çalıştırmış gibi davranma." : "";
         const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + researchText;
 
         const result = await env.AI.run(MODEL, {
