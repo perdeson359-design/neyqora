@@ -140,7 +140,23 @@ function buildAgentPlan(message) {
   else if (intent === "calculator") steps.push({ tool: "calculator", action: "calculate" });
   else if (intent === "coding") steps.push({ tool: "coding", action: "generate_or_repair_code" });
   else steps.push({ tool: "chat", action: "answer" });
-  return { intent, steps };
+  return { intent, steps, maxSteps: Math.min(3, Math.max(1, steps.length)) };
+}
+
+function validateAgentPlan(plan) {
+  const allowed = new Set(["project", "web", "weather", "calculator", "coding", "chat"]);
+  if (!plan || !Array.isArray(plan.steps) || plan.steps.length === 0) {
+    return { ok: false, error: "Agent planı boş." };
+  }
+  if (plan.steps.length > 3) {
+    return { ok: false, error: "Agent planı çok uzun." };
+  }
+  for (const step of plan.steps) {
+    if (!step || !allowed.has(step.tool) || typeof step.action !== "string") {
+      return { ok: false, error: "Geçersiz agent aracı." };
+    }
+  }
+  return { ok: true };
 }
 
 function routeMessage(message) {
@@ -559,6 +575,10 @@ export default {
         if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
 
         const agentPlan = buildAgentPlan(message);
+        const planValidation = validateAgentPlan(agentPlan);
+        if (!planValidation.ok) {
+          return Response.json({ error: "NEYQORA agent planı doğrulanamadı." }, { status: 500 });
+        }
         const intent = agentPlan.intent;
         const agentResults = await executeAgentPlan(env, agentPlan, message);
         const successfulToolResults = agentResults.filter(item => item && item.ok);
