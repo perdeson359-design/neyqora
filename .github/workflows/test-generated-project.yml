@@ -1,0 +1,58 @@
+name: Test Generated Project
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_path:
+        description: "projects altındaki proje klasörü"
+        required: true
+        type: string
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Validate project path
+        env:
+          PROJECT_PATH: ${{ inputs.project_path }}
+        run: |
+          case "$PROJECT_PATH" in
+            projects/*) ;;
+            *) echo "Only projects/* paths are allowed."; exit 1 ;;
+          esac
+          test -d "$PROJECT_PATH"
+
+      - name: Compile Python files
+        env:
+          PROJECT_PATH: ${{ inputs.project_path }}
+        run: |
+          set -e
+          files=$(find "$PROJECT_PATH" -type f -name '*.py' | sort)
+          for file in $files; do
+            timeout 20s python -m py_compile "$file"
+          done
+
+      - name: Run Python tests
+        env:
+          PROJECT_PATH: ${{ inputs.project_path }}
+        run: |
+          set -e
+          tests=$(find "$PROJECT_PATH" -type f -name 'test_*.py' | sort)
+          if [ -z "$tests" ]; then
+            echo "No Python tests found."
+            exit 0
+          fi
+          for test in $tests; do
+            timeout 30s python "$test"
+          done
