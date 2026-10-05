@@ -156,6 +156,14 @@ function buildAgentPlan(message) {
 function validateAgentPlan(plan) {
   const allowed = new Set(["project", "web", "weather", "calculator", "coding", "chat"]);
   const limits = { project: 1, web: 1, weather: 1, calculator: 1, coding: 1, chat: 1 };
+  const allowedActions = {
+    project: new Set(["generate_project"]),
+    web: new Set(["search_web"]),
+    weather: new Set(["get_current_weather"]),
+    calculator: new Set(["calculate"]),
+    coding: new Set(["generate_or_repair_code"]),
+    chat: new Set(["answer"])
+  };
   if (!plan || !Array.isArray(plan.steps) || plan.steps.length === 0) {
     return { ok: false, error: "Agent planı boş." };
   }
@@ -166,6 +174,9 @@ function validateAgentPlan(plan) {
   for (const step of plan.steps) {
     if (!step || !allowed.has(step.tool) || typeof step.action !== "string") {
       return { ok: false, error: "Geçersiz agent aracı." };
+    }
+    if (!allowedActions[step.tool]?.has(step.action)) {
+      return { ok: false, error: "Geçersiz agent işlemi." };
     }
     counts[step.tool] = (counts[step.tool] || 0) + 1;
     if (counts[step.tool] > limits[step.tool]) {
