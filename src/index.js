@@ -372,15 +372,86 @@ function routeMessage(message) {
 }
 
 function safeCalculate(message) {
-  const match = message.replace(/,/g, ".").match(/[0-9()+\-*/.^%\s]+/);
+  const match = String(message || "").replace(/,/g, ".").match(/[0-9()+\-*/.^%\s]+/);
   if (!match) return null;
   const expr = match[0].trim();
   if (!expr || !/^[0-9()+\-*/.^%\s]+$/.test(expr) || expr.length > 100) return null;
-  try {
-    const jsExpr = expr.replace(/\^/g, "**");
-    const value = Function('"use strict"; return (' + jsExpr + ')')();
-    return Number.isFinite(value) ? String(value) : null;
-  } catch { return null; }
+
+  const tokens = expr.match(/\d+(?:\.\d+)?|[()+\-*/^%]/g);
+  if (!tokens || tokens.join("") !== expr.replace(/\s+/g, "")) return null;
+
+  const precedence = { "+": 1, "-": 1, "*": 2, "/": 2, "%": 2, "^": 3 };
+  const rightAssociative = new Set(["^"]);
+  const values = [];
+  const operators = [];
+
+  const apply = () => {
+    const op = operators.pop();
+    if (!op || op === "(") return false;
+    const b = values.pop();
+    const a = values.pop();
+    if (a === undefined || b === undefined) return false;
+    let value;
+    if (op === "+") value = a + b;
+    else if (op === "-") value = a - b;
+    else if (op === "*") value = a * b;
+    else if (op === "/") {
+      if (b === 0) return false;
+      value = a / b;
+    } else if (op === "%") {
+      if (b === 0) return false;
+      value = a % b;
+    } else if (op === "^") value = a ** b;
+    else return false;
+    if (!Number.isFinite(value)) return false;
+    values.push(value);
+    return true;
+  };
+
+  let expectValue = true;
+  for (const token of tokens) {
+    if (/^\d/.test(token)) {
+      if (!expectValue) return null;
+      values.push(Number(token));
+      expectValue = false;
+      continue;
+    }
+    if (token === "(") {
+      if (!expectValue) return null;
+      operators.push(token);
+      continue;
+    }
+    if (token === ")") {
+      if (expectValue) return null;
+      while (operators.length && operators.at(-1) !== "(") {
+        if (!apply()) return null;
+      }
+      if (operators.pop() !== "(") return null;
+      expectValue = false;
+      continue;
+    }
+    if (expectValue && token === "-") {
+      values.push(0);
+    } else if (expectValue) {
+      return null;
+    }
+    while (operators.length && operators.at(-1) !== "(") {
+      const top = operators.at(-1);
+      const leftPrecedence = precedence[token];
+      const rightPrecedence = precedence[top];
+      if (rightPrecedence > leftPrecedence || (rightPrecedence === leftPrecedence && !rightAssociative.has(token))) {
+        if (!apply()) return null;
+      } else break;
+    }
+    operators.push(token);
+    expectValue = true;
+  }
+
+  if (expectValue) return null;
+  while (operators.length) {
+    if (operators.at(-1) === "(" || !apply()) return null;
+  }
+  return values.length === 1 && Number.isFinite(values[0]) ? String(values[0]) : null;
 }
 
 function buildProjectFiles(request) {
