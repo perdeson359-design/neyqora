@@ -36,9 +36,19 @@ jobs:
           import json, os
           from urllib.request import Request, urlopen
           body = json.dumps({"request": os.environ["PROJECT_REQUEST"]}).encode()
-          req = Request(os.environ["NEYQORA_URL"] + "/api/project", data=body, headers={"content-type":"text/plain","user-agent":"Mozilla/5.0 (NEYQORA GitHub Actions)","origin":"https://neyqora.kosseofficial.workers.dev"}, method="POST")
-          with urlopen(req, timeout=120) as response:
-              data = json.load(response)
+          req = Request(os.environ["NEYQORA_URL"] + "/api/project", data=body, headers={"content-type":"application/json","accept":"application/json","user-agent":"Mozilla/5.0 (NEYQORA GitHub Actions)","origin":"https://neyqora.kosseofficial.workers.dev"}, method="POST")
+          try:
+              with urlopen(req, timeout=120) as response:
+                  raw = response.read().decode("utf-8", errors="replace")
+                  print("NEYQORA project HTTP status:", response.status)
+                  print("NEYQORA project response:", raw)
+                  data = json.loads(raw)
+          except Exception as exc:
+              print("NEYQORA project request error:", repr(exc))
+              if hasattr(exc, "read"):
+                  raw = exc.read().decode("utf-8", errors="replace")
+                  print("NEYQORA project error body:", raw)
+              raise
           if not data.get("ok"):
               raise SystemExit("NEYQORA project generation failed: " + str(data))
           json.dump(data, open("/tmp/project.json","w",encoding="utf-8"), ensure_ascii=False)
