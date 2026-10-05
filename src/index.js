@@ -121,6 +121,45 @@ function buildAgentAudit(plan, results) {
   };
 }
 
+function isRetryableTool(tool, result) {
+  if (result?.ok) return false;
+  return tool === "web" || tool === "weather";
+}
+
+async function executeToolStep(env, step, message) {
+  if (step.tool === "calculator") {
+    const value = safeCalculate(message);
+    return { tool: "calculator", ok: value !== null, value };
+  }
+  if (step.tool === "weather") {
+    const match =
+      message.match(/\b([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(?:hava(?: durumu)?|sıcaklık|yağmur)\b/i) ||
+      message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
+    const city = match?.[1] || "Ankara";
+    try {
+      return { tool: "weather", ...(await getWeather(city)) };
+    } catch (error) {
+      return { tool: "weather", ok: false, error: error?.message || "Hava verisi alınamadı." };
+    }
+  }
+  if (step.tool === "web") {
+    try {
+      return { tool: "web", ok: true, results: await webSearch(message) };
+    } catch (error) {
+      return { tool: "web", ok: false, error: error?.message || "Web araması başarısız." };
+    }
+  }
+  if (step.tool === "project") {
+    try {
+      const files = await generateProjectFiles(env, message);
+      return { tool: "project", ok: !!files, files: files || [] };
+    } catch (error) {
+      return { tool: "project", ok: false, error: error?.message || "Proje üretilemedi." };
+    }
+  }
+  return { tool: step.tool, ok: true, action: step.action };
+}
+
 async function executeAgentPlan(env, plan, message) {
   const results = [];
   const startedAt = Date.now();
@@ -132,42 +171,17 @@ async function executeAgentPlan(env, plan, message) {
     }
 
     const toolStartedAt = Date.now();
+    let result = await executeToolStep(env, step, message);
+    result.durationMs = Date.now() - toolStartedAt;
+    results.push(result);
 
-    if (step.tool === "calculator") {
-      const value = safeCalculate(message);
-      results.push({ tool: "calculator", ok: value !== null, value, durationMs: Date.now() - toolStartedAt });
-      continue;
+    if (isRetryableTool(step.tool, result)) {
+      const retryStartedAt = Date.now();
+      const retry = await executeToolStep(env, step, message);
+      retry.durationMs = Date.now() - retryStartedAt;
+      retry.retry = true;
+      results.push(retry);
     }
-    if (step.tool === "weather") {
-      const match =
-        message.match(/\b([A-Za-zÇĞİÖŞÜçğıöşü]+)\s+(?:hava(?: durumu)?|sıcaklık|yağmur)\b/i) ||
-        message.match(/\b(?:hava(?: durumu)?|sıcaklık|yağmur)\s+(?:nasıl|kaç|durumu)?\s*([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i);
-      const city = match?.[1] || "Ankara";
-      try {
-        results.push({ tool: "weather", ...(await getWeather(city)), durationMs: Date.now() - toolStartedAt });
-      } catch (error) {
-        results.push({ tool: "weather", ok: false, error: error?.message || "Hava verisi alınamadı.", durationMs: Date.now() - toolStartedAt });
-      }
-      continue;
-    }
-    if (step.tool === "web") {
-      try {
-        results.push({ tool: "web", ok: true, results: await webSearch(message), durationMs: Date.now() - toolStartedAt });
-      } catch (error) {
-        results.push({ tool: "web", ok: false, error: error?.message || "Web araması başarısız.", durationMs: Date.now() - toolStartedAt });
-      }
-      continue;
-    }
-    if (step.tool === "project") {
-      try {
-        const files = await generateProjectFiles(env, message);
-        results.push({ tool: "project", ok: !!files, files: files || [], durationMs: Date.now() - toolStartedAt });
-      } catch (error) {
-        results.push({ tool: "project", ok: false, error: error?.message || "Proje üretilemedi.", durationMs: Date.now() - toolStartedAt });
-      }
-      continue;
-    }
-    results.push({ tool: step.tool, ok: true, action: step.action, durationMs: Date.now() - toolStartedAt });
   }
 
   return results;
