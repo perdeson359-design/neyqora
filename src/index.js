@@ -23,18 +23,29 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </div>
 <script>
 const chat=document.querySelector("#chat"),form=document.querySelector("#form"),input=document.querySelector("#input");
+let userId=localStorage.getItem("neyqora_user_id");
+if(!userId){userId=crypto.randomUUID();localStorage.setItem("neyqora_user_id",userId);}
 function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el}
 form.addEventListener("submit",async e=>{
  e.preventDefault();const message=input.value.trim();if(!message)return;
  add(message,"user");input.value="";const pending=add("NEYQORA düşünüyor...","ai");
  try{
-  const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message})});
+  const r=await fetch("/api/chat",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({message,userId})});
   const data=await r.json();pending.textContent=data.reply||data.error||"Yanıt alınamadı.";
  }catch(err){pending.textContent="Bağlantı hatası. Lütfen tekrar dene."}
 });
 </script>
 </body>
 </html>`;
+
+function shouldRemember(message) {
+  const text = message.toLocaleLowerCase("tr-TR");
+  return [
+    "hatırla", "unutma", "aklında tut", "benim adım", "ben ",
+    "seviyorum", "sevmiyorum", "tercihim", "tercih ederim",
+    "favorim", "bana ... de", "bana şöyle"
+  ].some(key => text.includes(key.replace("...", "")));
+}
 
 export default {
   async fetch(request, env) {
@@ -45,25 +56,46 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA", model: MODEL });
+      return Response.json({ ok: true, name: "NEYQORA", model: MODEL, memory: !!env.DB });
     }
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
       try {
         const body = await request.json();
         const message = String(body?.message || "").trim();
+        const userId = String(body?.userId || "").trim();
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
+        if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
+
+        let memories = [];
+        if (env.DB) {
+          const result = await env.DB.prepare(
+            "SELECT content, created_at FROM memories WHERE user_id = ? ORDER BY created_at DESC LIMIT 12"
+          ).bind(userId).all();
+          memories = result.results || [];
+        }
+
+        const memoryText = memories.length
+          ? "\n\nKullanıcı hakkında daha önce kaydedilmiş bilgiler:\n" +
+            memories.reverse().map(m => "- " + m.content).join("\n")
+          : "";
 
         const result = await env.AI.run(MODEL, {
           messages: [
-            { role: "system", content: "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret." },
+            { role: "system", content: "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Aşağıdaki hafıza bilgilerini yalnızca uygun olduğunda kullan." + memoryText },
             { role: "user", content: message }
           ]
         });
 
-        return Response.json({
-          reply: result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi."
-        });
+        const reply = result?.response || result?.choices?.[0]?.message?.content || "Yanıt üretilemedi.";
+
+        if (env.DB && shouldRemember(message)) {
+          await env.DB.prepare(
+            "INSERT INTO memories (user_id, content) VALUES (?, ?)"
+          ).bind(userId, message).run();
+        }
+
+        return Response.json({ reply, memorySaved: !!(env.DB && shouldRemember(message)) });
       } catch (error) {
         return Response.json({ error: "NEYQORA AI hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
       }
