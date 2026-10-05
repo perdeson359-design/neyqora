@@ -43,8 +43,55 @@ function shouldRemember(message) {
   return [
     "hatırla", "unutma", "aklında tut", "benim adım", "ben ",
     "seviyorum", "sevmiyorum", "tercihim", "tercih ederim",
-    "favorim", "bana ... de", "bana şöyle"
-  ].some(key => text.includes(key.replace("...", "")));
+    "favorim", "bana şöyle"
+  ].some(key => text.includes(key));
+}
+
+function routeMessage(message) {
+  const t = message.toLocaleLowerCase("tr-TR");
+  if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
+  if (/[0-9][0-9\\s+\\-*/().,^%]*[0-9]/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl|\\d+\\s*[+\\-*/^%]/.test(t)) return "calculator";
+  if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu")) return "weather";
+  if (t.includes("kod") || t.includes("javascript") || t.includes("python") || t.includes("bug") || t.includes("hata veriyor") || t.includes("program")) return "coding";
+  return "chat";
+}
+
+function safeCalculate(message) {
+  const match = message.replace(/,/g, ".").match(/[0-9()+\-*/.^%\s]+/);
+  if (!match) return null;
+  const expr = match[0].trim();
+  if (!expr || !/^[0-9()+\-*/.^%\s]+$/.test(expr) || expr.length > 100) return null;
+  try {
+    const jsExpr = expr.replace(/\^/g, "**");
+    const value = Function('"use strict"; return (' + jsExpr + ')')();
+    return Number.isFinite(value) ? String(value) : null;
+  } catch { return null; }
+}
+
+function decodeHtml(s) {
+  return s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+}
+
+async function webSearch(query) {
+  const q = query.replace(/^https?:\/\//i, "").trim();
+  const url = "https://html.duckduckgo.com/html/?q=" + encodeURIComponent(q);
+  const response = await fetch(url, { headers: { "user-agent": "NEYQORA/1.0" } });
+  if (!response.ok) throw new Error("Web araması kullanılamıyor.");
+  const html = await response.text();
+  const results = [];
+  const re = /<a[^>]+class="result__a"[^>]+href="([^"]+)"[^>]*>([\\s\\S]*?)<\/a>/gi;
+  let m;
+  while ((m = re.exec(html)) && results.length < 5) {
+    const title = decodeHtml(m[2].replace(/<[^>]+>/g, "").trim());
+    let link = m[1];
+    try {
+      const u = new URL(link, "https://html.duckduckgo.com");
+      const target = u.searchParams.get("uddg");
+      if (target) link = target;
+    } catch {}
+    results.push({ title, link });
+  }
+  return results;
 }
 
 export default {
@@ -56,7 +103,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/health") {
-      return Response.json({ ok: true, name: "NEYQORA", model: MODEL, memory: !!env.DB });
+      return Response.json({ ok: true, name: "NEYQORA", model: MODEL, memory: !!env.DB, router: true, web: true });
     }
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
@@ -66,6 +113,13 @@ export default {
         const userId = String(body?.userId || "").trim();
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
         if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
+
+        const intent = routeMessage(message);
+
+        if (intent === "calculator") {
+          const value = safeCalculate(message);
+          if (value !== null) return Response.json({ reply: "Sonuç: " + value, intent });
+        }
 
         let memories = [];
         if (env.DB) {
@@ -80,9 +134,26 @@ export default {
             memories.reverse().map(m => "- " + m.content).join("\n")
           : "";
 
+        let researchText = "";
+        if (intent === "web_search" || intent === "weather") {
+          try {
+            const results = await webSearch(message);
+            if (results.length) {
+              researchText = "\n\nGüncel web araştırması sonuçları. Bunları kaynak olarak kullan; kaynak uydurma:\n" +
+                results.map((r, i) => (i + 1) + ". " + r.title + " — " + r.link).join("\n");
+            } else {
+              researchText = "\n\nWeb aramasında sonuç bulunamadı. Bunu açıkça belirt.";
+            }
+          } catch {
+            researchText = "\n\nWeb araştırması şu anda kullanılamadı. Güncel bilgi varmış gibi davranma.";
+          }
+        }
+
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. İstek türü: " + intent + "." + memoryText + researchText;
+
         const result = await env.AI.run(MODEL, {
           messages: [
-            { role: "system", content: "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Aşağıdaki hafıza bilgilerini yalnızca uygun olduğunda kullan." + memoryText },
+            { role: "system", content: system },
             { role: "user", content: message }
           ]
         });
@@ -95,9 +166,9 @@ export default {
           ).bind(userId, message).run();
         }
 
-        return Response.json({ reply, memorySaved: !!(env.DB && shouldRemember(message)) });
+        return Response.json({ reply, intent, memorySaved: !!(env.DB && shouldRemember(message)) });
       } catch (error) {
-        return Response.json({ error: "NEYQORA AI hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
+        return Response.json({ error: "NEYQORA hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
       }
     }
 
