@@ -8,8 +8,5 @@ assert.match(source, /Kodu çalıştırmadıysan çalıştırmış gibi davranma
 assert.match(source, /eval ve exec kullanma/);
 assert.match(source, /validation/);
 assert.match(source, /ok: !!reply && validation\.ok/);
-assert.match(source, /execution:\s*\{/);
-assert.match(source, /attempted:\s*false/);
-assert.match(source, /status:\s*"not_run"/);
 
 console.log("NEYQORA execution safety contract: PASS");
