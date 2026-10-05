@@ -195,13 +195,32 @@ async function executeAgentPlan(env, plan, message) {
 function buildAgentPlan(message) {
   const intent = routeMessage(message);
   const steps = [];
-  if (intent === "project") steps.push({ tool: "project", action: "generate_project" });
-  else if (intent === "web_search") steps.push({ tool: "web", action: "search_web" });
-  else if (intent === "weather") steps.push({ tool: "weather", action: "get_current_weather" });
-  else if (intent === "calculator") steps.push({ tool: "calculator", action: "calculate" });
-  else if (intent === "coding") steps.push({ tool: "coding", action: "generate_or_repair_code" });
-  else steps.push({ tool: "chat", action: "answer" });
-  return { intent, steps, maxSteps: Math.min(3, Math.max(1, steps.length)) };
+
+  if (intent === "project") {
+    steps.push({ tool: "project", action: "generate_project" });
+  } else if (intent === "web_search") {
+    steps.push({ tool: "web", action: "search_web" });
+  } else if (intent === "weather") {
+    steps.push({ tool: "weather", action: "get_current_weather" });
+  } else if (intent === "calculator") {
+    steps.push({ tool: "calculator", action: "calculate" });
+  } else if (intent === "coding") {
+    steps.push({ tool: "coding", action: "generate_or_repair_code" });
+  } else {
+    steps.push({ tool: "chat", action: "answer" });
+  }
+
+  return {
+    intent,
+    steps,
+    maxSteps: Math.min(3, Math.max(1, steps.length)),
+    requiresTool: intent !== "chat"
+  };
+}
+
+function shouldFallbackToChat(intent, results) {
+  if (intent === "chat") return false;
+  return !results.some(result => result && result.ok);
 }
 
 function validateAgentPlan(plan) {
@@ -671,6 +690,7 @@ export default {
         const agentResults = await executeAgentPlan(env, agentPlan, message);
         const successfulToolResults = agentResults.filter(item => item && item.ok);
         const agentAudit = buildAgentAudit(agentPlan, agentResults);
+        const needsChatFallback = shouldFallbackToChat(intent, agentResults);
         const agentTrace = buildAgentTrace(agentPlan, agentResults);
 
         if (env.DB) {
@@ -792,7 +812,10 @@ export default {
           ? "\n\nKullanılan araçların doğrulanmış sonuçları:\n" +
             successfulToolResults.map(formatToolResult).filter(Boolean).join("\n")
           : "";
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText + toolContext;
+        const fallbackContext = needsChatFallback
+          ? "\n\nAraç sonucu alınamadı. Araçtan gelmeyen güncel veya doğrulanmamış bilgi uydurma; kullanıcıya aracın başarısız olduğunu açıkça söyle."
+          : "";
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kullanıcının açık isteğine sadık kal; istenmeyen kişisel bilgi, özellik veya konu ekleme. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + codingInstructions + memoryText + contextText + researchText + toolContext + fallbackContext;
 
         const modelMessages = [{ role: "system", content: system }];
         for (const item of history) {
