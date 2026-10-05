@@ -151,22 +151,41 @@ export default {
             memories.reverse().map(m => "- " + m.content).join("\n")
           : "";
 
-        let researchText = "";
-        if (intent === "web_search" || intent === "weather") {
+        if (intent === "web_search") {
           try {
             const results = await webSearch(message);
-            if (results.length) {
-              researchText = "\n\nGüncel web araştırması sonuçları. Yalnızca bunlara dayan ve mümkünse haber tarihiyle birlikte kaynakları belirt:\n" +
-                results.map((r, i) => (i + 1) + ". " + r.title + (r.pubDate ? " (" + r.pubDate + ")" : "") + " — " + r.link).join("\n");
-            } else {
-              researchText = "\n\nWeb aramasında sonuç bulunamadı. Bunu açıkça belirt.";
+            if (!results.length) {
+              return Response.json({
+                reply: "Güncel web aramasında sonuç bulunamadı.",
+                intent,
+                sources: []
+              });
             }
-          } catch {
-            researchText = "\n\nWeb araştırması şu anda kullanılamadı. Güncel bilgi varmış gibi davranma.";
+
+            const reply = "Güncel web araştırması sonuçları:\n\n" +
+              results.map((r, i) =>
+                (i + 1) + ". " + r.title +
+                (r.pubDate ? "\\n   Tarih: " + r.pubDate : "") +
+                "\\n   Kaynak: " + r.link
+              ).join("\n\n") +
+              "\n\nNot: Bu sonuçlar doğrudan web aramasından alındı; NEYQORA bunları haber diye uydurmadı.";
+
+            return Response.json({ reply, intent, sources: results });
+          } catch (error) {
+            return Response.json({
+              reply: "Web araştırması şu anda kullanılamadı: " + (error?.message || "Bilinmeyen hata"),
+              intent,
+              sources: []
+            });
           }
         }
 
-        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel haber sorularında yalnızca verilen araştırma sonuçlarına dayan. Tarihleri kontrol et; eski bir haberi güncelmiş gibi sunma. İstek türü: " + intent + "." + memoryText + researchText;
+        let researchText = "";
+        if (intent === "weather") {
+          researchText = "\n\nKullanıcı hava durumu soruyor. Güncel veri sağlayan bir hava aracı henüz bağlı değil; güncel sıcaklık veya tahmin uydurma.";
+        }
+
+        const system = "Sen NEYQORA'sın. Türkçe konuşan, güvenilir ve yardımcı bir yapay zekâ asistanısın. Bilmediğin şeyi uydurma. Kod istenirse temiz ve çalışabilir kod üret. Güncel veri gerektiren sorularda veri yoksa açıkça söyle. İstek türü: " + intent + "." + memoryText + researchText;
 
         const result = await env.AI.run(MODEL, {
           messages: [
