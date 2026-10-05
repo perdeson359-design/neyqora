@@ -48,19 +48,19 @@ function shouldRemember(message) {
 }
 
 function extractMemory(message) {
-  const name = message.match(/\\bbenim adım\\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\\b/i)?.[1];
+  const name = message.match(/\bbenim adım\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i)?.[1];
   if (name) return "Kullanıcının adı: " + name;
   return message;
 }
 
 function isNameQuestion(message) {
-  return /\\b(adım ne|benim adım ne|ismim ne|ben kimim)\\b/i.test(message);
+  return /\b(adım ne|benim adım ne|ismim ne|ben kimim)\b/i.test(message);
 }
 
 function routeMessage(message) {
   const t = message.toLocaleLowerCase("tr-TR");
   if (/^https?:\/\//i.test(t) || t.includes("internetten") || t.includes("web'den") || t.includes("araştır") || t.includes("güncel") || t.includes("son durum") || t.includes("haberler")) return "web_search";
-  if (/\\d/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl/.test(t)) return "calculator";
+  if (/\d/.test(t) && /kaç|hesapla|hesap|topla|çıkar|çarp|böl/.test(t)) return "calculator";
   if (t.includes("hava") || t.includes("sıcaklık") || t.includes("yağmur") || t.includes("hava durumu")) return "weather";
   if (t.includes("kod") || t.includes("javascript") || t.includes("python") || t.includes("bug") || t.includes("hata veriyor") || t.includes("program")) return "coding";
   return "chat";
@@ -85,15 +85,15 @@ function decodeHtml(s) {
     .replace(/&#x27;|&apos;/g, "'")
     .replace(/&lt;/g, "<")
     .replace(/&gt;/g, ">")
-    .replace(/&#(\\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
     .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 }
 
 async function webSearch(query) {
   const clean = query.trim();
   const searchQuery = clean
-    .replace(/\\b(bugün|güncel|son durum|haberleri|haberler|araştır|araştırır mısın|araştırabilir misin)\\b/gi, " ")
-    .replace(/\\s+/g, " ")
+    .replace(/\b(bugün|güncel|son durum|haberleri|haberler|araştır|araştırır mısın|araştırabilir misin)\b/gi, " ")
+    .replace(/\s+/g, " ")
     .trim() || clean;
   const isUrl = /^https?:\/\//i.test(clean);
 
