@@ -409,7 +409,7 @@ function validateAgentPlan(plan) {
   const allowed = new Set(["project", "web", "weather", "calculator", "coding", "chat"]);
   const limits = { project: 1, web: 1, weather: 1, calculator: 1, coding: 1, chat: 1 };
   const allowedActions = {
-    project: new Set(["generate_project"]),
+    project: new Set(["generate_project", "package_generated_project"]),
     web: new Set(["search_web"]),
     weather: new Set(["get_current_weather"]),
     calculator: new Set(["calculate"]),
