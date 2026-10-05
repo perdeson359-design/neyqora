@@ -69,11 +69,22 @@ function safeCalculate(message) {
 }
 
 function decodeHtml(s) {
-  return s.replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#x27;/g, "'").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  return s
+    .replace(/&amp;/g, "&")
+    .replace(/&quot;/g, '"')
+    .replace(/&#x27;|&apos;/g, "'")
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&#(\\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-f]+);/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
 }
 
 async function webSearch(query) {
   const clean = query.trim();
+  const searchQuery = clean
+    .replace(/\\b(bugün|güncel|son durum|haberleri|haberler|araştır|araştırır mısın|araştırabilir misin)\\b/gi, " ")
+    .replace(/\\s+/g, " ")
+    .trim() || clean;
   const isUrl = /^https?:\/\//i.test(clean);
 
   if (isUrl) {
@@ -86,8 +97,8 @@ async function webSearch(query) {
   }
 
   const sources = [
-    "https://news.google.com/rss/search?q=" + encodeURIComponent(clean) + "&hl=tr&gl=TR&ceid=TR:tr",
-    "https://www.bing.com/news/search?q=" + encodeURIComponent(clean) + "&format=rss"
+    "https://news.google.com/rss/search?q=" + encodeURIComponent(searchQuery) + "&hl=tr&gl=TR&ceid=TR:tr",
+    "https://www.bing.com/news/search?q=" + encodeURIComponent(searchQuery) + "&format=rss"
   ];
 
   for (const url of sources) {
@@ -184,8 +195,8 @@ export default {
             const reply = "Güncel web araştırması sonuçları:\n\n" +
               results.map((r, i) =>
                 (i + 1) + ". " + r.title +
-                (r.pubDate ? "\\n   Tarih: " + r.pubDate : "") +
-                "\\n   Kaynak: " + r.link
+                (r.pubDate ? "\n   Tarih: " + r.pubDate : "") +
+                "\n   Kaynak: " + r.link
               ).join("\n\n") +
               "\n\nNot: Bu sonuçlar doğrudan web aramasından alındı; NEYQORA bunları haber diye uydurmadı.";
 
