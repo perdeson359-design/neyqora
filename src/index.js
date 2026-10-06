@@ -18,7 +18,11 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 <body>
 <div class="app">
 <header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4.8</p></header>
-<div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
+<div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="memory-panel" style="padding:0 16px 12px">
+<div class="msg ai" style="margin-bottom:8px"><strong>Kalıcı Hafıza</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Kayıtlı bilgilerini görüntüleyebilir ve tek tek silebilirsin.</div></div>
+<div id="memory-list" class="msg ai">Hafıza yükleniyor...</div>
+</div>
+<div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
@@ -76,6 +80,26 @@ function add(text,cls){const el=document.createElement("div");el.className="msg 
 function rememberTurn(role,content){conversation.push({role,content:String(content||"")});if(conversation.length>10)conversation=conversation.slice(-10);}
 document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
+async function loadMemories(){
+  const list=document.querySelector("#memory-list");
+  if(!list)return;
+  try{
+    const r=await fetch("/api/memory?userId="+encodeURIComponent(userId));
+    const data=await r.json();
+    if(!r.ok)throw new Error(data.error||"Hafıza yüklenemedi.");
+    list.innerHTML="";
+    if(!data.memories?.length){list.textContent="Henüz kayıtlı hafıza yok.";return;}
+    for(const memory of data.memories){
+      const row=document.createElement("div");
+      row.style.cssText="display:flex;gap:8px;align-items:flex-start;padding:8px 0;border-bottom:1px solid #27314a";
+      const text=document.createElement("span"); text.textContent=memory.content; text.style.flex="1";
+      const del=document.createElement("button"); del.type="button"; del.textContent="Sil"; del.style.cssText="padding:7px 10px;border-radius:9px;border:0;background:#27385f;color:#fff";
+      del.onclick=async()=>{del.disabled=true;try{const rr=await fetch("/api/memory?userId="+encodeURIComponent(userId)+"&id="+encodeURIComponent(memory.id),{method:"DELETE"});if(!rr.ok)throw new Error();await loadMemories();}catch{del.disabled=false;}};
+      row.append(text,del);list.appendChild(row);
+    }
+  }catch{list.textContent="Hafıza yüklenemedi.";}
+}
+loadMemories();
 const sendButton=document.querySelector("#send");
 let sending=false;
 async function sendMessage(){
