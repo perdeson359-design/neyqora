@@ -310,6 +310,8 @@ $ISSUE_BODY"
         run: |
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          find projects -type d -name __pycache__ -prune -exec rm -rf {} +
+          find projects -type f -name '*.pyc' -delete
           git add projects/ requests/generated/
           git diff --cached --quiet && echo "No changes to commit." && exit 0
           git commit -m "Generate and test project with NEYQORA"
