@@ -1006,6 +1006,47 @@ export default {
       });
     }
 
+    if (request.method === "GET" && url.pathname === "/api/memory") {
+      try {
+        const isOwner = await verifyOwnerSession(request, env);
+        if (!env.DB) return Response.json({ ok: false, error: "Hafıza veritabanı bağlı değil." }, { status: 503 });
+        const requestedUserId = String(url.searchParams.get("userId") || "").trim();
+        const userId = isOwner ? "owner" : requestedUserId;
+        if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
+          return Response.json({ ok: false, error: "Geçerli userId gerekli." }, { status: 400 });
+        }
+        const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || "20"), 1), 50);
+        const result = await env.DB.prepare(
+          "SELECT id, content, created_at FROM memories WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT ?"
+        ).bind(userId, limit).all();
+        return Response.json({ ok: true, userId, memories: result.results || [] });
+      } catch (error) {
+        return Response.json({ ok: false, error: error?.message || "Hafıza okunamadı." }, { status: 500 });
+      }
+    }
+
+    if (request.method === "DELETE" && url.pathname === "/api/memory") {
+      try {
+        const isOwner = await verifyOwnerSession(request, env);
+        if (!env.DB) return Response.json({ ok: false, error: "Hafıza veritabanı bağlı değil." }, { status: 503 });
+        const requestedUserId = String(url.searchParams.get("userId") || "").trim();
+        const userId = isOwner ? "owner" : requestedUserId;
+        if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
+          return Response.json({ ok: false, error: "Geçerli userId gerekli." }, { status: 400 });
+        }
+        const id = Number(url.searchParams.get("id") || "0");
+        if (!Number.isInteger(id) || id < 1) {
+          return Response.json({ ok: false, error: "Geçerli memory id gerekli." }, { status: 400 });
+        }
+        const result = await env.DB.prepare(
+          "DELETE FROM memories WHERE user_id = ? AND id = ?"
+        ).bind(userId, id).run();
+        return Response.json({ ok: true, deleted: Number(result.meta?.changes || 0) > 0 });
+      } catch (error) {
+        return Response.json({ ok: false, error: error?.message || "Hafıza silinemedi." }, { status: 500 });
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/project/ci") {
       const issueNumber = Number(url.searchParams.get("issue") || "0");
       if (!Number.isInteger(issueNumber) || issueNumber < 1) {
