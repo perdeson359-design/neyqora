@@ -31,7 +31,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          trap 'printf "\nGeneration step failed at: %s\n" "$BASH_COMMAND" >> /tmp/generation-error.txt' ERR
 
           python - <<'PY
           import json, os
@@ -148,7 +147,7 @@ jobs:
           root=pathlib.Path("projects")/name
           for item in data["files"]:
               p=pathlib.Path(item["path"])
-              if p.is_absolute() or ".." in p.parts or "\" in str(p): raise SystemExit("Unsafe path")
+              if p.is_absolute() or ".." in p.parts or "\\" in str(p): raise SystemExit("Unsafe path")
               target=root/p
               target.parent.mkdir(parents=True,exist_ok=True)
               target.write_text(item["content"],encoding="utf-8")
