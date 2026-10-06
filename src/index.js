@@ -204,13 +204,24 @@ input.addEventListener("keydown",function(e){
 </body>
 </html>`;
 
+let productivityTablesPromise = null;
+
 async function ensureProductivityTables(env){
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS calendar_events (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,start_at TEXT NOT NULL,end_at TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',location TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_calendar_user_start ON calendar_events(user_id,start_at)").run();
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS email_drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,to_address TEXT NOT NULL,subject TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_email_user_created ON email_drafts(user_id,created_at DESC)").run();
-  await env.DB.prepare("CREATE TABLE IF NOT EXISTS automations (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,prompt TEXT NOT NULL,run_at TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',last_error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
-  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_automation_due ON automations(status,run_at)").run();
+  if (!env.DB) return;
+  if (!productivityTablesPromise) {
+    productivityTablesPromise = (async () => {
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS calendar_events (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,start_at TEXT NOT NULL,end_at TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',location TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_calendar_user_start ON calendar_events(user_id,start_at)").run();
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS email_drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,to_address TEXT NOT NULL,subject TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_email_user_created ON email_drafts(user_id,created_at DESC)").run();
+      await env.DB.prepare("CREATE TABLE IF NOT EXISTS automations (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,prompt TEXT NOT NULL,run_at TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',last_error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+      await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_automation_due ON automations(status,run_at)").run();
+    })().catch(error => {
+      productivityTablesPromise = null;
+      throw error;
+    });
+  }
+  await productivityTablesPromise;
 }
 function normalizeUserId(value){const text=String(value||"").trim();return /^[A-Za-z0-9._:-]{1,100}$/.test(text)?text:"";}
 function mapCalendarEvent(row){return {id:row.id,title:row.title,startAt:row.start_at,endAt:row.end_at,description:row.description,location:row.location,createdAt:row.created_at};}
@@ -920,7 +931,7 @@ function validateGeneratedProject(files) {
     if (/\b(?:os\.system|subprocess\.(?:run|Popen|call|check_output|check_call)|socket\.|ctypes\.|pickle\.loads|__import__)\s*\(/.test(code)) {
       errors.push(file.path + ": güvenli olmayan sistem/ağ işlemi yasak.");
     }
-    if /^\s*(?:import|from)\s+(?:subprocess|socket|ctypes|pickle)\b/m.test(code) {
+    if (/^\s*(?:import|from)\s+(?:subprocess|socket|ctypes|pickle)\b/m.test(code)) {
       errors.push(file.path + ": riskli Python modülü kullanımı yasak.");
     }
     const codeForStaticChecks = code
