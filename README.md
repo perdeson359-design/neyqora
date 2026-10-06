@@ -4,7 +4,7 @@ Kişisel yapay zekâ asistanı.
 
 ## Sürüm
 
-Worker API sürümü: **4.9**.
+Worker API sürümü: **6.0**.
 
 ## Sistem şeması
 
@@ -100,3 +100,12 @@ Self-host çalışma katmanı ve Docker hazırlığı repoya eklendi; **henüz s
 - Görselleri Workers AI Vision ile Türkçe analiz etme
 - Boyut ve MIME türü sınırları
 - UI üzerinden doğrudan medya analizi
+
+## V6.0 — Takvim, E-posta ve Otomasyon
+- D1 üzerinde kullanıcıya özel takvim etkinlikleri
+- E-posta taslağı oluşturma ve listeleme
+- Zamanlanmış otomasyon kayıtları
+- 5 dakikalık Cron ile bekleyen otomasyonları işleme
+- `AUTOMATION_WEBHOOK_URL` ile harici eylem entegrasyonu
+- UI üzerinden takvim, e-posta ve otomasyon yönetimi
+- Owner yetkisiyle sınırsız yönetim
