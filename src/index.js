@@ -1,5 +1,5 @@
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
-const VERSION = "6.0";
+const VERSION = "6.1";
 const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";
 const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
@@ -887,12 +887,17 @@ function sanitizeProjectName(request) {
 
 function sanitizeProjectFiles(files) {
   if (!Array.isArray(files) || files.length < 1 || files.length > 8) return null;
+  const allowedExtensions = new Set(["py","js","mjs","ts","tsx","jsx","html","css","json","md","txt","csv"]);
   const safe = [];
+  const seen = new Set();
   for (const file of files) {
     const path = String(file?.path || "").trim();
     const content = String(file?.content || "");
+    const extension = getFileExtension(path);
     if (!path || !content || path.length > 180 || content.length > 50000) return null;
-    if (path.startsWith("/") || path.includes("..") || path.includes("\\") || !/^[A-Za-z0-9._/-]+$/.test(path)) return null;
+    if (path.startsWith("/") || path.includes("..") || path.includes("\\") || path.startsWith(".github/") || !/^[A-Za-z0-9._/-]+$/.test(path)) return null;
+    if (!allowedExtensions.has(extension) || seen.has(path)) return null;
+    seen.add(path);
     safe.push({ path, content });
   }
   const hasMain = safe.some(f => /^(main|app|index)\.(py|js|ts|html)$/.test(f.path.split("/").pop() || ""));
@@ -911,6 +916,12 @@ function validateGeneratedProject(files) {
     const code = file.content;
     if (/\beval\s*\(/.test(code) || /\bexec\s*\(/.test(code)) {
       errors.push(file.path + ": eval/exec kullanımı yasak.");
+    }
+    if (/\b(?:os\.system|subprocess\.(?:run|Popen|call|check_output|check_call)|socket\.|ctypes\.|pickle\.loads|__import__)\s*\(/.test(code)) {
+      errors.push(file.path + ": güvenli olmayan sistem/ağ işlemi yasak.");
+    }
+    if /^\s*(?:import|from)\s+(?:subprocess|socket|ctypes|pickle)\b/m.test(code) {
+      errors.push(file.path + ": riskli Python modülü kullanımı yasak.");
     }
     const codeForStaticChecks = code
       .replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, "")
@@ -1148,7 +1159,11 @@ export default {
     if (request.method === "GET" && url.pathname === "/") {
       const headers = new Headers({
         "content-type": "text/html; charset=UTF-8",
-        "cache-control": "no-store, no-cache, must-revalidate, max-age=0"
+        "cache-control": "no-store, no-cache, must-revalidate, max-age=0",
+        "x-content-type-options": "nosniff",
+        "x-frame-options": "DENY",
+        "referrer-policy": "no-referrer",
+        "permissions-policy": "camera=(), microphone=(), geolocation=()"
       });
       const currentUserId = await getAuthenticatedUserId(request, env);
       if (!currentUserId) {
