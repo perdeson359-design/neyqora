@@ -6,7 +6,9 @@ on:
 
 jobs:
   generate:
+    if: github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR'
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     permissions:
       contents: write
       issues: write
@@ -65,6 +67,8 @@ jobs:
         run: |
           set -euo pipefail
           ! grep -RInE '\\b(eval|exec)[[:space:]]*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
+          ! grep -RInE '\\b(os\\.system|subprocess\\.(run|Popen|call|check_output|check_call)|socket\\.|ctypes\\.|pickle\\.loads|__import__)\\s*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
+          ! grep -RInE '^\\s*(import|from)\\s+(subprocess|socket|ctypes|pickle)\\b' "projects/issue-$ISSUE_NUMBER" --include='*.py'
 
       - name: Publish
         if: always()
