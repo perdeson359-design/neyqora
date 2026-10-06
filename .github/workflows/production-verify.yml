@@ -63,7 +63,7 @@ jobs:
 
           cat > /tmp/agent-project-request.json <<'JSON'
           {
-            "message": "Hesap makinesi projesi üret. Python kullan ve test_hesap_makinesi.py ile işlemleri test et.",
+            "message": "Hesap makinesi projesi üret.",
             "userId": "production-verification-agent",
             "history": []
           }
