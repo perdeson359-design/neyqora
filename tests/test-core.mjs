@@ -44,7 +44,7 @@ assert.match(source, /OWNER_AUTH_TOKEN/);
 assert.match(source, /unlimited: true/);
 assert.match(source, /isOwner \? "owner" : requestedUserId/);
 assert.match(source, /function shouldRemember/);
-assert.match(source, /function extractMemory/);
+assert.match(source, /function extractMemory/);\nassert.match(source, /function normalizeMemory/);\nassert.match(source, /function memoryCategory/);\nassert.match(source, /LIMIT -1 OFFSET 50/);\nassert.match(source, /Kullanıcının adı:%/);
 assert.match(source, /function isNameQuestion/);
 assert.match(source, /function forgetRequest/);
 assert.match(source, /adımı\\|ismimi/);
