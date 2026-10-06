@@ -1,0 +1,13 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local/runtime files
+.env
+.venv/
+venv/
+.pytest_cache/
+
+# Generated CI artifacts
+requests/generated/
