@@ -31,8 +31,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          trap 'printf "\nGeneration step failed at: %s\n" "$BASH_COMMAND" >> /tmp/generation-error.txt' ERR
 
-          python - <<'PY'
+          python - <<'PY
           import json, os
           request = os.environ["PROJECT_REQUEST"]
           with open("/tmp/project-request.json", "w", encoding="utf-8") as f:
