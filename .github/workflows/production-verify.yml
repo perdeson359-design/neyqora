@@ -32,10 +32,7 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 30); do
             echo "Production health check $attempt/30"
-            if curl -fsS \
-              -A "NEYQORA-Production-Verify" \
-              -H "Accept: application/json" \
-              "$NEYQORA_URL/api/health" > /tmp/health.json; then
+            if curl -fsS               -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               "$NEYQORA_URL/api/health" > /tmp/health.json; then
               cat /tmp/health.json
               if jq -e --arg expected "$EXPECTED_VERSION" '
                 .ok == true
@@ -64,7 +61,7 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          curl -fsSI -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" > /tmp/headers.txt
+          curl -fsS -D /tmp/headers.txt -o /dev/null -A "NEYQORA-Production-Verify" "$NEYQORA_URL/"
           grep -qi '^x-content-type-options: nosniff' /tmp/headers.txt
           grep -qi '^x-frame-options: DENY' /tmp/headers.txt
           grep -qi '^referrer-policy: no-referrer' /tmp/headers.txt
@@ -133,13 +130,7 @@ jobs:
               json.dump(payload, f, ensure_ascii=False)
           PY
 
-          code=$(curl -sS -o /tmp/project.json -w "%{http_code}" \
-            -A "NEYQORA-Production-Verify" \
-            -H "Origin: $NEYQORA_URL" \
-            -H "Content-Type: application/json" \
-            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
-            --data-binary @/tmp/project-request.json \
-            "$NEYQORA_URL/api/project")
+          code=$(curl -sS -o /tmp/project.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project")
 
           echo "Project API HTTP=$code"
           cat /tmp/project.json
@@ -233,25 +224,13 @@ jobs:
 
           user_id="production-v6-$(date +%s)"
 
-          event_code=$(curl -sS -o /tmp/v6-event.json -w "%{http_code}" \
-            -A "NEYQORA-Production-Verify" \
-            -H "Origin: $NEYQORA_URL" \
-            -H "Content-Type: application/json" \
-            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
-            --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 doğrulama\",\"startAt\":\"2026-10-06T14:00:00Z\",\"endAt\":\"2026-10-06T15:00:00Z\"}" \
-            "$NEYQORA_URL/api/calendar/events")
+          event_code=$(curl -sS -o /tmp/v6-event.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","title":"V6 doğrulama","startAt":"2026-10-06T14:00:00Z","endAt":"2026-10-06T15:00:00Z"}"             "$NEYQORA_URL/api/calendar/events")
           echo "Calendar POST HTTP=$event_code"
           cat /tmp/v6-event.json
           test "$event_code" = "200"
           jq -e '.ok == true and .event.title == "V6 doğrulama"' /tmp/v6-event.json >/dev/null
 
-          email_code=$(curl -sS -o /tmp/v6-email.json -w "%{http_code}" \
-            -A "NEYQORA-Production-Verify" \
-            -H "Origin: $NEYQORA_URL" \
-            -H "Content-Type: application/json" \
-            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
-            --data-binary "{\"userId\":\"$user_id\",\"to\":\"v6@example.com\",\"subject\":\"V6 doğrulama\",\"body\":\"V6 e-posta taslağı\"}" \
-            "$NEYQORA_URL/api/email/drafts")
+          email_code=$(curl -sS -o /tmp/v6-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","to":"v6@example.com","subject":"V6 doğrulama","body":"V6 e-posta taslağı"}"             "$NEYQORA_URL/api/email/drafts")
           echo "Email POST HTTP=$email_code"
           cat /tmp/v6-email.json
           test "$email_code" = "200"
@@ -262,13 +241,7 @@ jobs:
           print((datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat().replace("+00:00","Z"))
           PY
           )
-          automation_code=$(curl -sS -o /tmp/v6-automation.json -w "%{http_code}" \
-            -A "NEYQORA-Production-Verify" \
-            -H "Origin: $NEYQORA_URL" \
-            -H "Content-Type: application/json" \
-            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
-            --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 otomasyon\",\"runAt\":\"$run_at\",\"prompt\":\"V6 doğrulama görevi\"}" \
-            "$NEYQORA_URL/api/automations")
+          automation_code=$(curl -sS -o /tmp/v6-automation.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","title":"V6 otomasyon","runAt":"$run_at","prompt":"V6 doğrulama görevi"}"             "$NEYQORA_URL/api/automations")
           echo "Automation POST HTTP=$automation_code"
           cat /tmp/v6-automation.json
           test "$automation_code" = "200"
