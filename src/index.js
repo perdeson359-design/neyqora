@@ -1165,17 +1165,17 @@ export default {
       const result=await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid,String(body.to).slice(0,500),String(body.subject).slice(0,500),String(body.body).slice(0,20000),"draft").run(); return Response.json({ok:true,draft:{id:result.meta.last_row_id,to:String(body.to),subject:String(body.subject),status:"draft"}});
     }
     if (request.method === "GET" && url.pathname === "/api/email/drafts") {
-      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,to_address,subject,body,status,created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC LIMIT 100").bind(uid).all(); return Response.json({ok:true,drafts:rows.results||[]});
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid)return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:401}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,to_address,subject,body,status,created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC LIMIT 100").bind(uid).all(); return Response.json({ok:true,drafts:rows.results||[]});
     }
     if (request.method === "POST" && url.pathname === "/api/automations") {
-      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId),runAt=String(body.runAt||""); if(!uid||!body.title||!body.prompt||Number.isNaN(Date.parse(runAt)))return Response.json({ok:false,error:"title, prompt ve geçerli runAt gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
+      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":await getAuthenticatedUserId(request,env),runAt=String(body.runAt||""); if(!uid||!body.title||!body.prompt||Number.isNaN(Date.parse(runAt)))return Response.json({ok:false,error:"title, prompt ve geçerli runAt gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const result=await env.DB.prepare("INSERT INTO automations (user_id,title,prompt,run_at,status) VALUES (?,?,?,?,?)").bind(uid,String(body.title).slice(0,300),String(body.prompt).slice(0,8000),new Date(runAt).toISOString(),"pending").run(); return Response.json({ok:true,automation:{id:result.meta.last_row_id,title:String(body.title).slice(0,300),runAt:new Date(runAt).toISOString(),status:"pending"}});
     }
     if (request.method === "GET" && url.pathname === "/api/automations") {
-      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,title,prompt,run_at,status,last_error,created_at FROM automations WHERE user_id=? ORDER BY run_at ASC LIMIT 100").bind(uid).all(); return Response.json({ok:true,automations:rows.results||[]});
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid)return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:401}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,title,prompt,run_at,status,last_error,created_at FROM automations WHERE user_id=? ORDER BY run_at ASC LIMIT 100").bind(uid).all(); return Response.json({ok:true,automations:rows.results||[]});
     }
     if (request.method === "DELETE" && url.pathname === "/api/automations") {
-      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"userId ve id gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM automations WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":await getAuthenticatedUserId(request,env),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"id ve kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM automations WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
     }
     if (request.method === "GET" && url.pathname === "/api/health") {
       return Response.json({
@@ -1195,6 +1195,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/audio/transcribe") {
       try {
         const isOwner = await verifyOwnerSession(request, env);
+        const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!authenticatedUserId) return Response.json({ error: "Kullanıcı oturumu gerekli." }, { status: 401 });
         const contentLength = Number(request.headers.get("content-length") || "0");
         const maxBytes = isOwner ? 15_000_000 : 10_000_000;
         if (!contentLength || contentLength > maxBytes) return Response.json({ ok: false, error: "Ses dosyası 10 MB ile sınırlıdır." }, { status: 413 });
@@ -1302,7 +1304,8 @@ export default {
         const isOwner = await verifyOwnerSession(request, env);
         if (!env.DB) return Response.json({ ok: false, error: "Hafıza veritabanı bağlı değil." }, { status: 503 });
         const requestedUserId = String(url.searchParams.get("userId") || "").trim();
-        const userId = isOwner ? "owner" : requestedUserId;
+        const userId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!userId) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
         if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
           return Response.json({ ok: false, error: "Geçerli userId gerekli." }, { status: 400 });
         }
