@@ -17,13 +17,11 @@ on:
         description: "Source issue number"
         required: false
         type: string
-  issues:
-    types: [opened]
 
 jobs:
   generate:
     runs-on: ubuntu-latest
-    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' || (github.event_name == 'issues' && github.actor == 'perdeson359-design') }}
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event_name == 'workflow_call' }}
     permissions:
       contents: write
       issues: write
