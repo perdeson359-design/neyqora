@@ -683,13 +683,13 @@ function validateGeneratedProject(files) {
       errors.push(file.path + ": eval/exec kullanımı yasak.");
     }
     const codeForStaticChecks = code
-      .replace(/("""[\\s\\S]*?"""|'''[\\s\\S]*?'''|"(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*')/g, "")
-      .replace(/#[^\\n]*/g, "");
+      .replace(/("""[\s\S]*?"""|'''[\s\S]*?'''|"(?:\\.|[^"\\])*"|'(?:\\.|[^'\\])*')/g, "")
+      .replace(/#[^\n]*/g, "");
     if (/[A-Za-z_][A-Za-z0-9_]*[ÇĞİÖŞÜçğıöşü]/.test(codeForStaticChecks)) {
       errors.push(file.path + ": Python tanımlayıcılarında Türkçe karakter var.");
     }
     const opens = (codeForStaticChecks.match(/[([{]/g) || []).length;
-    const closes = (codeForStaticChecks.match(/[)\\]}]/g) || []).length;
+    const closes = (codeForStaticChecks.match(/[)\]}]/g) || []).length;
     if (opens !== closes) errors.push(file.path + ": parantez/braket dengesi hatalı.");
   }
 
