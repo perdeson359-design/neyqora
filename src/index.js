@@ -297,7 +297,8 @@ async function executeToolStep(env, step, message) {
   }
   if (step.tool === "project") {
     try {
-      const files = await generateProjectFiles(env, message);
+      const templateFiles = buildProjectFiles(message);
+      const files = templateFiles || await generateProjectFiles(env, message);
       return { tool: "project", ok: !!files, files: files || [] };
     } catch (error) {
       return { tool: "project", ok: false, error: error?.message || "Proje üretilemedi." };
@@ -339,16 +340,18 @@ async function executeAgentPlan(env, plan, message) {
     result.durationMs = Date.now() - toolStartedAt;
     results.push(result);
 
-    if (!result.ok && step.action !== "answer") {
-      break;
-    }
-
-    if (isRetryableTool(step.tool, result)) {
+    if (!result.ok && isRetryableTool(step.tool, result)) {
       const retryStartedAt = Date.now();
       const retry = await executeToolStep(env, step, message);
       retry.durationMs = Date.now() - retryStartedAt;
       retry.retry = true;
       results.push(retry);
+      if (!retry.ok && step.action !== "answer") break;
+      continue;
+    }
+
+    if (!result.ok && step.action !== "answer") {
+      break;
     }
   }
 
@@ -679,11 +682,14 @@ function validateGeneratedProject(files) {
     if (/\beval\s*\(/.test(code) || /\bexec\s*\(/.test(code)) {
       errors.push(file.path + ": eval/exec kullanımı yasak.");
     }
-    if (/[A-Za-z_][A-Za-z0-9_]*[ÇĞİÖŞÜçğıöşü]/.test(code)) {
+    const codeForStaticChecks = code
+      .replace(/("""[\\s\\S]*?"""|'''[\\s\\S]*?'''|"(?:\\\\.|[^"\\\\])*"|'(?:\\\\.|[^'\\\\])*')/g, "")
+      .replace(/#[^\\n]*/g, "");
+    if (/[A-Za-z_][A-Za-z0-9_]*[ÇĞİÖŞÜçğıöşü]/.test(codeForStaticChecks)) {
       errors.push(file.path + ": Python tanımlayıcılarında Türkçe karakter var.");
     }
-    const opens = (code.match(/[([{]/g) || []).length;
-    const closes = (code.match(/[)\\]}]/g) || []).length;
+    const opens = (codeForStaticChecks.match(/[([{]/g) || []).length;
+    const closes = (codeForStaticChecks.match(/[)\\]}]/g) || []).length;
     if (opens !== closes) errors.push(file.path + ": parantez/braket dengesi hatalı.");
   }
 
@@ -695,57 +701,6 @@ function validateGeneratedProject(files) {
 }
 
 async function generateProjectFiles(env, request) {
-  const text = String(request || "").toLocaleLowerCase("tr-TR");
-  if (text.includes("hesap makinesi")) {
-    const files = [
-      {
-        path: "main.py",
-        content: [
-          "def calculate(a, operator, b):",
-          "    if operator == '+': return a + b",
-          "    if operator == '-': return a - b",
-          "    if operator == '*': return a * b",
-          "    if operator == '/':",
-          "        if b == 0: raise ValueError('Sıfıra bölme yapılamaz.')",
-          "        return a / b",
-          "    raise ValueError('Geçersiz işlem.')",
-          "",
-          "if __name__ == '__main__':",
-          "    print(calculate(10, '+', 5))"
-        ].join("\\n")
-      },
-      {
-        path: "test_hesap_makinesi.py",
-        content: [
-          "from main import calculate",
-          "",
-          "def test_operations():",
-          "    assert calculate(10, '+', 5) == 15",
-          "    assert calculate(10, '-', 5) == 5",
-          "    assert calculate(10, '*', 5) == 50",
-          "    assert calculate(10, '/', 5) == 2",
-          "",
-          "def test_zero_division():",
-          "    try:",
-          "        calculate(10, '/', 0)",
-          "    except ValueError:",
-          "        return",
-          "    raise AssertionError('Sıfıra bölme ValueError vermeli.')",
-          "",
-          "if __name__ == '__main__':",
-          "    test_operations()",
-          "    test_zero_division()",
-          "    print('Tüm testler başarılı.')"
-        ].join("\\n")
-      },
-      {
-        path: "README.md",
-        content: "# NEYQORA generated project\\n\\nBasit Python hesap makinesi ve testleri.\\n"
-      }
-    ];
-    return validateGeneratedProject(files).ok ? files : null;
-  }
-
   const result = await env.AI.run(MODEL, {
     messages: [
       { role: "system", content: "Sen NEYQORA proje üreticisisin. Kullanıcının istediği programı üret. Yalnızca istenen özellikleri ekle. Varsayılan olarak Python 3.10+ kullan. Çıktıyı SADECE geçerli JSON ver: {\"files\":[{\"path\":\"main.py\",\"content\":\"...\"}]}. En fazla 8 dosya. En az bir ana dosya ve mümkünse test_*.py dosyası üret. Python tanımlayıcılarında yalnızca ASCII kullan. eval ve exec kullanma. Testler gerçek kodu çağırmalı. Açıklama ekleme." },
@@ -1316,5 +1271,6 @@ export const __test = {
   summarizeAgentStatus,
   safeCalculate,
   basicPythonValidation,
+  validateGeneratedProject,
   executeToolStep
 };
