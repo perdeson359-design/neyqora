@@ -189,10 +189,20 @@ jobs:
           print("Tests:", [str(p.relative_to(root)) for p in tests])
           PY
 
-          if grep -RInE '\\b(eval|exec)\\s*\\(' /tmp/neyqora-production-project --include='*.py'; then
-            echo "Unsafe eval/exec detected."
-            exit 1
-          fi
+          python - <<'PY'
+          import pathlib, re
+          root = pathlib.Path("/tmp/neyqora-production-project")
+          pattern = re.compile(r"\b(eval|exec)\s*\(")
+          hits = []
+          for path in root.rglob("*.py"):
+              text = path.read_text(encoding="utf-8")
+              if pattern.search(text):
+                  hits.append(str(path))
+          if hits:
+              print("Unsafe eval/exec detected:", *hits, sep="\n")
+              raise SystemExit(1)
+          print("Generated project safety scan: PASS")
+          PY
 
           while IFS= read -r -d '' file; do
             python -m py_compile "$file"
