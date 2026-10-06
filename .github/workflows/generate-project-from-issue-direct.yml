@@ -5,18 +5,20 @@ on:
     types: [opened]
   issue_comment:
     types: [created]
+  push:
+    branches: [main]
 
 jobs:
   generate:
-    if: ${{ github.event_name == 'issues' || (github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'NEYQORA_CI_RESULT')) }}
+    if: ${{ github.event_name == 'issues' || (github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'NEYQORA_CI_RESULT')) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[generate-test]')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      PROJECT_REQUEST: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
-      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      PROJECT_REQUEST: ${{ github.event_name == 'push' && 'Hesap makinesi üret ve test et. [generate-test]' || format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
+      ISSUE_NUMBER: ${{ github.event_name == 'push' && '23' || github.event.issue.number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
