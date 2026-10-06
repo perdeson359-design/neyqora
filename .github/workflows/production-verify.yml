@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 10
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      EXPECTED_VERSION: "4.3"
+      EXPECTED_VERSION: "4.4"
     steps:
       - name: Wait for production Worker
         shell: bash
@@ -26,7 +26,7 @@ jobs:
           d=json.load(open("/tmp/health.json", encoding="utf-8"))
           assert d.get("ok") is True, d
           assert d.get("name") == "NEYQORA", d
-          assert d.get("version") == "4.3", d
+          assert d.get("version") == "4.4", d
           assert d.get("router") is True, d
           assert d.get("agent") is True, d
           print("Production health: PASS")
