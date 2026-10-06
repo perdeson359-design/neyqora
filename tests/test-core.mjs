@@ -90,6 +90,11 @@ assert.match(source, /max 8 files|En fazla 8 dosya/);
 assert.match(source, /path\.startsWith\("\/"\)|path\.includes\("\\\\"\)|unsafe/i);
 assert.match(source, /files\.length > 8/);
 assert.match(source, /validateGeneratedProject/);
+assert.match(source, /x-content-type-options/);
+assert.match(source, /productivityTablesPromise/);
+assert.match(source, /path.startsWith\("\.github\/"/);
+assert.match(source, /os\\.system/);
+assert.match(source, /subprocess/);
 assert.match(source, /templateFiles \|\| await generateProjectFiles/);
 
 assert.match(source, /if \(intent === "coding"\) \{/);
@@ -98,7 +103,7 @@ assert.match(source, /codingValidation = result\?\.validation/);
 assert.match(source, /validation: codingValidation/);
 
 
-assert.match(source, /VERSION = "6\.0"/);
+assert.match(source, /VERSION = "6\.1"/);
 assert.match(source, /\/api\/calendar\/events/);
 assert.match(source, /\/api\/email\/drafts/);
 assert.match(source, /\/api\/email\/send/);
