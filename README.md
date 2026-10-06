@@ -22,5 +22,3 @@ Cloudflare Workers Builds, `main` dalındaki değişiklikleri otomatik olarak da
 - Ses ve görüntü
 - Takvim, e-posta ve otomasyon
 
-
-<!-- generator integration test marker -->
