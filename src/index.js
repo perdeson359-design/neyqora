@@ -175,18 +175,30 @@ async function verifyOwnerSession(request, env) {
 }
 
 function shouldRemember(message) {
-  const text = message.toLocaleLowerCase("tr-TR");
+  const text = String(message || "").toLocaleLowerCase("tr-TR").trim();
   return [
-    "hatırla", "unutma", "aklında tut", "benim adım", "ben ",
+    "hatırla", "unutma", "aklında tut", "benim adım",
     "seviyorum", "sevmiyorum", "tercihim", "tercih ederim",
     "favorim", "bana şöyle"
   ].some(key => text.includes(key));
 }
 
 function extractMemory(message) {
-  const name = message.match(/\bbenim adım\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i)?.[1];
+  const text = String(message || "").trim();
+  const name = text.match(/\bbenim adım\s+([A-Za-zÇĞİÖŞÜçğıöşü]+)\b/i)?.[1];
   if (name) return "Kullanıcının adı: " + name;
-  return message;
+  return text;
+}
+
+function normalizeMemory(content) {
+  return String(content || "").replace(/\s+/g, " ").trim().slice(0, 4000);
+}
+
+function memoryCategory(content) {
+  const text = String(content || "").toLocaleLowerCase("tr-TR");
+  if (text.startsWith("kullanıcının adı:")) return "identity";
+  if (/tercih|favori|seviyorum|sevmiyorum/.test(text)) return "preference";
+  return "general";
 }
 
 function isNameQuestion(message) {
@@ -1340,11 +1352,24 @@ export default {
           }
         }
 
+        let memorySaved = false;
         if (env.DB && shouldRemember(message)) {
-          const memory = extractMemory(message).slice(0, 4000);
-          await env.DB.prepare(
-            "INSERT INTO memories (user_id, content) VALUES (?, ?)"
-          ).bind(userId, memory).run();
+          const memory = normalizeMemory(extractMemory(message));
+          if (memory) {
+            const category = memoryCategory(memory);
+            if (category === "identity") {
+              await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content LIKE 'Kullanıcının adı:%'").bind(userId).run();
+            } else {
+              await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content = ?").bind(userId, memory).run();
+            }
+            await env.DB.prepare(
+              "INSERT INTO memories (user_id, content) VALUES (?, ?)"
+            ).bind(userId, memory).run();
+            await env.DB.prepare(
+              "DELETE FROM memories WHERE user_id = ? AND id IN (SELECT id FROM memories WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT -1 OFFSET 50)"
+            ).bind(userId, userId).run();
+            memorySaved = true;
+          }
         }
 
         return Response.json({
@@ -1355,7 +1380,7 @@ export default {
           audit: agentAudit,
           trace: agentTrace,
           agentStatus,
-          memorySaved: !!(env.DB && shouldRemember(message))
+          memorySaved
         });
       } catch (error) {
         return Response.json({ error: "NEYQORA hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
