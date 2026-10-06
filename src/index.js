@@ -1,5 +1,5 @@
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
-const VERSION = "5.0";
+const VERSION = "6.0";
 const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";
 const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
@@ -20,13 +20,13 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </head>
 <body>
 <div class="app">
-<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V5.0</p></header>
+<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.0</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="memory-panel" style="padding:0 16px 12px">
 <div class="msg ai" style="margin-bottom:8px"><strong>Kalıcı Hafıza</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Kayıtlı bilgilerini görüntüleyebilir, tek tek veya tamamını silebilirsin.</div><button id="clear-memories" type="button" style="margin-top:9px;padding:8px 11px;border-radius:9px;border:0;background:#27385f;color:#fff">Tüm Hafızayı Sil</button></div>
 <div id="memory-list" class="msg ai">Hafıza yükleniyor...</div>
 </div>
 <div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
-<div id="file-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Dosya Analizi</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Metin, kod, JSON, CSV ve Markdown dosyalarını yükleyip analiz ettirebilirsin.</div><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log" style="width:100%;margin-top:10px;color:#dbe4ff"><button id="analyze-files" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Dosyaları Analiz Et</button></div><div id="file-result" class="msg ai" hidden></div></div><div id="media-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Ses ve Görüntü</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Ses kaydı yükleyerek yazıya dönüştür, görsel yükleyerek analiz ettir.</div><input id="audio-input" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" style="width:100%;margin-top:10px;color:#dbe4ff"><button id="transcribe-audio" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Sesi Yazıya Çevir</button><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="width:100%;margin-top:14px;color:#dbe4ff"><button id="analyze-image" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Görseli Analiz Et</button></div><div id="media-result" class="msg ai" hidden></div></div><div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
+<div id="productivity-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Takvim · E-posta · Otomasyon</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Etkinlik oluştur, e-posta taslağı hazırla ve zamanlanmış görev oluştur.</div><input id="event-title" placeholder="Takvim etkinliği" style="width:100%;margin-top:10px"><input id="event-start" type="datetime-local" style="width:100%;margin-top:8px"><input id="event-end" type="datetime-local" style="width:100%;margin-top:8px"><button id="create-event" type="button" style="width:100%;height:42px;margin-top:8px;background:#27385f;color:#fff">Etkinlik Oluştur</button><input id="email-to" placeholder="E-posta alıcısı" style="width:100%;margin-top:12px"><input id="email-subject" placeholder="Konu" style="width:100%;margin-top:8px"><textarea id="email-body" placeholder="E-posta içeriği" style="width:100%;min-height:90px;margin-top:8px;background:#0b1020;color:#fff;border:0;border-radius:12px;padding:12px"></textarea><button id="save-email" type="button" style="width:100%;height:42px;margin-top:8px;background:#27385f;color:#fff">E-posta Taslağını Kaydet</button><input id="automation-title" placeholder="Otomasyon adı" style="width:100%;margin-top:12px"><input id="automation-run" type="datetime-local" style="width:100%;margin-top:8px"><input id="automation-prompt" placeholder="Görev" style="width:100%;margin-top:8px"><button id="create-automation" type="button" style="width:100%;height:42px;margin-top:8px;background:#27385f;color:#fff">Otomasyon Oluştur</button></div><div id="productivity-result" class="msg ai" hidden></div></div><div id="file-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Dosya Analizi</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Metin, kod, JSON, CSV ve Markdown dosyalarını yükleyip analiz ettirebilirsin.</div><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log" style="width:100%;margin-top:10px;color:#dbe4ff"><button id="analyze-files" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Dosyaları Analiz Et</button></div><div id="file-result" class="msg ai" hidden></div></div><div id="media-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Ses ve Görüntü</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Ses kaydı yükleyerek yazıya dönüştür, görsel yükleyerek analiz ettir.</div><input id="audio-input" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm" style="width:100%;margin-top:10px;color:#dbe4ff"><button id="transcribe-audio" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Sesi Yazıya Çevir</button><input id="image-input" type="file" accept="image/png,image/jpeg,image/webp,image/gif" style="width:100%;margin-top:14px;color:#dbe4ff"><button id="analyze-image" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Görseli Analiz Et</button></div><div id="media-result" class="msg ai" hidden></div></div><div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
 window.neyqoraSend=async function(){
@@ -126,6 +126,10 @@ document.querySelector("#analyze-files")?.addEventListener("click",async()=>{
   if(result){result.hidden=false;result.textContent="Dosyalar analiz ediliyor...";}
   try{const r=await fetch("/api/files/analyze",{method:"POST",body:formData});const data=await r.json();if(!r.ok)throw new Error(data.error||"Analiz başarısız.");result.textContent=data.analysis||"Analiz sonucu yok.";}catch(error){if(result)result.textContent="Hata: "+(error?.message||"Dosya analizi başarısız.");}finally{if(button)button.disabled=false;}
 });
+async function postProductivity(url,payload){const r=await fetch(url,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(payload)});const d=await r.json();if(!r.ok)throw new Error(d.error||"İşlem başarısız.");return d;}
+document.querySelector("#create-event")?.addEventListener("click",async()=>{const o=document.querySelector("#productivity-result");try{const d=await postProductivity("/api/calendar/events",{userId,title:document.querySelector("#event-title").value,startAt:document.querySelector("#event-start").value,endAt:document.querySelector("#event-end").value});o.hidden=false;o.textContent="Etkinlik oluşturuldu: "+d.event.title;}catch(e){o.hidden=false;o.textContent="Hata: "+e.message;}});
+document.querySelector("#save-email")?.addEventListener("click",async()=>{const o=document.querySelector("#productivity-result");try{const d=await postProductivity("/api/email/drafts",{userId,to:document.querySelector("#email-to").value,subject:document.querySelector("#email-subject").value,body:document.querySelector("#email-body").value});o.hidden=false;o.textContent="E-posta taslağı kaydedildi (#"+d.draft.id+").";}catch(e){o.hidden=false;o.textContent="Hata: "+e.message;}});
+document.querySelector("#create-automation")?.addEventListener("click",async()=>{const o=document.querySelector("#productivity-result");try{const d=await postProductivity("/api/automations",{userId,title:document.querySelector("#automation-title").value,runAt:new Date(document.querySelector("#automation-run").value).toISOString(),prompt:document.querySelector("#automation-prompt").value});o.hidden=false;o.textContent="Otomasyon oluşturuldu (#"+d.automation.id+").";}catch(e){o.hidden=false;o.textContent="Hata: "+e.message;}});
 document.querySelector("#transcribe-audio")?.addEventListener("click",async()=>{
   const file=document.querySelector("#audio-input")?.files?.[0]; const result=document.querySelector("#media-result"); const button=document.querySelector("#transcribe-audio");
   if(!file){if(result){result.hidden=false;result.textContent="Önce ses dosyası seç.";}return;}
@@ -200,6 +204,16 @@ input.addEventListener("keydown",function(e){
 </body>
 </html>`;
 
+async function ensureProductivityTables(env){
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS calendar_events (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,start_at TEXT NOT NULL,end_at TEXT NOT NULL,description TEXT NOT NULL DEFAULT '',location TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_calendar_user_start ON calendar_events(user_id,start_at)").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS email_drafts (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,to_address TEXT NOT NULL,subject TEXT NOT NULL,body TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'draft',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_email_user_created ON email_drafts(user_id,created_at DESC)").run();
+  await env.DB.prepare("CREATE TABLE IF NOT EXISTS automations (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,title TEXT NOT NULL,prompt TEXT NOT NULL,run_at TEXT NOT NULL,status TEXT NOT NULL DEFAULT 'pending',last_error TEXT NOT NULL DEFAULT '',created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();
+  await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_automation_due ON automations(status,run_at)").run();
+}
+function normalizeUserId(value){const text=String(value||"").trim();return /^[A-Za-z0-9._:-]{1,100}$/.test(text)?text:"";}
+function mapCalendarEvent(row){return {id:row.id,title:row.title,startAt:row.start_at,endAt:row.end_at,description:row.description,location:row.location,createdAt:row.created_at};}
 function getBearerToken(request) {
   const value = request.headers.get("authorization") || "";
   return value.toLowerCase().startsWith("bearer ") ? value.slice(7).trim() : "";
@@ -1069,6 +1083,38 @@ export default {
       }
     }
 
+    if (request.method === "GET" && url.pathname === "/api/calendar/events") {
+      const isOwner=await verifyOwnerSession(request,env); const uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env);
+      const rows=await env.DB.prepare("SELECT id,title,start_at,end_at,description,location,created_at FROM calendar_events WHERE user_id=? ORDER BY start_at ASC LIMIT 100").bind(uid).all();
+      return Response.json({ok:true,events:(rows.results||[]).map(mapCalendarEvent)});
+    }
+    if (request.method === "POST" && url.pathname === "/api/calendar/events") {
+      const isOwner=await verifyOwnerSession(request,env); const body=await request.json(); const uid=isOwner?"owner":normalizeUserId(body.userId);
+      if(!uid||!body.title||!body.startAt)return Response.json({ok:false,error:"userId, title ve startAt gerekli."},{status:400}); await ensureProductivityTables(env);
+      const startAt=String(body.startAt),endAt=String(body.endAt||body.startAt); if(Number.isNaN(Date.parse(startAt))||Number.isNaN(Date.parse(endAt)))return Response.json({ok:false,error:"Geçersiz tarih."},{status:400});
+      const result=await env.DB.prepare("INSERT INTO calendar_events (user_id,title,start_at,end_at,description,location) VALUES (?,?,?,?,?,?)").bind(uid,String(body.title).slice(0,300),startAt,endAt,String(body.description||"").slice(0,4000),String(body.location||"").slice(0,500)).run();
+      return Response.json({ok:true,event:{id:result.meta.last_row_id,title:String(body.title).slice(0,300),startAt,endAt}});
+    }
+    if (request.method === "DELETE" && url.pathname === "/api/calendar/events") {
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"userId ve id gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM calendar_events WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
+    }
+    if (request.method === "POST" && url.pathname === "/api/email/drafts") {
+      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId); if(!uid||!body.to||!body.subject||!body.body)return Response.json({ok:false,error:"userId, to, subject ve body gerekli."},{status:400}); await ensureProductivityTables(env);
+      const result=await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid,String(body.to).slice(0,500),String(body.subject).slice(0,500),String(body.body).slice(0,20000),"draft").run(); return Response.json({ok:true,draft:{id:result.meta.last_row_id,to:String(body.to),subject:String(body.subject),status:"draft"}});
+    }
+    if (request.method === "GET" && url.pathname === "/api/email/drafts") {
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,to_address,subject,body,status,created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC LIMIT 100").bind(uid).all(); return Response.json({ok:true,drafts:rows.results||[]});
+    }
+    if (request.method === "POST" && url.pathname === "/api/automations") {
+      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId),runAt=String(body.runAt||""); if(!uid||!body.title||!body.prompt||Number.isNaN(Date.parse(runAt)))return Response.json({ok:false,error:"userId, title, prompt ve geçerli runAt gerekli."},{status:400}); await ensureProductivityTables(env);
+      const result=await env.DB.prepare("INSERT INTO automations (user_id,title,prompt,run_at,status) VALUES (?,?,?,?,?)").bind(uid,String(body.title).slice(0,300),String(body.prompt).slice(0,8000),new Date(runAt).toISOString(),"pending").run(); return Response.json({ok:true,automation:{id:result.meta.last_row_id,title:String(body.title).slice(0,300),runAt:new Date(runAt).toISOString(),status:"pending"}});
+    }
+    if (request.method === "GET" && url.pathname === "/api/automations") {
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,title,prompt,run_at,status,last_error,created_at FROM automations WHERE user_id=? ORDER BY run_at ASC LIMIT 100").bind(uid).all(); return Response.json({ok:true,automations:rows.results||[]});
+    }
+    if (request.method === "DELETE" && url.pathname === "/api/automations") {
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"userId ve id gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM automations WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
+    }
     if (request.method === "GET" && url.pathname === "/api/health") {
       return Response.json({
         ok: true,
@@ -1078,7 +1124,7 @@ export default {
         memory: !!env.DB,
         router: true,
         agent: true,
-        tools: ["calculator", "weather", "web", "coding", "project"],
+        tools: ["calculator", "weather", "web", "coding", "project", "calendar", "email", "automation"],
         web: true,
         ownerAuth: !!env.OWNER_AUTH_TOKEN
       });
@@ -1604,6 +1650,11 @@ export default {
   }
 };
 
+async function runDueAutomations(env){
+  if(!env.DB)return; await ensureProductivityTables(env); const now=new Date().toISOString();
+  const rows=await env.DB.prepare("SELECT id,user_id,title,prompt FROM automations WHERE status='pending' AND run_at<=? ORDER BY run_at ASC LIMIT 20").bind(now).all();
+  for(const row of rows.results||[]){try{if(!env.AUTOMATION_WEBHOOK_URL)throw new Error("AUTOMATION_WEBHOOK_URL yapılandırılmamış."); const r=await fetch(env.AUTOMATION_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:row.id,userId:row.user_id,title:row.title,prompt:row.prompt})});if(!r.ok)throw new Error("Automation webhook "+r.status);await env.DB.prepare("UPDATE automations SET status='completed',last_error='' WHERE id=?").bind(row.id).run();}catch(error){await env.DB.prepare("UPDATE automations SET status='failed',last_error=? WHERE id=?").bind(String(error?.message||"unknown").slice(0,1000),row.id).run();}}
+}
 // Testable pure-core helpers are kept independent from Cloudflare runtime APIs.
 export const __test = {
   routeMessage,
