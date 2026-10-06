@@ -44,8 +44,12 @@ jobs:
                 and .router == true
                 and .agent == true
               ' /tmp/health.json >/dev/null; then
-                echo "Production health: PASS"
-                exit 0
+                if curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json; then
+                  jq -e '.ok == true and (.userId | type == "string")' /tmp/session.json >/dev/null
+                  echo "Production health + session: PASS"
+                  exit 0
+                fi
+                echo "Worker version is ready but signed session endpoint is not deployed yet."
               fi
               echo "Production not ready yet."
             else
