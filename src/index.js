@@ -214,7 +214,59 @@ async function ensureProductivityTables(env){
 }
 function normalizeUserId(value){const text=String(value||"").trim();return /^[A-Za-z0-9._:-]{1,100}$/.test(text)?text:"";}
 function mapCalendarEvent(row){return {id:row.id,title:row.title,startAt:row.start_at,endAt:row.end_at,description:row.description,location:row.location,createdAt:row.created_at};}
-function parseEmailRecipients(value){\n  const raw = Array.isArray(value) ? value : String(value || "").split(/[,;\\n]+/);\n  const recipients = raw.map(item => String(item || "").trim()).filter(Boolean);\n  if (!recipients.length || recipients.length > 10) return null;\n  const emailPattern = /^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/;\n  if (recipients.some(item => item.length > 320 || !emailPattern.test(item))) return null;\n  return [...new Set(recipients)];\n}\n\nasync function sendResendEmail(env, { to, subject, body }){\n  const recipients=parseEmailRecipients(to); const cleanSubject=String(subject||"").trim(); const cleanBody=String(body||"").trim();\n  if(!recipients) throw new Error("Geçerli en az bir e-posta alıcısı gerekli.");\n  if(!cleanSubject||cleanSubject.length>500) throw new Error("Konu boş olamaz ve 500 karakteri geçemez.");\n  if(!cleanBody||cleanBody.length>20000) throw new Error("E-posta içeriği boş olamaz ve 20.000 karakteri geçemez.");\n  if(!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY yapılandırılmamış.");\n  const from=String(env.RESEND_FROM||"onboarding@resend.dev").trim();\n  const controller=new AbortController(); const timer=setTimeout(()=>controller.abort(),15000);\n  try{\n    const response=await fetch("https://api.resend.com/emails",{method:"POST",headers:{"content-type":"application/json","authorization":"Bearer "+env.RESEND_API_KEY},body:JSON.stringify({from,to:recipients,subject:cleanSubject,text:cleanBody}),signal:controller.signal});\n    const raw=await response.text(); if(raw.length>4096) throw new Error("Resend yanıtı çok büyük.");\n    let data={}; try{data=raw?JSON.parse(raw):{};}catch{}\n    if(!response.ok) throw new Error("Resend API "+response.status+(data?.message?": "+String(data.message).slice(0,500):""));\n    const id=String(data?.id||"").trim(); if(!id) throw new Error("Resend geçerli bir mesaj kimliği döndürmedi.");\n    return {id,from,to:recipients,subject:cleanSubject};\n  }finally{clearTimeout(timer);}\n}\n\nfunction getUserSessionSecret(env) {
+function parseEmailRecipients(value){
+  const raw = Array.isArray(value) ? value : String(value || "").split(/[,;\n]+/);
+  const recipients = raw.map(item => String(item || "").trim()).filter(Boolean);
+  if (!recipients.length || recipients.length > 10) return null;
+  const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+  if (recipients.some(item => item.length > 320 || !emailPattern.test(item))) return null;
+  return [...new Set(recipients)];
+}
+
+async function sendResendEmail(env, { to, subject, body }){
+  const recipients = parseEmailRecipients(to);
+  const cleanSubject = String(subject || "").trim();
+  const cleanBody = String(body || "").trim();
+  if (!recipients) throw new Error("Geçerli en az bir e-posta alıcısı gerekli.");
+  if (!cleanSubject || cleanSubject.length > 500) throw new Error("Konu boş olamaz ve 500 karakteri geçemez.");
+  if (!cleanBody || cleanBody.length > 20000) throw new Error("E-posta içeriği boş olamaz ve 20.000 karakteri geçemez.");
+  if (!env.RESEND_API_KEY) throw new Error("RESEND_API_KEY yapılandırılmamış.");
+  const from = String(env.RESEND_FROM || "onboarding@resend.dev").trim();
+  if (!from) throw new Error("RESEND_FROM yapılandırılmamış.");
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), 15000);
+  try {
+    const response = await fetch("https://api.resend.com/emails", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        "authorization": "Bearer " + env.RESEND_API_KEY
+      },
+      body: JSON.stringify({
+        from,
+        to: recipients,
+        subject: cleanSubject,
+        text: cleanBody
+      }),
+      signal: controller.signal
+    });
+    const raw = await response.text();
+    if (raw.length > 4096) throw new Error("Resend yanıtı çok büyük.");
+    let data = {};
+    try { data = raw ? JSON.parse(raw) : {}; } catch {}
+    if (!response.ok) {
+      const detail = String(data?.message || data?.error || raw || "").slice(0, 500);
+      throw new Error("Resend API " + response.status + (detail ? ": " + detail : ""));
+    }
+    const id = String(data?.id || "").trim();
+    if (!id) throw new Error("Resend geçerli bir mesaj kimliği döndürmedi.");
+    return { id, from, to: recipients, subject: cleanSubject };
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function getUserSessionSecret(env) {
   return String(env.USER_SESSION_SECRET || env.OWNER_AUTH_TOKEN || "");
 }
 
@@ -1164,7 +1216,34 @@ export default {
       const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid||!body.to||!body.subject||!body.body)return Response.json({ok:false,error:"to, subject ve body gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const result=await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid,String(body.to).slice(0,500),String(body.subject).slice(0,500),String(body.body).slice(0,20000),"draft").run(); return Response.json({ok:true,draft:{id:result.meta.last_row_id,to:String(body.to),subject:String(body.subject),status:"draft"}});
     }
-    if (request.method === "POST" && url.pathname === "/api/email/send") {\n      try {\n        const isOwner=await verifyOwnerSession(request,env), body=await request.json(), uid=isOwner?"owner":await getAuthenticatedUserId(request,env);\n        if(!uid) return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:401});\n        if(!env.RESEND_API_KEY) return Response.json({ok:false,error:"Resend bağlantısı yapılandırılmamış."},{status:503});\n        const recipients=parseEmailRecipients(body?.to), subject=String(body?.subject||"").trim(), messageBody=String(body?.body||"").trim();\n        if(!recipients||!subject||!messageBody) return Response.json({ok:false,error:"Geçerli alıcı, konu ve e-posta içeriği gerekli."},{status:400});\n        if(subject.length>500||messageBody.length>20000) return Response.json({ok:false,error:"E-posta boyutu sınırı aşıldı."},{status:413});\n        const email=await sendResendEmail(env,{to:recipients,subject,body:messageBody});\n        await ensureProductivityTables(env);\n        const result=await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid,recipients.join(", "),subject,messageBody,"sent").run();\n        return Response.json({ok:true,email:{id:email.id,from:email.from,to:email.to,subject:email.subject,status:"sent"},draft:{id:result.meta.last_row_id,status:"sent"}});\n      } catch(error) {\n        const message=String(error?.message||"E-posta gönderilemedi.");\n        if(/AbortError|timeout/i.test(message)) return Response.json({ok:false,error:"Resend isteği zaman aşımına uğradı."},{status:504});\n        return Response.json({ok:false,error:message},{status:502});\n      }\n    }\n    if (request.method === "GET" && url.pathname === "/api/email/drafts") {
+    if (request.method === "POST" && url.pathname === "/api/email/send") {
+      try {
+        const isOwner = await verifyOwnerSession(request, env);
+        const body = await request.json();
+        const uid = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!uid) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
+        if (!env.RESEND_API_KEY) return Response.json({ ok: false, error: "Resend bağlantısı yapılandırılmamış." }, { status: 503 });
+        const recipients = parseEmailRecipients(body?.to);
+        const subject = String(body?.subject || "").trim();
+        const messageBody = String(body?.body || "").trim();
+        if (!recipients || !subject || !messageBody) return Response.json({ ok: false, error: "Geçerli alıcı, konu ve e-posta içeriği gerekli." }, { status: 400 });
+        if (subject.length > 500 || messageBody.length > 20000) return Response.json({ ok: false, error: "E-posta boyutu sınırı aşıldı." }, { status: 413 });
+        const email = await sendResendEmail(env, { to: recipients, subject, body: messageBody });
+        await ensureProductivityTables(env);
+        const result = await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid, recipients.join(", "), subject, messageBody, "sent").run();
+        return Response.json({
+          ok: true,
+          email: { id: email.id, from: email.from, to: email.to, subject: email.subject, status: "sent" },
+          draft: { id: result.meta.last_row_id, status: "sent" }
+        });
+      } catch (error) {
+        const message = String(error?.message || "E-posta gönderilemedi.");
+        if (/AbortError|timeout/i.test(message)) return Response.json({ ok: false, error: "Resend isteği zaman aşımına uğradı." }, { status: 504 });
+        return Response.json({ ok: false, error: message }, { status: 502 });
+      }
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/email/drafts") {
       const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid)return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:401}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,to_address,subject,body,status,created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC LIMIT 100").bind(uid).all(); return Response.json({ok:true,drafts:rows.results||[]});
     }
     if (request.method === "POST" && url.pathname === "/api/automations") {
