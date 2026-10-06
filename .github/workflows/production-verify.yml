@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      EXPECTED_VERSION: "5.0"
+      EXPECTED_VERSION: "6.0"
       EXPECTED_COMMIT: ${{ github.sha }}
 
     steps:
@@ -197,6 +197,53 @@ jobs:
           done
 
           echo "Generated project tests: PASS"
+
+      - name: Verify V6 productivity contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          user_id="production-v6-$(date +%s)"
+
+          event_code=$(curl -sS -o /tmp/v6-event.json -w "%{http_code}" \
+            -A "NEYQORA-Production-Verify" \
+            -H "Origin: $NEYQORA_URL" \
+            -H "Content-Type: application/json" \
+            --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 doğrulama\",\"startAt\":\"2026-10-06T14:00:00Z\",\"endAt\":\"2026-10-06T15:00:00Z\"}" \
+            "$NEYQORA_URL/api/calendar/events")
+          echo "Calendar POST HTTP=$event_code"
+          cat /tmp/v6-event.json
+          test "$event_code" = "200"
+          jq -e '.ok == true and .event.title == "V6 doğrulama"' /tmp/v6-event.json >/dev/null
+
+          email_code=$(curl -sS -o /tmp/v6-email.json -w "%{http_code}" \
+            -A "NEYQORA-Production-Verify" \
+            -H "Origin: $NEYQORA_URL" \
+            -H "Content-Type: application/json" \
+            --data-binary "{\"userId\":\"$user_id\",\"to\":\"v6@example.com\",\"subject\":\"V6 doğrulama\",\"body\":\"V6 e-posta taslağı\"}" \
+            "$NEYQORA_URL/api/email/drafts")
+          echo "Email POST HTTP=$email_code"
+          cat /tmp/v6-email.json
+          test "$email_code" = "200"
+          jq -e '.ok == true and .draft.status == "draft"' /tmp/v6-email.json >/dev/null
+
+          run_at=$(python - <<'PY'
+          from datetime import datetime, timedelta, timezone
+          print((datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat().replace("+00:00","Z"))
+          PY
+          )
+          automation_code=$(curl -sS -o /tmp/v6-automation.json -w "%{http_code}" \
+            -A "NEYQORA-Production-Verify" \
+            -H "Origin: $NEYQORA_URL" \
+            -H "Content-Type: application/json" \
+            --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 otomasyon\",\"runAt\":\"$run_at\",\"prompt\":\"V6 doğrulama görevi\"}" \
+            "$NEYQORA_URL/api/automations")
+          echo "Automation POST HTTP=$automation_code"
+          cat /tmp/v6-automation.json
+          test "$automation_code" = "200"
+          jq -e '.ok == true and .automation.status == "pending"' /tmp/v6-automation.json >/dev/null
+
+          echo "V6 productivity contracts: PASS"
 
       - name: Production gate
         run: |
