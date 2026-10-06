@@ -1,4 +1,5 @@
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
+const VERSION = "4.9";
 
 const HTML = `<!doctype html>
 <html lang="tr">
@@ -17,13 +18,13 @@ input{flex:1;min-width:0;background:#0b1020;color:white;border:0;outline:0;paddi
 </head>
 <body>
 <div class="app">
-<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4.8</p></header>
+<header><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V4.9</p></header>
 <div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div><div id="memory-panel" style="padding:0 16px 12px">
 <div class="msg ai" style="margin-bottom:8px"><strong>Kalıcı Hafıza</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Kayıtlı bilgilerini görüntüleyebilir, tek tek veya tamamını silebilirsin.</div><button id="clear-memories" type="button" style="margin-top:9px;padding:8px 11px;border-radius:9px;border:0;background:#27385f;color:#fff">Tüm Hafızayı Sil</button></div>
 <div id="memory-list" class="msg ai">Hafıza yükleniyor...</div>
 </div>
 <div id="project-panel" hidden style="padding:0 16px 110px"><div class="msg ai" id="project-title">Proje sonucu</div><button id="copy-project" type="button" style="width:100%;height:44px;margin:6px 0 10px;border-radius:12px;border:0;background:#fff;color:#0a0e18;font-weight:700">Kodu Kopyala</button><button id="send-project" type="button" style="width:100%;height:44px;margin:0 0 10px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">GitHub'da Proje Görevi Oluştur</button><pre id="project-files" style="white-space:pre-wrap;overflow:auto;background:#0b1020;padding:12px;border-radius:12px;color:#dbe4ff"></pre></div>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
+<div id="file-panel" style="padding:0 16px 12px"><div class="msg ai"><strong>Dosya Analizi</strong><div style="margin-top:6px;color:#8d98b3;font-size:13px">Metin, kod, JSON, CSV ve Markdown dosyalarını yükleyip analiz ettirebilirsin.</div><input id="file-input" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log" style="width:100%;margin-top:10px;color:#dbe4ff"><button id="analyze-files" type="button" style="width:100%;height:42px;margin-top:9px;border-radius:12px;border:0;background:#27385f;color:#fff;font-weight:700">Dosyaları Analiz Et</button></div><div id="file-result" class="msg ai" hidden></div></div><div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
 window.neyqoraSend=async function(){
@@ -111,6 +112,18 @@ document.querySelector("#clear-memories")?.addEventListener("click",async()=>{
   finally{if(button)button.disabled=false;}
 });
 loadMemories();
+document.querySelector("#analyze-files")?.addEventListener("click",async()=>{
+  const input=document.querySelector("#file-input");
+  const result=document.querySelector("#file-result");
+  const button=document.querySelector("#analyze-files");
+  const files=[...(input?.files||[])];
+  if(!files.length){if(result){result.hidden=false;result.textContent="Önce dosya seç.";};return;}
+  const formData=new FormData();
+  for(const file of files)formData.append("files",file,file.name);
+  if(button)button.disabled=true;
+  if(result){result.hidden=false;result.textContent="Dosyalar analiz ediliyor...";}
+  try{const r=await fetch("/api/files/analyze",{method:"POST",body:formData});const data=await r.json();if(!r.ok)throw new Error(data.error||"Analiz başarısız.");result.textContent=data.analysis||"Analiz sonucu yok.";}catch(error){if(result)result.textContent="Hata: "+(error?.message||"Dosya analizi başarısız.");}finally{if(button)button.disabled=false;}
+});
 const sendButton=document.querySelector("#send");
 let sending=false;
 async function sendMessage(){
@@ -208,6 +221,21 @@ async function verifyOwnerSession(request, env) {
   if (!Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
   const expected = await hmacHex(secret, parts[0] + "." + parts[1]);
   return parts[2] === expected;
+}
+
+function getFileExtension(name) {
+  const value = String(name || "").toLowerCase();
+  const index = value.lastIndexOf(".");
+  return index > -1 ? value.slice(index + 1) : "";
+}
+
+function isAnalyzableFile(file) {
+  const allowed = new Set(["txt","md","csv","json","js","mjs","ts","tsx","jsx","py","java","c","cpp","h","hpp","css","html","xml","yaml","yml","sql","sh","log"]);
+  return allowed.has(getFileExtension(file?.name));
+}
+
+function normalizeFileText(content, maxChars = 60000) {
+  return String(content || "").replace(/\u0000/g, "").replace(/\r\n/g, "\n").slice(0, maxChars);
 }
 
 function shouldRemember(message) {
@@ -1031,7 +1059,7 @@ export default {
       return Response.json({
         ok: true,
         name: "NEYQORA",
-        version: "4.8",
+        version: VERSION,
         model: MODEL,
         memory: !!env.DB,
         router: true,
@@ -1040,6 +1068,35 @@ export default {
         web: true,
         ownerAuth: !!env.OWNER_AUTH_TOKEN
       });
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/files/analyze") {
+      try {
+        const isOwner = await verifyOwnerSession(request, env);
+        const contentLength = Number(request.headers.get("content-length") || "0");
+        if (!isOwner && contentLength > 4_000_000) return Response.json({ ok: false, error: "Dosya yükleme toplamı 4 MB ile sınırlıdır." }, { status: 413 });
+        const form = await request.formData();
+        const files = form.getAll("files").filter(value => value instanceof File);
+        if (!files.length) return Response.json({ ok: false, error: "En az bir dosya yükleyin." }, { status: 400 });
+        if (files.length > 5) return Response.json({ ok: false, error: "En fazla 5 dosya analiz edilebilir." }, { status: 400 });
+        const maxFileBytes = isOwner ? 2_000_000 : 1_000_000;
+        let totalBytes = 0;
+        const documents = [];
+        for (const file of files) {
+          if (!isAnalyzableFile(file)) return Response.json({ ok: false, error: "Desteklenmeyen dosya türü: " + file.name }, { status: 415 });
+          if (file.size > maxFileBytes) return Response.json({ ok: false, error: file.name + " dosyası çok büyük." }, { status: 413 });
+          totalBytes += file.size;
+          if (!isOwner && totalBytes > 4_000_000) return Response.json({ ok: false, error: "Toplam dosya boyutu 4 MB'ı aşamaz." }, { status: 413 });
+          documents.push({ name: String(file.name || "dosya"), type: file.type || "text/plain", size: file.size, content: normalizeFileText(await file.text()) });
+        }
+        const source = documents.map((file, index) => "DOSYA " + (index + 1) + ": " + file.name + "\nBoyut: " + file.size + " byte\nİçerik:\n" + file.content).join("\n\n---\n\n");
+        const prompt = "Aşağıdaki kullanıcı dosyalarını analiz et. Türkçe yanıt ver. Her dosya için kısa özet, önemli bulgular, varsa hata/güvenlik riski ve uygulanabilir önerileri belirt. Kod dosyalarında sözdizimi veya bariz mantık sorunlarını yalnızca metinden doğrulanabildiği ölçüde belirt; çalıştırmadığın kodu çalıştırmış gibi gösterme. Dosyada olmayan bilgiyi uydurma.\n\n" + source;
+        const result = await env.AI.run(MODEL, { messages: [{ role: "system", content: "Sen güvenilir bir dosya analiz asistanısın. Yalnızca verilen dosya içeriğine dayan." }, { role: "user", content: prompt }], max_tokens: 2048, temperature: 0.2 });
+        const analysis = result?.response || result?.choices?.[0]?.message?.content || "Dosya analizi üretilemedi.";
+        return Response.json({ ok: true, files: documents.map(file => ({ name: file.name, type: file.type, size: file.size, characters: file.content.length })), analysis });
+      } catch (error) {
+        return Response.json({ ok: false, error: error?.message || "Dosya analizi başarısız." }, { status: 500 });
+      }
     }
 
     if (request.method === "GET" && url.pathname === "/api/memory") {
@@ -1489,5 +1546,8 @@ export const __test = {
   validateGeneratedProject,
   executeToolStep,
   getBearerToken,
-  getCookie
+  getCookie,
+  getFileExtension,
+  isAnalyzableFile,
+  normalizeFileText
 };
