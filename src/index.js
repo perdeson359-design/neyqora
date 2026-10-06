@@ -210,11 +210,14 @@ function forgetRequest(message) {
   if (/\b(tümünü|hepsini|bütününü)\s+(unut|sil)\b/.test(t) || /\b(hafızayı|hafizayi|hafızamdaki|hafizamdaki)\s+(temizle|sil|unut)\b/.test(t)) {
     return { type: "all" };
   }
-  if (/\b(adımı|ismimi)\s+(unut|sil)\b/.test(t)) return { type: "name" };
-  if (/\b(bunu|şunu)\s+(unut|sil)\b/.test(t)) {
-    const detail = t.replace(/^.*?\b(bunu|şunu)\s+(unut|sil)\b[\s:,-]*/i, "").trim();
+  if (/\b(adımı|ismimi|ismimle ilgili|adımla ilgili)\s+(unut|sil|temizle)\b/.test(t)) return { type: "name" };
+  const direct = t.match(/\b(?:şunu|bunu|şu bilgiyi|bu bilgiyi)\s+(?:unut|sil|temizle)\b[\s:,-]*(.*)$/);
+  if (direct) {
+    const detail = direct[1].trim();
     return { type: detail ? "text" : "latest", detail };
   }
+  const quoted = t.match(/["“”']([^"“”']+)["“”']\s+(?:unut|sil|temizle)\b/);
+  if (quoted) return { type: "text", detail: quoted[1].trim() };
   return null;
 }
 
