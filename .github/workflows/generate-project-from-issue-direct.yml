@@ -29,43 +29,66 @@ jobs:
       - name: Generate project
         shell: bash
         run: |
-          set -e
+          set -euo pipefail
+
           python - <<'PY'
           import json, os
-          with open("/tmp/project-request.json","w",encoding="utf-8") as f:
-              json.dump({"request": os.environ["PROJECT_REQUEST"]}, f, ensure_ascii=False)
+          request = os.environ["PROJECT_REQUEST"]
+          with open("/tmp/project-request.json", "w", encoding="utf-8") as f:
+              json.dump({"request": request, "issueNumber": os.environ["ISSUE_NUMBER"]}, f, ensure_ascii=False)
           PY
-          code=$(curl -sS -o /tmp/project-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/project-request.json "$NEYQORA_URL/api/project")
-          echo "NEYQORA project HTTP status: $code"
-          cat /tmp/project-response.json
-          if [ "$code" != "200" ]; then
-            echo "Direct /api/project başarısız; /api/chat fallback deneniyor."
+
+          code=$(curl -sS -o /tmp/project-response.json -w "%{http_code}"             -A "NEYQORA-GitHub-Actions"             -H "Origin: https://neyqora.kosseofficial.workers.dev"             -H "Accept: application/json"             -H "Content-Type: application/json"             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project" || true)
+
+          echo "NEYQORA /api/project HTTP status: $code"
+          cat /tmp/project-response.json || true
+
+          if [ "$code" != "200" ] || ! python - <<'PY'
+          import json
+          try:
+              data=json.load(open("/tmp/project-response.json",encoding="utf-8"))
+              ok=bool(data.get("ok")) and bool(data.get("files"))
+          except Exception:
+              ok=False
+          raise SystemExit(0 if ok else 1)
+          PY
+          then
+            echo "Direct /api/project başarısız veya files üretmedi; /api/chat fallback deneniyor."
+
             python - <<'PY'
             import json
             data=json.load(open("/tmp/project-request.json",encoding="utf-8"))
-            data={"message": data["request"], "userId": "github-actions", "history": []}
-            json.dump(data,open("/tmp/chat-request.json","w",encoding="utf-8"),ensure_ascii=False)
+            with open("/tmp/chat-request.json","w",encoding="utf-8") as f:
+                json.dump({"message":data["request"],"userId":"github-actions","history":[]},f,ensure_ascii=False)
             PY
-            code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Accept: application/json" -H "Content-Type: application/json" --data-binary @/tmp/chat-request.json "$NEYQORA_URL/api/chat")
-            echo "NEYQORA chat HTTP status: $code"
-            cat /tmp/chat-response.json
-            [ "$code" = "200" ]
+
+            chat_code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}"               -A "NEYQORA-GitHub-Actions"               -H "Origin: https://neyqora.kosseofficial.workers.dev"               -H "Accept: application/json"               -H "Content-Type: application/json"               --data-binary @/tmp/chat-request.json               "$NEYQORA_URL/api/chat" || true)
+
+            echo "NEYQORA /api/chat HTTP status: $chat_code"
+            cat /tmp/chat-response.json || true
+            [ "$chat_code" = "200" ]
+
             python - <<'PY'
             import json
             data=json.load(open("/tmp/chat-response.json",encoding="utf-8"))
-            if not data.get("files"):
-                raise SystemExit("NEYQORA chat fallback project generation failed: "+str(data))
+            files=data.get("files")
+            if not files:
+                raise SystemExit("NEYQORA chat fallback returned no files: "+str(data))
             data["ok"]=True
-            json.dump(data, open("/tmp/project-response.json","w",encoding="utf-8"), ensure_ascii=False)
+            with open("/tmp/project-response.json","w",encoding="utf-8") as f:
+                json.dump(data,f,ensure_ascii=False)
             PY
           fi
+
           python - <<'PY'
           import json
           data=json.load(open("/tmp/project-response.json",encoding="utf-8"))
           if not data.get("ok") or not data.get("files"):
               raise SystemExit("NEYQORA project generation failed: "+str(data))
-          json.dump(data, open("/tmp/project.json","w",encoding="utf-8"), ensure_ascii=False)
+          with open("/tmp/project.json","w",encoding="utf-8") as f:
+              json.dump(data,f,ensure_ascii=False)
           PY
+
           python - <<'PY'
           import json, os, pathlib
           data=json.load(open("/tmp/project.json",encoding="utf-8"))
@@ -79,15 +102,22 @@ jobs:
               target=root/p
               target.parent.mkdir(parents=True,exist_ok=True)
               target.write_text(item["content"],encoding="utf-8")
+          print("Generated:", root)
           PY
+
       - name: First test
         id: first
         continue-on-error: true
+        shell: bash
         run: |
-          set -e
+          set -euo pipefail
           files=$(find projects -type f -name 'test_*.py' | sort)
-          [ -n "$files" ] || exit 1
-          while IFS= read -r f; do timeout 30s python "$f"; done <<< "$files"
+          [ -n "$files" ] || { echo "No tests generated" | tee /tmp/test-output.txt; exit 1; }
+          : > /tmp/test-output.txt
+          while IFS= read -r f; do
+            echo "Testing $f" | tee -a /tmp/test-output.txt
+            timeout 30s python "$f" 2>&1 | tee -a /tmp/test-output.txt
+          done <<< "$files"
       - name: Repair
         if: steps.first.outcome == 'failure'
         run: |
