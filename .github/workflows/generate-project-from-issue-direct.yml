@@ -6,7 +6,6 @@ on:
 
 jobs:
   generate:
-    if: ${{ github.actor == 'perdeson359-design' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
