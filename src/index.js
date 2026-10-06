@@ -137,6 +137,43 @@ input.addEventListener("keydown",function(e){
 </body>
 </html>`;
 
+function getBearerToken(request) {
+  const value = request.headers.get("authorization") || "";
+  return value.toLowerCase().startsWith("bearer ") ? value.slice(7).trim() : "";
+}
+
+function getCookie(request, name) {
+  const cookie = request.headers.get("cookie") || "";
+  const match = cookie.split(";").map(part => part.trim()).find(part => part.startsWith(name + "="));
+  return match ? decodeURIComponent(match.slice(name.length + 1)) : "";
+}
+
+async function hmacHex(secret, value) {
+  const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
+  const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
+  return Array.from(new Uint8Array(signature)).map(byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+async function createOwnerSession(secret) {
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+  const payload = "owner." + expiresAt;
+  return payload + "." + await hmacHex(secret, payload);
+}
+
+async function verifyOwnerSession(request, env) {
+  const secret = String(env.OWNER_AUTH_TOKEN || "");
+  if (!secret) return false;
+  const bearer = getBearerToken(request);
+  if (bearer && bearer === secret) return true;
+  const session = getCookie(request, "neyqora_owner");
+  const parts = session.split(".");
+  if (parts.length !== 3 || parts[0] !== "owner") return false;
+  const expiresAt = Number(parts[1]);
+  if (!Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
+  const expected = await hmacHex(secret, parts[0] + "." + parts[1]);
+  return parts[2] === expected;
+}
+
 function shouldRemember(message) {
   const text = message.toLocaleLowerCase("tr-TR");
   return [
@@ -916,6 +953,26 @@ export default {
       return new Response(HTML, {headers: {"content-type": "text/html; charset=UTF-8", "cache-control": "no-store, no-cache, must-revalidate, max-age=0"}});
     }
 
+    if (request.method === "POST" && url.pathname === "/api/auth/owner") {
+      try {
+        const body = await request.json();
+        const token = String(body?.token || "");
+        const secret = String(env.OWNER_AUTH_TOKEN || "");
+        if (!secret || !token || token !== secret) return Response.json({ ok: false, error: "Owner kimliği doğrulanamadı." }, { status: 401 });
+        const session = await createOwnerSession(secret);
+        return new Response(JSON.stringify({ ok: true, role: "owner", unlimited: true }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=UTF-8",
+            "cache-control": "no-store",
+            "set-cookie": "neyqora_owner=" + encodeURIComponent(session) + "; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000"
+          }
+        });
+      } catch {
+        return Response.json({ ok: false, error: "Owner girişi işlenemedi." }, { status: 400 });
+      }
+    }
+
     if (request.method === "GET" && url.pathname === "/api/health") {
       return Response.json({
         ok: true,
@@ -926,7 +983,8 @@ export default {
         router: true,
         agent: true,
         tools: ["calculator", "weather", "web", "coding", "project"],
-        web: true
+        web: true,
+        ownerAuth: !!env.OWNER_AUTH_TOKEN
       });
     }
 
@@ -974,12 +1032,13 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/project") {
       try {
+        const isOwner = await verifyOwnerSession(request, env);
         const contentLength = Number(request.headers.get("content-length") || "0");
-        if (contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
+        if (!isOwner && contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
         const requestText = String(body?.request || "").trim();
         if (!requestText) return Response.json({ error: "request gerekli." }, { status: 400 });
-        if (requestText.length > 12000) return Response.json({ error: "request çok uzun." }, { status: 413 });
+        if (!isOwner && requestText.length > 12000) return Response.json({ error: "request çok uzun." }, { status: 413 });
         let files = buildProjectFiles(requestText);
         let generator = "template";
         if (!files) {
@@ -1008,8 +1067,9 @@ export default {
 
     if (request.method === "GET" && url.pathname === "/api/search") {
       const q = (url.searchParams.get("q") || "").trim();
+      const isOwner = await verifyOwnerSession(request, env);
       if (!q) return Response.json({ error: "q parametresi gerekli." }, { status: 400 });
-      if (q.length > 1000) return Response.json({ error: "Arama sorgusu çok uzun." }, { status: 413 });
+      if (!isOwner && q.length > 1000) return Response.json({ error: "Arama sorgusu çok uzun." }, { status: 413 });
       try {
         const results = await webSearch(q);
         return Response.json({ ok: true, query: q, results });
@@ -1020,23 +1080,25 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
       try {
+        const isOwner = await verifyOwnerSession(request, env);
         const contentLength = Number(request.headers.get("content-length") || "0");
-        if (contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
+        if (!isOwner && contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
         const message = String(body?.message || "").trim();
-        const userId = String(body?.userId || "").trim();
+        const requestedUserId = String(body?.userId || "").trim();
+        const userId = isOwner ? "owner" : requestedUserId;
         const rawHistory = Array.isArray(body?.history) ? body.history : [];
         const history = rawHistory
           .filter(item => item && (item.role === "user" || item.role === "assistant"))
-          .map(item => ({ role: item.role, content: String(item.content || "").slice(0, 4000) }))
-          .slice(-10);
+          .map(item => ({ role: item.role, content: String(item.content || "").slice(0, isOwner ? 20000 : 4000) }))
+          .slice(isOwner ? -100 : -10);
         const historyChars = history.reduce((sum, item) => sum + item.content.length, 0);
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
-        if (message.length > 8000) return Response.json({ error: "Mesaj çok uzun." }, { status: 413 });
-        if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
+        if (!isOwner && message.length > 8000) return Response.json({ error: "Mesaj çok uzun." }, { status: 413 });
+        if (!isOwner && (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId))) {
           return Response.json({ error: "Kullanıcı kimliği geçersiz." }, { status: 400 });
         }
-        if (historyChars > 20000) return Response.json({ error: "Konuşma geçmişi çok uzun." }, { status: 413 });
+        if (!isOwner && historyChars > 20000) return Response.json({ error: "Konuşma geçmişi çok uzun." }, { status: 413 });
 
         const agentPlan = buildAgentPlan(message);
         const planValidation = validateAgentPlan(agentPlan);
@@ -1309,5 +1371,7 @@ export const __test = {
   safeCalculate,
   basicPythonValidation,
   validateGeneratedProject,
-  executeToolStep
+  executeToolStep,
+  getBearerToken,
+  getCookie
 };
