@@ -49,7 +49,7 @@ assert.match(source, /function isNameQuestion/);
 assert.match(source, /function forgetRequest/);
 assert.match(source, /adımı\\|ismimi/);
 assert.match(source, /Kullanıcının adı/);
-assert.match(source, /type: detail \? "text" : "latest"/);\nassert.match(source, /type: "all"/);\nassert.match(source, /memoryCleared: true/);\nassert.match(source, /DELETE FROM memories WHERE user_id = \?/);
+assert.match(source, /type: detail \? "text" : "latest"/);\nassert.match(source, /type: "all"/);\nassert.match(source, /şu bilgiyi/);\nassert.match(source, /quoted/);\nassert.match(source, /type: "name"/);\nassert.match(source, /memoryCleared: true/);\nassert.match(source, /DELETE FROM memories WHERE user_id = \?/);
 assert.match(source, /function sanitizeProjectFiles/);
 assert.match(source, /function validateGeneratedProject/);
 assert.match(source, /path\.includes\(".."\)/);
