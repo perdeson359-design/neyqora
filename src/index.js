@@ -761,6 +761,28 @@ function basicPythonValidation(code) {
   return { ok: errors.length === 0, errors };
 }
 
+function isBlockedFetchUrl(rawUrl) {
+  try {
+    const parsed = new URL(rawUrl);
+    if (!["http:", "https:"].includes(parsed.protocol)) return true;
+    const host = parsed.hostname.toLowerCase();
+    return host === "localhost" ||
+      host === "localhost.localdomain" ||
+      host === "metadata.google.internal" ||
+      host === "instance-data.ec2.internal" ||
+      host === "host.docker.internal" ||
+      host === "127.0.0.1" ||
+      host === "::1" ||
+      host === "[::1]" ||
+      host === "169.254.169.254" ||
+      /^10\./.test(host) ||
+      /^192\.168\./.test(host) ||
+      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+  } catch {
+    return true;
+  }
+}
+
 function decodeHtml(s) {
   return s
     .replace(/&amp;/g, "&")
@@ -843,6 +865,7 @@ async function webSearch(query) {
   const isUrl = /^https?:\/\//i.test(clean);
 
   if (isUrl) {
+    if (isBlockedFetchUrl(clean)) throw new Error("Bu URL güvenlik politikası nedeniyle açılamıyor.");
     const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" } });
     if (!response.ok) throw new Error("Sayfa açılamadı.");
     const html = await response.text();
@@ -951,6 +974,8 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/project") {
       try {
+        const contentLength = Number(request.headers.get("content-length") || "0");
+        if (contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
         const requestText = String(body?.request || "").trim();
         if (!requestText) return Response.json({ error: "request gerekli." }, { status: 400 });
@@ -995,6 +1020,8 @@ export default {
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
       try {
+        const contentLength = Number(request.headers.get("content-length") || "0");
+        if (contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
         const message = String(body?.message || "").trim();
         const userId = String(body?.userId || "").trim();
