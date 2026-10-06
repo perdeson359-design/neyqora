@@ -56,6 +56,52 @@ jobs:
           echo "Production Worker did not become healthy in time."
           exit 1
 
+      - name: Verify agent routing and project tool
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cat > /tmp/agent-project-request.json <<'JSON'
+          {
+            "message": "Hesap makinesi projesi üret. Python kullan ve test_hesap_makinesi.py ile işlemleri test et.",
+            "userId": "production-verification-agent",
+            "history": []
+          }
+          JSON
+
+          code=$(curl -sS -o /tmp/agent-project.json -w "%{http_code}" \\
+            -A "NEYQORA-Production-Verify" \\
+            -H "Origin: $NEYQORA_URL" \\
+            -H "Content-Type: application/json" \\
+            --data-binary @/tmp/agent-project-request.json \\
+            "$NEYQORA_URL/api/chat")
+
+          echo "Agent project HTTP=$code"
+          cat /tmp/agent-project.json
+          test "$code" = "200"
+
+          python - <<'PY'
+          import json
+
+          d = json.load(open("/tmp/agent-project.json", encoding="utf-8"))
+          assert d.get("intent") == "project", d
+          plan = d.get("plan") or {}
+          steps = plan.get("steps") or []
+          assert any(
+              s.get("tool") == "project" and s.get("action") == "generate_project"
+              for s in steps
+          ), plan
+          results = d.get("toolResults") or []
+          project = next((r for r in results if r.get("tool") == "project"), None)
+          assert project and project.get("ok") is True, d
+          files = project.get("files") or []
+          paths = [str(x.get("path", "")) for x in files]
+          assert any(p.lower().startswith("test_") and p.lower().endswith(".py") for p in paths), paths
+          assert (d.get("agentStatus") or {}).get("status") == "success", d
+          print("Agent routing + project tool: PASS")
+          print("Generated files:", paths)
+          PY
+
       - name: Verify project generation contract
         shell: bash
         run: |
