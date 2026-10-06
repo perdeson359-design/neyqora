@@ -12,7 +12,7 @@ jobs:
       issues: write
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      PROJECT_REQUEST: @@{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }@@
+      PROJECT_REQUEST: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
       - name: Checkout
