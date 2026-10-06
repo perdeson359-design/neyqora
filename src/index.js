@@ -1410,6 +1410,9 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/project/ci") {
+      const isOwner = await verifyOwnerSession(request, env);
+      const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+      if (!authenticatedUserId) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
       const issueNumber = Number(url.searchParams.get("issue") || "0");
       if (!Number.isInteger(issueNumber) || issueNumber < 1) {
         return Response.json({ ok: false, error: "issue parametresi gerekli." }, { status: 400 });
@@ -1491,6 +1494,8 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/search") {
       const q = (url.searchParams.get("q") || "").trim();
       const isOwner = await verifyOwnerSession(request, env);
+      const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+      if (!authenticatedUserId) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
       if (!q) return Response.json({ error: "q parametresi gerekli." }, { status: 400 });
       if (!isOwner && q.length > 1000) return Response.json({ error: "Arama sorgusu çok uzun." }, { status: 413 });
       try {
