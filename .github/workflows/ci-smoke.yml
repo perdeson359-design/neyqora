@@ -1,0 +1,30 @@
+name: NEYQORA CI Smoke Test
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check NEYQORA health
+        shell: bash
+        run: |
+          set -e
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
+            -A "NEYQORA-GitHub-Actions-Smoke" \
+            -H "Accept: application/json" \
+            "https://neyqora.kosseofficial.workers.dev/api/health")
+          echo "NEYQORA health HTTP status: $code"
+          cat /tmp/health.json
+          test "$code" = "200"
+
+      - name: CI connection result
+        run: echo "NEYQORA GitHub Actions bağlantısı: PASS"
