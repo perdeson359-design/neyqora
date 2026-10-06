@@ -214,6 +214,37 @@ async function ensureProductivityTables(env){
 }
 function normalizeUserId(value){const text=String(value||"").trim();return /^[A-Za-z0-9._:-]{1,100}$/.test(text)?text:"";}
 function mapCalendarEvent(row){return {id:row.id,title:row.title,startAt:row.start_at,endAt:row.end_at,description:row.description,location:row.location,createdAt:row.created_at};}
+function getUserSessionSecret(env) {
+  return String(env.USER_SESSION_SECRET || env.OWNER_AUTH_TOKEN || "");
+}
+
+async function createUserSession(secret, userId) {
+  const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
+  const payload = "user." + userId + "." + expiresAt;
+  return payload + "." + await hmacHex(secret, payload);
+}
+
+async function getAuthenticatedUserId(request, env) {
+  const secret = getUserSessionSecret(env);
+  if (!secret) return "";
+  const session = getCookie(request, "neyqora_user");
+  const parts = session.split(".");
+  if (parts.length !== 4 || parts[0] !== "user") return "";
+  const userId = parts[1];
+  const expiresAt = Number(parts[2]);
+  if (!/^[A-Za-z0-9._:-]{1,100}$/.test(userId) || !Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return "";
+  const expected = await hmacHex(secret, parts[0] + "." + parts[1] + "." + parts[2]);
+  return parts[3] === expected ? userId : "";
+}
+
+async function issueUserSession(env) {
+  const secret = getUserSessionSecret(env);
+  if (!secret) return null;
+  const userId = crypto.randomUUID();
+  const session = await createUserSession(secret, userId);
+  return { userId, cookie: "neyqora_user=" + encodeURIComponent(session) + "; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=2592000" };
+}
+
 function getBearerToken(request) {
   const value = request.headers.get("authorization") || "";
   return value.toLowerCase().startsWith("bearer ") ? value.slice(7).trim() : "";
@@ -1013,9 +1044,10 @@ async function webSearch(query) {
 
   if (isUrl) {
     if (isBlockedFetchUrl(clean)) throw new Error("Bu URL güvenlik politikası nedeniyle açılamıyor.");
-    const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" } });
+    const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" }, signal: AbortSignal.timeout(10000) });
     if (!response.ok) throw new Error("Sayfa açılamadı.");
     const html = await response.text();
+    if (html.length > 1_000_000) throw new Error("Sayfa yanıtı çok büyük.");
     const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || clean)
       .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     return [{ title, link: clean }];
@@ -1029,11 +1061,13 @@ async function webSearch(query) {
   for (const url of sources) {
     try {
       const response = await fetch(url, {
-        headers: { "user-agent": "Mozilla/5.0 NEYQORA/1.0", "accept": "application/rss+xml, application/xml, text/xml" }
+        headers: { "user-agent": "Mozilla/5.0 NEYQORA/1.0", "accept": "application/rss+xml, application/xml, text/xml" },
+        signal: AbortSignal.timeout(10000)
       });
       if (!response.ok) continue;
 
       const xml = await response.text();
+      if (xml.length > 1_000_000) continue;
       const results = [];
       const itemRe = /<item>([\s\S]*?)<\/item>/gi;
       let item;
@@ -1060,7 +1094,35 @@ export default {
     const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/") {
-      return new Response(HTML, {headers: {"content-type": "text/html; charset=UTF-8", "cache-control": "no-store, no-cache, must-revalidate, max-age=0"}});
+      const headers = new Headers({
+        "content-type": "text/html; charset=UTF-8",
+        "cache-control": "no-store, no-cache, must-revalidate, max-age=0"
+      });
+      const currentUserId = await getAuthenticatedUserId(request, env);
+      if (!currentUserId) {
+        const issued = await issueUserSession(env);
+        if (issued) headers.set("set-cookie", issued.cookie);
+      }
+      return new Response(HTML, { headers });
+    }
+
+    if (request.method === "GET" && url.pathname === "/api/session") {
+      const isOwner = await verifyOwnerSession(request, env);
+      if (isOwner) return Response.json({ ok: true, userId: "owner", role: "owner" });
+      const userId = await getAuthenticatedUserId(request, env);
+      if (!userId) {
+        const issued = await issueUserSession(env);
+        if (!issued) return Response.json({ ok: false, error: "Kullanıcı oturumu için gizli anahtar yapılandırılmamış." }, { status: 503 });
+        return new Response(JSON.stringify({ ok: true, userId: issued.userId, role: "user" }), {
+          status: 200,
+          headers: {
+            "content-type": "application/json; charset=UTF-8",
+            "cache-control": "no-store",
+            "set-cookie": issued.cookie
+          }
+        });
+      }
+      return Response.json({ ok: true, userId, role: "user" });
     }
 
     if (request.method === "POST" && url.pathname === "/api/auth/owner") {
@@ -1084,29 +1146,29 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/calendar/events") {
-      const isOwner=await verifyOwnerSession(request,env); const uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env);
+      const isOwner=await verifyOwnerSession(request,env); const uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid)return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const rows=await env.DB.prepare("SELECT id,title,start_at,end_at,description,location,created_at FROM calendar_events WHERE user_id=? ORDER BY start_at ASC LIMIT 100").bind(uid).all();
       return Response.json({ok:true,events:(rows.results||[]).map(mapCalendarEvent)});
     }
     if (request.method === "POST" && url.pathname === "/api/calendar/events") {
-      const isOwner=await verifyOwnerSession(request,env); const body=await request.json(); const uid=isOwner?"owner":normalizeUserId(body.userId);
-      if(!uid||!body.title||!body.startAt)return Response.json({ok:false,error:"userId, title ve startAt gerekli."},{status:400}); await ensureProductivityTables(env);
+      const isOwner=await verifyOwnerSession(request,env); const body=await request.json(); const uid=isOwner?"owner":await getAuthenticatedUserId(request,env);
+      if(!uid||!body.title||!body.startAt)return Response.json({ok:false,error:"title ve startAt gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const startAt=String(body.startAt),endAt=String(body.endAt||body.startAt); if(Number.isNaN(Date.parse(startAt))||Number.isNaN(Date.parse(endAt)))return Response.json({ok:false,error:"Geçersiz tarih."},{status:400});
       const result=await env.DB.prepare("INSERT INTO calendar_events (user_id,title,start_at,end_at,description,location) VALUES (?,?,?,?,?,?)").bind(uid,String(body.title).slice(0,300),startAt,endAt,String(body.description||"").slice(0,4000),String(body.location||"").slice(0,500)).run();
       return Response.json({ok:true,event:{id:result.meta.last_row_id,title:String(body.title).slice(0,300),startAt,endAt}});
     }
     if (request.method === "DELETE" && url.pathname === "/api/calendar/events") {
-      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"userId ve id gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM calendar_events WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
+      const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":await getAuthenticatedUserId(request,env),id=Number(url.searchParams.get("id")); if(!uid||!Number.isInteger(id))return Response.json({ok:false,error:"id ve kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env); await env.DB.prepare("DELETE FROM calendar_events WHERE id=? AND user_id=?").bind(id,uid).run(); return Response.json({ok:true});
     }
     if (request.method === "POST" && url.pathname === "/api/email/drafts") {
-      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId); if(!uid||!body.to||!body.subject||!body.body)return Response.json({ok:false,error:"userId, to, subject ve body gerekli."},{status:400}); await ensureProductivityTables(env);
+      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid||!body.to||!body.subject||!body.body)return Response.json({ok:false,error:"to, subject ve body gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const result=await env.DB.prepare("INSERT INTO email_drafts (user_id,to_address,subject,body,status) VALUES (?,?,?,?,?)").bind(uid,String(body.to).slice(0,500),String(body.subject).slice(0,500),String(body.body).slice(0,20000),"draft").run(); return Response.json({ok:true,draft:{id:result.meta.last_row_id,to:String(body.to),subject:String(body.subject),status:"draft"}});
     }
     if (request.method === "GET" && url.pathname === "/api/email/drafts") {
       const isOwner=await verifyOwnerSession(request,env),uid=isOwner?"owner":normalizeUserId(url.searchParams.get("userId")); if(!uid)return Response.json({ok:false,error:"userId gerekli."},{status:400}); await ensureProductivityTables(env); const rows=await env.DB.prepare("SELECT id,to_address,subject,body,status,created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC LIMIT 100").bind(uid).all(); return Response.json({ok:true,drafts:rows.results||[]});
     }
     if (request.method === "POST" && url.pathname === "/api/automations") {
-      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId),runAt=String(body.runAt||""); if(!uid||!body.title||!body.prompt||Number.isNaN(Date.parse(runAt)))return Response.json({ok:false,error:"userId, title, prompt ve geçerli runAt gerekli."},{status:400}); await ensureProductivityTables(env);
+      const isOwner=await verifyOwnerSession(request,env),body=await request.json(),uid=isOwner?"owner":normalizeUserId(body.userId),runAt=String(body.runAt||""); if(!uid||!body.title||!body.prompt||Number.isNaN(Date.parse(runAt)))return Response.json({ok:false,error:"title, prompt ve geçerli runAt gerekli; kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const result=await env.DB.prepare("INSERT INTO automations (user_id,title,prompt,run_at,status) VALUES (?,?,?,?,?)").bind(uid,String(body.title).slice(0,300),String(body.prompt).slice(0,8000),new Date(runAt).toISOString(),"pending").run(); return Response.json({ok:true,automation:{id:result.meta.last_row_id,title:String(body.title).slice(0,300),runAt:new Date(runAt).toISOString(),status:"pending"}});
     }
     if (request.method === "GET" && url.pathname === "/api/automations") {
@@ -1221,10 +1283,9 @@ export default {
       try {
         const isOwner = await verifyOwnerSession(request, env);
         if (!env.DB) return Response.json({ ok: false, error: "Hafıza veritabanı bağlı değil." }, { status: 503 });
-        const requestedUserId = String(url.searchParams.get("userId") || "").trim();
-        const userId = isOwner ? "owner" : requestedUserId;
+        const userId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
         if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
-          return Response.json({ ok: false, error: "Geçerli userId gerekli." }, { status: 400 });
+          return Response.json({ ok: false, error: "Geçerli kullanıcı oturumu gerekli." }, { status: 400 });
         }
         const limit = Math.min(Math.max(Number(url.searchParams.get("limit") || "20"), 1), 50);
         const result = await env.DB.prepare(
@@ -1359,8 +1420,7 @@ export default {
         if (!isOwner && contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
         const message = String(body?.message || "").trim();
-        const requestedUserId = String(body?.userId || "").trim();
-        const userId = isOwner ? "owner" : requestedUserId;
+        const userId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
         const rawHistory = Array.isArray(body?.history) ? body.history : [];
         const history = rawHistory
           .filter(item => item && (item.role === "user" || item.role === "assistant"))
@@ -1647,13 +1707,20 @@ export default {
     }
 
     return new Response("NEYQORA", { status: 404 });
+  },
+  async scheduled(controller, env) {
+    try {
+      await runDueAutomations(env);
+    } catch (error) {
+      console.error("NEYQORA automation scheduler error:", error?.message || error);
+    }
   }
 };
 
 async function runDueAutomations(env){
   if(!env.DB)return; await ensureProductivityTables(env); const now=new Date().toISOString();
   const rows=await env.DB.prepare("SELECT id,user_id,title,prompt FROM automations WHERE status='pending' AND run_at<=? ORDER BY run_at ASC LIMIT 20").bind(now).all();
-  for(const row of rows.results||[]){try{if(!env.AUTOMATION_WEBHOOK_URL)throw new Error("AUTOMATION_WEBHOOK_URL yapılandırılmamış."); const r=await fetch(env.AUTOMATION_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:row.id,userId:row.user_id,title:row.title,prompt:row.prompt})});if(!r.ok)throw new Error("Automation webhook "+r.status);await env.DB.prepare("UPDATE automations SET status='completed',last_error='' WHERE id=?").bind(row.id).run();}catch(error){await env.DB.prepare("UPDATE automations SET status='failed',last_error=? WHERE id=?").bind(String(error?.message||"unknown").slice(0,1000),row.id).run();}}
+  for(const row of rows.results||[]){try{if(!env.AUTOMATION_WEBHOOK_URL)throw new Error("AUTOMATION_WEBHOOK_URL yapılandırılmamış."); const r=await fetch(env.AUTOMATION_WEBHOOK_URL,{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:row.id,userId:row.user_id,title:row.title,prompt:row.prompt}),signal:AbortSignal.timeout(10000)});if(!r.ok)throw new Error("Automation webhook "+r.status);await env.DB.prepare("UPDATE automations SET status='completed',last_error='' WHERE id=?").bind(row.id).run();}catch(error){await env.DB.prepare("UPDATE automations SET status='failed',last_error=? WHERE id=?").bind(String(error?.message||"unknown").slice(0,1000),row.id).run();}}
 }
 // Testable pure-core helpers are kept independent from Cloudflare runtime APIs.
 export const __test = {
