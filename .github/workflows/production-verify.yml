@@ -69,12 +69,7 @@ jobs:
           }
           JSON
 
-          code=$(curl -sS -o /tmp/agent-project.json -w "%{http_code}" \\
-            -A "NEYQORA-Production-Verify" \\
-            -H "Origin: $NEYQORA_URL" \\
-            -H "Content-Type: application/json" \\
-            --data-binary @/tmp/agent-project-request.json \\
-            "$NEYQORA_URL/api/chat")
+          code=$(curl -sS -o /tmp/agent-project.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/agent-project-request.json "$NEYQORA_URL/api/chat")
 
           echo "Agent project HTTP=$code"
           cat /tmp/agent-project.json
