@@ -3,174 +3,85 @@ name: Generate Project From Issue Direct
 on:
   issues:
     types: [opened]
-  push:
-    branches: [main]
-    paths: ['.github/GENERATE_NOW']
 
 jobs:
   generate:
+    if: ${{ github.actor == 'perdeson359-design' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
       issues: write
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      PROJECT_REQUEST: ${{ github.event_name == 'push' && 'Hesap makinesi üret ve test et. [generate-test]' || format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
-      ISSUE_NUMBER: ${{ github.event_name == 'push' && '23' || github.event.issue.number }}
+      PROJECT_REQUEST: @@{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }@@
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-      - name: Check NEYQORA health from runner
+
+      - name: Health
         run: |
-          set -e
-          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" -A "Mozilla/5.0 (NEYQORA GitHub Actions)" -H "Origin: https://neyqora.kosseofficial.workers.dev" "$NEYQORA_URL/api/health")
-          echo "NEYQORA health HTTP status: $code"
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/health")
+          echo "Health HTTP=$code"
           cat /tmp/health.json
-          [ "$code" = "200" ]
+          test "$code" = "200"
 
       - name: Generate project
         id: generate
-        shell: bash
         run: |
           set -euo pipefail
+          python -c 'import json,os; json.dump({"request":os.environ["PROJECT_REQUEST"]},open("/tmp/request.json","w",encoding="utf-8"),ensure_ascii=False)'
+          code=$(curl -sS -o /tmp/response.json -w "%{http_code}" -A "NEYQORA-GitHub-Actions" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Content-Type: application/json" --data-binary @/tmp/request.json "$NEYQORA_URL/api/project" || true)
+          echo "Project API HTTP=$code"
+          cat /tmp/response.json || true
+          python -c 'import json; d=json.load(open("/tmp/response.json")); assert d.get("ok") and d.get("files"), d'
+          python -c 'import json,os,pathlib; d=json.load(open("/tmp/response.json")); root=pathlib.Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"]); root.mkdir(parents=True,exist_ok=True); [(root/pathlib.Path(x["path"])).parent.mkdir(parents=True,exist_ok=True) or (root/pathlib.Path(x["path"])).write_text(x["content"],encoding="utf-8") for x in d["files"]]; print(root)'
 
-          python -c 'import json,os; json.dump({"request":os.environ["PROJECT_REQUEST"],"issueNumber":os.environ["ISSUE_NUMBER"]},open("/tmp/project-request.json","w",encoding="utf-8"),ensure_ascii=False)'
-
-          code=$(curl -sS -o /tmp/project-response.json -w "%{http_code}"             -A "NEYQORA-GitHub-Actions"             -H "Origin: https://neyqora.kosseofficial.workers.dev"             -H "Accept: application/json"             -H "Content-Type: application/json"             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project" || true)
-
-          echo "NEYQORA /api/project HTTP status: $code"
-          cat /tmp/project-response.json || true
-
-          valid_project=0
-          python -c 'import json; d=json.load(open("/tmp/project-response.json",encoding="utf-8")); raise SystemExit(0 if d.get("ok") and d.get("files") else 1)' && valid_project=1 || true
-
-          if [ "$code" != "200" ] || [ "$valid_project" != "1" ]; then
-            printf "NEYQORA /api/project failed. HTTP=%s
-" "$code" > /tmp/generation-error.txt
-            cat /tmp/project-response.json >> /tmp/generation-error.txt 2>/dev/null || true
-            echo "Direct /api/project başarısız; /api/chat fallback deneniyor."
-
-            python -c 'import json; d=json.load(open("/tmp/project-request.json",encoding="utf-8")); json.dump({"message":d["request"],"userId":"github-actions","history":[]},open("/tmp/chat-request.json","w",encoding="utf-8"),ensure_ascii=False)'
-
-            chat_code=$(curl -sS -o /tmp/chat-response.json -w "%{http_code}"               -A "NEYQORA-GitHub-Actions"               -H "Origin: https://neyqora.kosseofficial.workers.dev"               -H "Accept: application/json"               -H "Content-Type: application/json"               --data-binary @/tmp/chat-request.json               "$NEYQORA_URL/api/chat" || true)
-
-            echo "NEYQORA /api/chat HTTP status: $chat_code"
-            cat /tmp/chat-response.json || true
-
-            if [ "$chat_code" != "200" ]; then
-              printf "
-NEYQORA /api/chat fallback failed. HTTP=%s
-" "$chat_code" >> /tmp/generation-error.txt
-              cat /tmp/chat-response.json >> /tmp/generation-error.txt 2>/dev/null || true
-              exit 1
-            fi
-
-            python -c 'import json; d=json.load(open("/tmp/chat-response.json",encoding="utf-8")); f=d.get("files"); open("/tmp/generation-error.txt","a",encoding="utf-8").write("\nNEYQORA /api/chat returned no files.\n"+json.dumps(d,ensure_ascii=False)) if not f else None; raise SystemExit("NEYQORA chat fallback returned no files") if not f else None'
-            python -c 'import json; d=json.load(open("/tmp/chat-response.json",encoding="utf-8")); d["ok"]=True; json.dump(d,open("/tmp/project-response.json","w",encoding="utf-8"),ensure_ascii=False)'
-          fi
-
-          python -c 'import json; d=json.load(open("/tmp/project-response.json",encoding="utf-8")); raise SystemExit("NEYQORA project generation failed") if not d.get("ok") or not d.get("files") else None; json.dump(d,open("/tmp/project.json","w",encoding="utf-8"),ensure_ascii=False)'
-
-          python -c 'import json,os,pathlib; d=json.load(open("/tmp/project.json",encoding="utf-8")); name="".join(c.lower() if c.isalnum() else "-" for c in os.environ["PROJECT_REQUEST"]).strip("-")[:40] or "project"; root=pathlib.Path("projects")/name; root.mkdir(parents=True,exist_ok=True); [((root/pathlib.Path(i["path"])).parent.mkdir(parents=True,exist_ok=True), (root/pathlib.Path(i["path"])).write_text(i["content"],encoding="utf-8")) for i in d["files"] if not pathlib.Path(i["path"]).is_absolute() and ".." not in pathlib.Path(i["path"]).parts and "\\" not in i["path"]]; print("Generated:",root)'
-      - name: First test
-        id: first
+      - name: Test
+        id: test
         continue-on-error: true
-        shell: bash
         run: |
           set -euo pipefail
-          files=$(find projects -type f -name 'test_*.py' | sort)
-          [ -n "$files" ] || { echo "No tests generated" | tee /tmp/test-output.txt; exit 1; }
-          : > /tmp/test-output.txt
-          while IFS= read -r f; do
-            echo "Testing $f" | tee -a /tmp/test-output.txt
-            timeout 30s python "$f" 2>&1 | tee -a /tmp/test-output.txt
-          done <<< "$files"
-      - name: Repair
-        if: steps.first.outcome == 'failure'
-        run: |
-          set -e
-          python - <<'PY'
-          import json, os, pathlib
-          from urllib.request import Request, urlopen
-          log=""
-          p=pathlib.Path("/tmp/test-output.txt")
-          if p.exists(): log=p.read_text(encoding="utf-8",errors="replace")[-12000:]
-          reqtext=os.environ["PROJECT_REQUEST"]+"\n\nTestleri düzelt. Gerçek hata çıktısı:\n"+log
-          body=json.dumps({"request":reqtext}).encode()
-          req=Request(os.environ["NEYQORA_URL"]+"/api/project",data=body,headers={"content-type":"application/json"},method="POST")
-          with urlopen(req,timeout=120) as response: data=json.load(response)
-          if not data.get("ok"): raise SystemExit("Repair failed")
-          name="".join(c.lower() if c.isalnum() else "-" for c in os.environ["PROJECT_REQUEST"]).strip("-")[:40] or "project"
-          root=pathlib.Path("projects")/name
-          for item in data["files"]:
-              p=pathlib.Path(item["path"])
-              if p.is_absolute() or ".." in p.parts or "\\" in str(p): raise SystemExit("Unsafe path")
-              target=root/p
-              target.parent.mkdir(parents=True,exist_ok=True)
-              target.write_text(item["content"],encoding="utf-8")
-          PY
-      - name: Final test
-        id: final
-        continue-on-error: true
-        run: |
-          set -e
-          files=$(find projects -type f -name 'test_*.py' | sort)
-          [ -n "$files" ] || exit 1
-          while IFS= read -r f; do timeout 30s python "$f"; done <<< "$files"
+          files=$(find "projects/issue-$ISSUE_NUMBER" -type f -name 'test_*.py' | sort)
+          test -n "$files"
+          while IFS= read -r file; do timeout 30s python "$file"; done <<< "$files"
+
       - name: Syntax
         id: syntax
         continue-on-error: true
         run: |
-          set -e
-          files=$(find projects -type f -name '*.py' | sort)
-          while IFS= read -r f; do timeout 30s python -m py_compile "$f"; done <<< "$files"
+          set -euo pipefail
+          files=$(find "projects/issue-$ISSUE_NUMBER" -type f -name '*.py' | sort)
+          while IFS= read -r file; do python -m py_compile "$file"; done <<< "$files"
+
       - name: Safety
         id: safety
         continue-on-error: true
         run: |
-          set -e
-          ! grep -R -nE '\b(eval|exec)[[:space:]]*\(' projects --include='*.py'
-      - name: Publish result
+          set -euo pipefail
+          ! grep -R -nE '\\b(eval|exec)[[:space:]]*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
+
+      - name: Publish
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
-          GENERATION: ${{ steps.generate.outcome }}
-          FIRST: ${{ steps.first.outcome }}
-          FINAL: ${{ steps.final.outcome }}
+          TEST: ${{ steps.test.outcome }}
           SYNTAX: ${{ steps.syntax.outcome }}
           SAFETY: ${{ steps.safety.outcome }}
         run: |
-          if [ "$GENERATION" = "success" ] && [ "$FINAL" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then STATUS="passed"; else STATUS="failed"; fi
-          cat > /tmp/ci.md <<EOF
-          <!-- NEYQORA_CI_RESULT {"status":"$STATUS","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"$FIRST","final_gate":"$FINAL"} -->
-          NEYQORA CI sonucu: **$STATUS**
-          - Run: ${{ github.run_id }}
-          - Üretim: $GENERATION
-          - İlk test: $FIRST
-          - Final test: $FINAL
-          - Sözdizimi: $SYNTAX
-          - Güvenlik: $SAFETY
-          EOF
-          if [ -f /tmp/generation-error.txt ]; then
-            printf "\n### Üretim hata çıktısı\n\`\`\`text\n" >> /tmp/ci.md
-            tail -c 12000 /tmp/generation-error.txt >> /tmp/ci.md
-            printf "\n\`\`\`\n" >> /tmp/ci.md
-          fi
+          if [ "$TEST" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then status=passed; else status=failed; fi
+          printf '%s\n' '<!-- NEYQORA_CI_RESULT {"status":"'"$status"'","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"'"$TEST"'","final_gate":"'"$TEST"'"} -->' > /tmp/ci.md
+          printf '%s\n' "NEYQORA CI sonucu: **$status**" "- Test: $TEST" "- Sözdizimi: $SYNTAX" "- Güvenlik: $SAFETY" >> /tmp/ci.md
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
-      - name: Verify CI result through NEYQORA
-        if: steps.final.outcome == 'success'
-        run: |
-          set -e
-          result=$(curl -sS -A "Mozilla/5.0 (NEYQORA GitHub Actions)" "$NEYQORA_URL/api/project/ci?issue=$ISSUE_NUMBER")
-          echo "$result"
-          echo "$result" | grep -q '"status":"passed"'
 
-      - name: Commit successful project
-        if: steps.final.outcome == 'success' && steps.syntax.outcome == 'success' && steps.safety.outcome == 'success'
+      - name: Commit
+        if: steps.test.outcome == 'success' && steps.syntax.outcome == 'success' && steps.safety.outcome == 'success'
         run: |
+          set -euo pipefail
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add projects/
+          git add "projects/issue-$ISSUE_NUMBER"
           git diff --cached --quiet && exit 0
           git commit -m "Generate and test project from issue"
           git push
