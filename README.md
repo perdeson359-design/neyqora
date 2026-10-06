@@ -94,3 +94,9 @@ Self-host çalışma katmanı ve Docker hazırlığı repoya eklendi; **henüz s
 - Dosya analizi
 - Ses ve görüntü
 - Takvim, e-posta ve otomasyon
+
+## V5.0 — Ses ve Görüntü
+- Ses dosyalarını Workers AI Whisper ile Türkçe metne dönüştürme
+- Görselleri Workers AI Vision ile Türkçe analiz etme
+- Boyut ve MIME türü sınırları
+- UI üzerinden doğrudan medya analizi
