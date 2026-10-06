@@ -3,6 +3,7 @@
   "name": "neyqora",
   "main": "src/index.js",
   "compatibility_date": "2026-10-02",
+  "triggers": { "crons": ["*/5 * * * *"] },
   "observability": {
     "enabled": true
   },
