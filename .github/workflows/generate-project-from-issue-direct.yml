@@ -80,6 +80,8 @@ jobs:
           set -euo pipefail
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          find "projects/issue-$ISSUE_NUMBER" -type d -name __pycache__ -prune -exec rm -rf {} +
+          find "projects/issue-$ISSUE_NUMBER" -type f -name '*.pyc' -delete
           git add "projects/issue-$ISSUE_NUMBER"
           git diff --cached --quiet && exit 0
           git commit -m "Generate and test project from issue"
