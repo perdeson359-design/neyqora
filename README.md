@@ -21,3 +21,6 @@ Cloudflare Workers Builds, `main` dalındaki değişiklikleri otomatik olarak da
 - Dosya analizi
 - Ses ve görüntü
 - Takvim, e-posta ve otomasyon
+
+
+<!-- generator integration test marker -->
