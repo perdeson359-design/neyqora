@@ -588,7 +588,7 @@ function buildProjectFiles(request) {
   const text = String(request || "").toLocaleLowerCase("tr-TR");
   if (text.includes("hesap makinesi")) {
     return [
-      { path: "hesap_makinesi.py", content: `def calculate(num1, operator, num2):
+      { path: "main.py", content: `def calculate(num1, operator, num2):
     if operator == "+":
         return num1 + num2
     if operator == "-":
@@ -618,7 +618,7 @@ def main():
 if __name__ == "__main__":
     main()
 ` },
-      { path: "test_hesap_makinesi.py", content: `from hesap_makinesi import calculate
+      { path: "test_hesap_makinesi.py", content: `from main import calculate
 
 def test_operations():
     assert calculate(10, "+", 5) == 15
@@ -656,7 +656,7 @@ function sanitizeProjectName(request) {
 }
 
 function sanitizeProjectFiles(files) {
-  if (!Array.isArray(files) || files.length < 1 || files.length > 12) return null;
+  if (!Array.isArray(files) || files.length < 1 || files.length > 8) return null;
   const safe = [];
   for (const file of files) {
     const path = String(file?.path || "").trim();
