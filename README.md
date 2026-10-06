@@ -4,7 +4,7 @@ Kişisel yapay zekâ asistanı.
 
 ## Sürüm
 
-Worker API sürümü: **4.8**.
+Worker API sürümü: **4.9**.
 
 ## Sistem şeması
 
