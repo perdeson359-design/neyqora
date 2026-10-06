@@ -4,9 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
+  issue_comment:
+    types: [created]
 
 jobs:
   smoke:
+    if: ${{ github.event_name != 'issue_comment' || startsWith(github.event.comment.body, '/ci-smoke') }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
