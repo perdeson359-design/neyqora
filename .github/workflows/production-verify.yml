@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      EXPECTED_VERSION: "4.9"
+      EXPECTED_VERSION: "5.0"
       EXPECTED_COMMIT: ${{ github.sha }}
 
     steps:
