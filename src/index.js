@@ -195,9 +195,12 @@ function isNameQuestion(message) {
 
 function forgetRequest(message) {
   const t = String(message || "").toLocaleLowerCase("tr-TR").trim();
-  if (/\b(adımı|ismimi)\s+unut\b/.test(t)) return { type: "name" };
-  if (/\b(bunu|şunu)\s+unut\b/.test(t)) {
-    const detail = t.replace(/^.*?\b(bunu|şunu)\s+unut\b[\s:,-]*/i, "").trim();
+  if (/\b(tümünü|hepsini|bütününü)\s+(unut|sil)\b/.test(t) || /\b(hafızayı|hafizayi|hafızamdaki|hafizamdaki)\s+(temizle|sil|unut)\b/.test(t)) {
+    return { type: "all" };
+  }
+  if (/\b(adımı|ismimi)\s+(unut|sil)\b/.test(t)) return { type: "name" };
+  if (/\b(bunu|şunu)\s+(unut|sil)\b/.test(t)) {
+    const detail = t.replace(/^.*?\b(bunu|şunu)\s+(unut|sil)\b[\s:,-]*/i, "").trim();
     return { type: detail ? "text" : "latest", detail };
   }
   return null;
@@ -1117,6 +1120,10 @@ export default {
         if (env.DB) {
           const forget = forgetRequest(message);
           if (forget) {
+            if (forget.type === "all") {
+              await env.DB.prepare("DELETE FROM memories WHERE user_id = ?").bind(userId).run();
+              return Response.json({ reply: "Kayıtlı hafızadaki bilgileri temizledim.", intent: "memory", memoryCleared: true });
+            }
             if (forget.type === "name") {
               await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content LIKE 'Kullanıcının adı:%'").bind(userId).run();
               return Response.json({ reply: "Adınla ilgili kayıtlı bilgiyi unuttum.", intent: "memory" });
