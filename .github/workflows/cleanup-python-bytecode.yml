@@ -1,0 +1,28 @@
+name: Clean Python bytecode
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  cleanup:
+    if: ${{ github.actor == 'github-actions[bot]' || contains(github.event.head_commit.message, 'Generate and test project') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Remove bytecode
+        run: |
+          set -e
+          find projects -type d -name __pycache__ -prune -exec rm -rf {} +
+          find projects -type f -name '*.pyc' -delete
+          if git diff --quiet; then
+            echo "No bytecode cleanup needed."
+            exit 0
+          fi
+          git config user.name "NEYQORA"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add projects/
+          git commit -m "Clean generated Python bytecode"
+          git push
