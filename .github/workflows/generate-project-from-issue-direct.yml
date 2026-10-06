@@ -31,7 +31,12 @@ jobs:
         run: |
           set -euo pipefail
           python -c 'import json,os; json.dump({"request":os.environ["PROJECT_REQUEST"]},open("/tmp/request.json","w",encoding="utf-8"),ensure_ascii=False)'
-          code=$(curl -sS -o /tmp/response.json -w "%{http_code}" -A "NEYQORA-GitHub-Actions" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Content-Type: application/json" --data-binary @/tmp/request.json "$NEYQORA_URL/api/project" || true)
+          session_code=$(curl -sS -o /tmp/session.json -w "%{http_code}" -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/session")
+          echo "Session HTTP=$session_code"
+          cat /tmp/session.json
+          test "$session_code" = "200"
+          python -c 'import json; d=json.load(open("/tmp/session.json")); assert d.get("ok") and isinstance(d.get("userId"),str), d'
+          code=$(curl -sS -o /tmp/response.json -w "%{http_code}" -b /tmp/neyqora.cookies -c /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Content-Type: application/json" --data-binary @/tmp/request.json "$NEYQORA_URL/api/project" || true)
           echo "Project API HTTP=$code"
           cat /tmp/response.json || true
           python -c 'import json; d=json.load(open("/tmp/response.json")); assert d.get("ok") and d.get("files"), d'
@@ -59,7 +64,7 @@ jobs:
         continue-on-error: true
         run: |
           set -euo pipefail
-          ! grep -R -nE '\\b(eval|exec)[[:space:]]*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
+          ! grep -RInE '\\b(eval|exec)[[:space:]]*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
 
       - name: Publish
         if: always()
