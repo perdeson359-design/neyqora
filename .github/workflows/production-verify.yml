@@ -32,15 +32,9 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 30); do
             echo "Production health check $attempt/30"
-            if curl -fsS               -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               "$NEYQORA_URL/api/health" > /tmp/health.json; then
+            if curl -fsS -A "NEYQORA-Production-Verify" -H "Accept: application/json" "$NEYQORA_URL/api/health" > /tmp/health.json; then
               cat /tmp/health.json
-              if jq -e --arg expected "$EXPECTED_VERSION" '
-                .ok == true
-                and .name == "NEYQORA"
-                and .version == $expected
-                and .router == true
-                and .agent == true
-              ' /tmp/health.json >/dev/null; then
+              if jq -e --arg expected "$EXPECTED_VERSION" '.ok == true and .name == "NEYQORA" and .version == $expected and .router == true and .agent == true' /tmp/health.json >/dev/null; then
                 if curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json; then
                   jq -e '.ok == true and (.userId | type == "string")' /tmp/session.json >/dev/null
                   echo "Production health + session: PASS"
@@ -72,7 +66,6 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           cat > /tmp/agent-project-request.json <<'JSON'
           {
             "message": "Hesap makinesi projesi üret.",
@@ -80,26 +73,19 @@ jobs:
             "history": []
           }
           JSON
-
           curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json
           cat /tmp/session.json
           code=$(curl -sS -b /tmp/neyqora.cookies -c /tmp/neyqora.cookies -o /tmp/agent-project.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/agent-project-request.json "$NEYQORA_URL/api/chat")
-
           echo "Agent project HTTP=$code"
           cat /tmp/agent-project.json
           test "$code" = "200"
-
           python - <<'PY'
           import json
-
           d = json.load(open("/tmp/agent-project.json", encoding="utf-8"))
           assert d.get("intent") == "project", d
           plan = d.get("plan") or {}
           steps = plan.get("steps") or []
-          assert any(
-              s.get("tool") == "project" and s.get("action") == "generate_project"
-              for s in steps
-          ), plan
+          assert any(s.get("tool") == "project" and s.get("action") == "generate_project" for s in steps), plan
           results = d.get("toolResults") or []
           project = next((r for r in results if r.get("tool") == "project"), None)
           assert project and project.get("ok") is True, d
@@ -117,41 +103,24 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import json
-
-          payload = {
-              "request": (
-                  "Production doğrulama: basit bir Python hesap makinesi üret. "
-                  "test_hesap_makinesi.py ile toplama, çıkarma, çarpma, bölme "
-                  "ve sıfıra bölmeyi test et."
-              )
-          }
-
+          payload = {"request": "Production doğrulama: basit bir Python hesap makinesi üret. test_hesap_makinesi.py ile toplama, çıkarma, çarpma, bölme ve sıfıra bölmeyi test et."}
           with open("/tmp/project-request.json", "w", encoding="utf-8") as f:
               json.dump(payload, f, ensure_ascii=False)
           PY
-
-          code=$(curl -sS -o /tmp/project.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project")
-
+          code=$(curl -sS -o /tmp/project.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies --data-binary @/tmp/project-request.json "$NEYQORA_URL/api/project")
           echo "Project API HTTP=$code"
           cat /tmp/project.json
           test "$code" = "200"
-
           python - <<'PY'
           import json
-
           with open("/tmp/project.json", encoding="utf-8") as f:
               d = json.load(f)
-
           assert d.get("ok") is True, d
           files = d.get("files") or []
           assert files, d
           paths = [str(x.get("path", "")) for x in files]
-          assert any(
-              p.lower().startswith("test_") and p.lower().endswith(".py")
-              for p in paths
-          ), paths
+          assert any(p.lower().startswith("test_") and p.lower().endswith(".py") for p in paths), paths
           assert d.get("testable") is True, d
-
           print("Production project contract: PASS")
           print("Files:", paths)
           PY
@@ -160,61 +129,47 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
           python - <<'PY'
           import json
           import pathlib
-
           d = json.load(open("/tmp/project.json", encoding="utf-8"))
           root = pathlib.Path("/tmp/neyqora-production-project").resolve()
           root.mkdir(parents=True, exist_ok=True)
-
           for item in d.get("files") or []:
               path = str(item.get("path", ""))
               content = str(item.get("content", ""))
               p = (root / path).resolve()
-
               if root != p and root not in p.parents:
                   raise SystemExit(f"Unsafe project path: {path}")
-
               p.parent.mkdir(parents=True, exist_ok=True)
               p.write_text(content, encoding="utf-8")
-
           tests = list(root.glob("test_*.py"))
           if not tests:
               raise SystemExit("No test_*.py generated")
-
-          print(
-              "Generated files:",
-              [str(p.relative_to(root)) for p in sorted(root.rglob("*")) if p.is_file()]
-          )
+          print("Generated files:", [str(p.relative_to(root)) for p in sorted(root.rglob("*")) if p.is_file()])
           print("Tests:", [str(p.relative_to(root)) for p in tests])
           PY
-
           python - <<'PY'
           import pathlib, re
           root = pathlib.Path("/tmp/neyqora-production-project")
-          pattern = re.compile(r"\b(eval|exec)\s*\(")
+          pattern = re.compile(r"(eval|exec)s*(")
           hits = []
           for path in root.rglob("*.py"):
-              text = path.read_text(encoding="utf-8")
-              if pattern.search(text):
+              if pattern.search(path.read_text(encoding="utf-8")):
                   hits.append(str(path))
           if hits:
-              print("Unsafe eval/exec detected:", *hits, sep="\n")
+              print("Unsafe eval/exec detected:", *hits, sep="
+")
               raise SystemExit(1)
           print("Generated project safety scan: PASS")
           PY
-
           while IFS= read -r -d '' file; do
             python -m py_compile "$file"
           done < <(find /tmp/neyqora-production-project -type f -name '*.py' -print0)
-
           cd /tmp/neyqora-production-project
           for test in test_*.py; do
             timeout 30s python "$test"
           done
-
           echo "Generated project tests: PASS"
 
       - name: Verify V6 productivity contracts
@@ -224,13 +179,19 @@ jobs:
 
           user_id="production-v6-$(date +%s)"
 
-          event_code=$(curl -sS -o /tmp/v6-event.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","title":"V6 doğrulama","startAt":"2026-10-06T14:00:00Z","endAt":"2026-10-06T15:00:00Z"}"             "$NEYQORA_URL/api/calendar/events")
+          cat > /tmp/v6-event-request.json <<JSON
+          {"userId":"$user_id","title":"V6 doğrulama","startAt":"2026-10-06T14:00:00Z","endAt":"2026-10-06T15:00:00Z"}
+          JSON
+          event_code=$(curl -sS -o /tmp/v6-event.json -w "%{http_code}"             -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary @/tmp/v6-event-request.json "$NEYQORA_URL/api/calendar/events")
           echo "Calendar POST HTTP=$event_code"
           cat /tmp/v6-event.json
           test "$event_code" = "200"
           jq -e '.ok == true and .event.title == "V6 doğrulama"' /tmp/v6-event.json >/dev/null
 
-          email_code=$(curl -sS -o /tmp/v6-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","to":"v6@example.com","subject":"V6 doğrulama","body":"V6 e-posta taslağı"}"             "$NEYQORA_URL/api/email/drafts")
+          cat > /tmp/v6-email-request.json <<JSON
+          {"userId":"$user_id","to":"v6@example.com","subject":"V6 doğrulama","body":"V6 e-posta taslağı"}
+          JSON
+          email_code=$(curl -sS -o /tmp/v6-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary @/tmp/v6-email-request.json "$NEYQORA_URL/api/email/drafts")
           echo "Email POST HTTP=$email_code"
           cat /tmp/v6-email.json
           test "$email_code" = "200"
@@ -241,7 +202,10 @@ jobs:
           print((datetime.now(timezone.utc) + timedelta(minutes=10)).isoformat().replace("+00:00","Z"))
           PY
           )
-          automation_code=$(curl -sS -o /tmp/v6-automation.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary "{"userId":"$user_id","title":"V6 otomasyon","runAt":"$run_at","prompt":"V6 doğrulama görevi"}"             "$NEYQORA_URL/api/automations")
+          cat > /tmp/v6-automation-request.json <<JSON
+          {"userId":"$user_id","title":"V6 otomasyon","runAt":"$run_at","prompt":"V6 doğrulama görevi"}
+          JSON
+          automation_code=$(curl -sS -o /tmp/v6-automation.json -w "%{http_code}"             -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary @/tmp/v6-automation-request.json "$NEYQORA_URL/api/automations")
           echo "Automation POST HTTP=$automation_code"
           cat /tmp/v6-automation.json
           test "$automation_code" = "200"
@@ -253,13 +217,11 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-
-          email_code=$(curl -sS -o /tmp/resend-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary '{"userId":"production-resend-test","to":"delivered@resend.dev","subject":"NEYQORA Resend doğrulama","body":"NEYQORA Production Resend bağlantı testi."}'             "$NEYQORA_URL/api/email/send")
+          email_code=$(curl -sS -o /tmp/resend-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary '{"userId":"production-resend-test","to":"delivered@resend.dev","subject":"NEYQORA Resend doğrulama","body":"NEYQORA Production Resend bağlantı testi."}'             "$NEYQORA_URL/api/email/send")
           echo "Resend POST HTTP=$email_code"
           cat /tmp/resend-email.json
           test "$email_code" = "200"
           jq -e '.ok == true and .email.status == "sent" and (.email.id | type == "string") and (.email.id | length > 0)' /tmp/resend-email.json >/dev/null
-
           echo "Resend email contract: PASS"
 
       - name: Production gate
