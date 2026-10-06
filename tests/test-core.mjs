@@ -34,7 +34,7 @@ assert.match(source, /executeToolStep/);
 assert.match(source, /isBlockedFetchUrl/);
 assert.match(source, /contentLength > 256000/);
 assert.match(source, /message.length > 8000/);
-assert.match(source, /historyChars > 20000/;
+assert.match(source, /historyChars > 20000/);
 assert.match(source, /async function generateCodingResponse/);
 assert.match(source, /tool: "coding"/);
 assert.match(source, /ok: !!reply && validation.ok/);
