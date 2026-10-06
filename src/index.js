@@ -1371,6 +1371,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/project") {
       try {
         const isOwner = await verifyOwnerSession(request, env);
+        const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!authenticatedUserId) return Response.json({ error: "Kullanıcı oturumu gerekli." }, { status: 401 });
         const contentLength = Number(request.headers.get("content-length") || "0");
         if (!isOwner && contentLength > 256000) return Response.json({ error: "İstek gövdesi çok büyük." }, { status: 413 });
         const body = await request.json();
