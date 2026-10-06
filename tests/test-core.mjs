@@ -47,6 +47,9 @@ assert.match(source, /path\.includes\(".."\)/);
 assert.match(source, /eval|exec/);
 assert.match(source, /max 8 files|En fazla 8 dosya/);
 assert.match(source, /path\.startsWith\("\/"\)|path\.includes\("\\\\"\)|unsafe/i);
+assert.match(source, /files\.length > 8/);
+assert.match(source, /validateGeneratedProject/);
+assert.match(source, /templateFiles \|\| await generateProjectFiles/);
 
 assert.match(source, /if \(intent === "coding"\) \{/);
 assert.match(source, /codingReply = result\?\.reply/);
