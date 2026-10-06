@@ -69,7 +69,9 @@ jobs:
           }
           JSON
 
-          code=$(curl -sS -o /tmp/agent-project.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/agent-project-request.json "$NEYQORA_URL/api/chat")
+          curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json
+          cat /tmp/session.json
+          code=$(curl -sS -b /tmp/neyqora.cookies -c /tmp/neyqora.cookies -o /tmp/agent-project.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/agent-project-request.json "$NEYQORA_URL/api/chat")
 
           echo "Agent project HTTP=$code"
           cat /tmp/agent-project.json
@@ -120,6 +122,7 @@ jobs:
             -A "NEYQORA-Production-Verify" \
             -H "Origin: $NEYQORA_URL" \
             -H "Content-Type: application/json" \
+            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
             --data-binary @/tmp/project-request.json \
             "$NEYQORA_URL/api/project")
 
@@ -209,6 +212,7 @@ jobs:
             -A "NEYQORA-Production-Verify" \
             -H "Origin: $NEYQORA_URL" \
             -H "Content-Type: application/json" \
+            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
             --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 doğrulama\",\"startAt\":\"2026-10-06T14:00:00Z\",\"endAt\":\"2026-10-06T15:00:00Z\"}" \
             "$NEYQORA_URL/api/calendar/events")
           echo "Calendar POST HTTP=$event_code"
@@ -220,6 +224,7 @@ jobs:
             -A "NEYQORA-Production-Verify" \
             -H "Origin: $NEYQORA_URL" \
             -H "Content-Type: application/json" \
+            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
             --data-binary "{\"userId\":\"$user_id\",\"to\":\"v6@example.com\",\"subject\":\"V6 doğrulama\",\"body\":\"V6 e-posta taslağı\"}" \
             "$NEYQORA_URL/api/email/drafts")
           echo "Email POST HTTP=$email_code"
@@ -236,6 +241,7 @@ jobs:
             -A "NEYQORA-Production-Verify" \
             -H "Origin: $NEYQORA_URL" \
             -H "Content-Type: application/json" \
+            --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies \
             --data-binary "{\"userId\":\"$user_id\",\"title\":\"V6 otomasyon\",\"runAt\":\"$run_at\",\"prompt\":\"V6 doğrulama görevi\"}" \
             "$NEYQORA_URL/api/automations")
           echo "Automation POST HTTP=$automation_code"
