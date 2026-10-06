@@ -1,6 +1,7 @@
 name: Core Tests
 
 on:
+  workflow_dispatch:
   push:
     paths: ["src/index.js","wrangler.jsonc","tests/**",".github/workflows/test-core.yml"]
   pull_request:
