@@ -19,7 +19,7 @@ assert.match(source, /120000/);
 assert.match(source, /retry/);
 
 assert.match(source, /\/api\/health/);
-assert.match(source, /version:\s*"4\.8"/);
+assert.match(source, /version:\s*VERSION/);
 assert.match(source, /\/api\/chat/);
 assert.match(source, /\/api\/project/);
 assert.match(source, /\/api\/project\/ci/);
