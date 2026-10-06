@@ -66,7 +66,7 @@ const env = {
   AI,
   DB,
   OWNER_AUTH_TOKEN: process.env.OWNER_AUTH_TOKEN,
-  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,
+  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,\n  RESEND_API_KEY: process.env.RESEND_API_KEY || "",\n  RESEND_FROM: process.env.RESEND_FROM || "onboarding@resend.dev",
   NEYQORA_SELF_HOSTED: "1"
 };
 
