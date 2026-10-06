@@ -25,7 +25,7 @@ assert.match(source, /\/api\/project/);
 assert.match(source, /\/api\/project\/ci/);
 assert.match(source, /NEYQORA_CI_RESULT/);
 assert.match(source, /api.github.com\/repos\/perdeson359-design\/neyqora\/issues/);
-assert.match(source, /\/api\/search/);
+assert.match(source, /\/api\/search/);\nassert.match(source, /\/api\/memory/);\nassert.match(source, /DELETE FROM memories WHERE user_id = \? AND id = \?/);\nassert.match(source, /SELECT id, content, created_at FROM memories/);
 assert.match(source, /Response\.json\(\{ ok: true/);
 assert.match(source, /memory:\s*!!env\.DB/);
 assert.match(source, /toolResults: agentResults/);
