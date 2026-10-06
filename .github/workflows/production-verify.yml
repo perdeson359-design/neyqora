@@ -16,7 +16,7 @@ jobs:
     timeout-minutes: 10
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      EXPECTED_VERSION: "6.0"
+      EXPECTED_VERSION: "6.1"
       EXPECTED_COMMIT: ${{ github.sha }}
 
     steps:
@@ -59,6 +59,17 @@ jobs:
           done
           echo "Production Worker did not become healthy in time."
           exit 1
+
+      - name: Verify security headers
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsSI -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" > /tmp/headers.txt
+          grep -qi '^x-content-type-options: nosniff' /tmp/headers.txt
+          grep -qi '^x-frame-options: DENY' /tmp/headers.txt
+          grep -qi '^referrer-policy: no-referrer' /tmp/headers.txt
+          grep -qi '^permissions-policy:' /tmp/headers.txt
+          echo "Security headers: PASS"
 
       - name: Verify agent routing and project tool
         shell: bash
