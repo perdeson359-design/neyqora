@@ -100,7 +100,13 @@ assert.match(source, /validation: codingValidation/);
 
 assert.match(source, /VERSION = "6\.0"/);
 assert.match(source, /\/api\/calendar\/events/);
-assert.match(source, /\/api\/email\/drafts/);\nassert.match(source, /\/api\/email\/send/);\nassert.match(source, /sendResendEmail/);\nassert.match(source, /RESEND_API_KEY/);\nassert.match(source, /api\.resend\.com\/emails/);\nassert.match(source, /E-posta Gönder/);\nassert.match(source, /parseEmailRecipients/);
+assert.match(source, /\/api\/email\/drafts/);
+assert.match(source, /\/api\/email\/send/);
+assert.match(source, /sendResendEmail/);
+assert.match(source, /RESEND_API_KEY/);
+assert.match(source, /api\.resend\.com\/emails/);
+assert.match(source, /E-posta Gönder/);
+assert.match(source, /parseEmailRecipients/);
 assert.match(source, /\/api\/automations/);
 assert.match(source, /async function runDueAutomations/);
 assert.match(source, /async scheduled\(controller, env\)/);
