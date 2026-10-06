@@ -4,32 +4,12 @@ on:
   push:
     branches: [main]
   workflow_dispatch:
-  issue_comment:
-    types: [created]
-  issues:
-    types: [opened]
 
 jobs:
   smoke:
-    if: ${{ github.event_name != 'issue_comment' || startsWith(github.event.comment.body, '/ci-smoke') }}
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-
-      - name: Check NEYQORA health
-        shell: bash
+      - name: Runner test
         run: |
-          set -e
-          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" \
-            -A "NEYQORA-GitHub-Actions-Smoke" \
-            -H "Accept: application/json" \
-            "https://neyqora.kosseofficial.workers.dev/api/health")
-          echo "NEYQORA health HTTP status: $code"
-          cat /tmp/health.json
-          test "$code" = "200"
-
-      - name: CI connection result
-        run: echo "NEYQORA GitHub Actions bağlantısı: PASS"
+          echo "GitHub Actions runner: PASS"
+          curl -fsS -A "NEYQORA-GitHub-Actions-Smoke"             -H "Accept: application/json"             "https://neyqora.kosseofficial.workers.dev/api/health"
