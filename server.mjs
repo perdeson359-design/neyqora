@@ -66,6 +66,7 @@ const env = {
   AI,
   DB,
   OWNER_AUTH_TOKEN: process.env.OWNER_AUTH_TOKEN,
+  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,
   NEYQORA_SELF_HOSTED: "1"
 };
 
