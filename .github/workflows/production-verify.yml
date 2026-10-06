@@ -81,5 +81,46 @@ jobs:
           print("Files:", paths)
           PY
 
+      - name: Execute generated project tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json, pathlib, sys
+          d=json.load(open("/tmp/project.json", encoding="utf-8"))
+          root=pathlib.Path("/tmp/neyqora-production-project")
+          root.mkdir(parents=True, exist_ok=True)
+          files=d.get("files") or []
+          for item in files:
+              path=str(item.get("path",""))
+              content=str(item.get("content",""))
+              p=(root/path).resolve()
+              if root.resolve() not in p.parents:
+                  raise SystemExit(f"Unsafe project path: {path}")
+              p.parent.mkdir(parents=True, exist_ok=True)
+              p.write_text(content, encoding="utf-8")
+          tests=list(root.glob("test_*.py"))
+          pyfiles=list(root.rglob("*.py"))
+          if not tests:
+              raise SystemExit("No test_*.py generated")
+          print("Generated files:", [str(p.relative_to(root)) for p in sorted(root.rglob("*")) if p.is_file()])
+          print("Tests:", [str(p.relative_to(root)) for p in tests])
+          PY
+
+          if grep -RInE '\b(eval|exec)\s*\(' /tmp/neyqora-production-project --include='*.py'; then
+            echo "Unsafe eval/exec detected."
+            exit 1
+          fi
+
+          while IFS= read -r -d '' file; do
+            python -m py_compile "$file"
+          done < <(find /tmp/neyqora-production-project -type f -name '*.py' -print0)
+
+          cd /tmp/neyqora-production-project
+          for test in test_*.py; do
+            timeout 30s python "$test"
+          done
+          echo "Generated project tests: PASS"
+
       - name: Production gate
         run: echo "NEYQORA production verification: PASS"
