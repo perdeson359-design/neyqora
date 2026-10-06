@@ -94,4 +94,19 @@ assert.match(source, /codingReply = result\?\.reply/);
 assert.match(source, /codingValidation = result\?\.validation/);
 assert.match(source, /validation: codingValidation/);
 
+
+assert.match(source, /VERSION = "6\.0"/);
+assert.match(source, /\/api\/calendar\/events/);
+assert.match(source, /\/api\/email\/drafts/);
+assert.match(source, /\/api\/automations/);
+assert.match(source, /async function runDueAutomations/);
+assert.match(source, /async scheduled\(controller, env\)/);
+assert.match(source, /AUTOMATION_WEBHOOK_URL/);
+assert.match(source, /calendar_events/);
+assert.match(source, /email_drafts/);
+assert.match(source, /automations/);
+assert.match(source, /create-event/);
+assert.match(source, /save-email/);
+assert.match(source, /create-automation/);
+
 console.log("NEYQORA core contract tests: PASS");
