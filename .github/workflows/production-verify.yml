@@ -2,7 +2,8 @@ name: Production Verification
 
 on:
   push:
-    branches: [main]
+    branches:
+      - main
   workflow_dispatch:
 
 concurrency:
@@ -17,6 +18,7 @@ jobs:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
       EXPECTED_VERSION: "4.4"
       EXPECTED_COMMIT: ${{ github.sha }}
+
     steps:
       - name: Verification target
         run: |
@@ -30,34 +32,22 @@ jobs:
           set -euo pipefail
           for attempt in $(seq 1 30); do
             echo "Production health check $attempt/30"
-            if curl -fsS -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               "$NEYQORA_URL/api/health" > /tmp/health.json; then
+            if curl -fsS \
+              -A "NEYQORA-Production-Verify" \
+              -H "Accept: application/json" \
+              "$NEYQORA_URL/api/health" > /tmp/health.json; then
               cat /tmp/health.json
-              if EXPECTED_VERSION="$EXPECTED_VERSION" python - <<'PY'
-          import json, os
-          d=json.load(open("/tmp/health.json", encoding="utf-8"))
-          expected=os.environ["EXPECTED_VERSION"]
-          if (
-              d.get("ok") is True
-              and d.get("name") == "NEYQORA"
-              and d.get("version") == expected
-              and d.get("router") is True
-              and d.get("agent") is True
-          ):
-              print("Production health: PASS")
-              raise SystemExit(0)
-          print("Production not ready yet:", {
-              "ok": d.get("ok"),
-              "name": d.get("name"),
-              "version": d.get("version"),
-              "expected": expected,
-              "router": d.get("router"),
-              "agent": d.get("agent")
-          })
-          raise SystemExit(1)
-          PY
-              then
+              if jq -e --arg expected "$EXPECTED_VERSION" '
+                .ok == true
+                and .name == "NEYQORA"
+                and .version == $expected
+                and .router == true
+                and .agent == true
+              ' /tmp/health.json >/dev/null; then
+                echo "Production health: PASS"
                 exit 0
               fi
+              echo "Production not ready yet."
             else
               echo "Worker is not reachable yet."
             fi
@@ -72,22 +62,46 @@ jobs:
           set -euo pipefail
           python - <<'PY'
           import json
-          payload={"request":"Production doğrulama: basit bir Python hesap makinesi üret. test_hesap_makinesi.py ile toplama, çıkarma, çarpma, bölme ve sıfıra bölmeyi test et."}
-          json.dump(payload, open("/tmp/project-request.json","w",encoding="utf-8"), ensure_ascii=False)
+
+          payload = {
+              "request": (
+                  "Production doğrulama: basit bir Python hesap makinesi üret. "
+                  "test_hesap_makinesi.py ile toplama, çıkarma, çarpma, bölme "
+                  "ve sıfıra bölmeyi test et."
+              )
+          }
+
+          with open("/tmp/project-request.json", "w", encoding="utf-8") as f:
+              json.dump(payload, f, ensure_ascii=False)
           PY
-          code=$(curl -sS -o /tmp/project.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project")
+
+          code=$(curl -sS -o /tmp/project.json -w "%{http_code}" \
+            -A "NEYQORA-Production-Verify" \
+            -H "Origin: $NEYQORA_URL" \
+            -H "Content-Type: application/json" \
+            --data-binary @/tmp/project-request.json \
+            "$NEYQORA_URL/api/project")
+
           echo "Project API HTTP=$code"
           cat /tmp/project.json
           test "$code" = "200"
+
           python - <<'PY'
-          import json, re
-          d=json.load(open("/tmp/project.json", encoding="utf-8"))
+          import json
+
+          with open("/tmp/project.json", encoding="utf-8") as f:
+              d = json.load(f)
+
           assert d.get("ok") is True, d
-          files=d.get("files") or []
+          files = d.get("files") or []
           assert files, d
-          paths=[str(x.get("path","")) for x in files]
-          assert any(p.lower().startswith("test_") and p.lower().endswith(".py") for p in paths), paths
+          paths = [str(x.get("path", "")) for x in files]
+          assert any(
+              p.lower().startswith("test_") and p.lower().endswith(".py")
+              for p in paths
+          ), paths
           assert d.get("testable") is True, d
+
           print("Production project contract: PASS")
           print("Files:", paths)
           PY
@@ -96,29 +110,38 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+
           python - <<'PY'
-          import json, pathlib, sys
-          d=json.load(open("/tmp/project.json", encoding="utf-8"))
-          root=pathlib.Path("/tmp/neyqora-production-project")
+          import json
+          import pathlib
+
+          d = json.load(open("/tmp/project.json", encoding="utf-8"))
+          root = pathlib.Path("/tmp/neyqora-production-project").resolve()
           root.mkdir(parents=True, exist_ok=True)
-          files=d.get("files") or []
-          for item in files:
-              path=str(item.get("path",""))
-              content=str(item.get("content",""))
-              p=(root/path).resolve()
-              if root.resolve() not in p.parents:
+
+          for item in d.get("files") or []:
+              path = str(item.get("path", ""))
+              content = str(item.get("content", ""))
+              p = (root / path).resolve()
+
+              if root != p and root not in p.parents:
                   raise SystemExit(f"Unsafe project path: {path}")
+
               p.parent.mkdir(parents=True, exist_ok=True)
               p.write_text(content, encoding="utf-8")
-          tests=list(root.glob("test_*.py"))
-          pyfiles=list(root.rglob("*.py"))
+
+          tests = list(root.glob("test_*.py"))
           if not tests:
               raise SystemExit("No test_*.py generated")
-          print("Generated files:", [str(p.relative_to(root)) for p in sorted(root.rglob("*")) if p.is_file()])
+
+          print(
+              "Generated files:",
+              [str(p.relative_to(root)) for p in sorted(root.rglob("*")) if p.is_file()]
+          )
           print("Tests:", [str(p.relative_to(root)) for p in tests])
           PY
 
-          if grep -RInE '\b(eval|exec)\s*\(' /tmp/neyqora-production-project --include='*.py'; then
+          if grep -RInE '\\b(eval|exec)\\s*\\(' /tmp/neyqora-production-project --include='*.py'; then
             echo "Unsafe eval/exec detected."
             exit 1
           fi
@@ -131,7 +154,11 @@ jobs:
           for test in test_*.py; do
             timeout 30s python "$test"
           done
+
           echo "Generated project tests: PASS"
 
       - name: Production gate
-        run: echo "NEYQORA production verification: PASS"
+        run: |
+          echo "NEYQORA production verification: PASS"
+          echo "Verified commit: $EXPECTED_COMMIT"
+          echo "Verified version: $EXPECTED_VERSION"
