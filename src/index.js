@@ -954,6 +954,7 @@ export default {
         const body = await request.json();
         const requestText = String(body?.request || "").trim();
         if (!requestText) return Response.json({ error: "request gerekli." }, { status: 400 });
+        if (requestText.length > 12000) return Response.json({ error: "request çok uzun." }, { status: 413 });
         let files = buildProjectFiles(requestText);
         let generator = "template";
         if (!files) {
@@ -983,6 +984,7 @@ export default {
     if (request.method === "GET" && url.pathname === "/api/search") {
       const q = (url.searchParams.get("q") || "").trim();
       if (!q) return Response.json({ error: "q parametresi gerekli." }, { status: 400 });
+      if (q.length > 1000) return Response.json({ error: "Arama sorgusu çok uzun." }, { status: 413 });
       try {
         const results = await webSearch(q);
         return Response.json({ ok: true, query: q, results });
@@ -1001,8 +1003,13 @@ export default {
           .filter(item => item && (item.role === "user" || item.role === "assistant"))
           .map(item => ({ role: item.role, content: String(item.content || "").slice(0, 4000) }))
           .slice(-10);
+        const historyChars = history.reduce((sum, item) => sum + item.content.length, 0);
         if (!message) return Response.json({ error: "Mesaj boş." }, { status: 400 });
-        if (!userId || userId.length > 100) return Response.json({ error: "Kullanıcı kimliği eksik." }, { status: 400 });
+        if (message.length > 8000) return Response.json({ error: "Mesaj çok uzun." }, { status: 413 });
+        if (!userId || userId.length > 100 || !/^[A-Za-z0-9._:-]+$/.test(userId)) {
+          return Response.json({ error: "Kullanıcı kimliği geçersiz." }, { status: 400 });
+        }
+        if (historyChars > 20000) return Response.json({ error: "Konuşma geçmişi çok uzun." }, { status: 413 });
 
         const agentPlan = buildAgentPlan(message);
         const planValidation = validateAgentPlan(agentPlan);
@@ -1238,7 +1245,7 @@ export default {
         }
 
         if (env.DB && shouldRemember(message)) {
-          const memory = extractMemory(message);
+          const memory = extractMemory(message).slice(0, 4000);
           await env.DB.prepare(
             "INSERT INTO memories (user_id, content) VALUES (?, ?)"
           ).bind(userId, memory).run();
