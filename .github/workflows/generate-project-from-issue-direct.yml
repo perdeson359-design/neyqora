@@ -80,6 +80,9 @@ jobs:
             data=json.load(open("/tmp/chat-response.json",encoding="utf-8"))
             files=data.get("files")
             if not files:
+                with open("/tmp/generation-error.txt","a",encoding="utf-8") as f:
+                    f.write("\nNEYQORA /api/chat returned no files.\n")
+                    f.write(json.dumps(data,ensure_ascii=False))
                 raise SystemExit("NEYQORA chat fallback returned no files: "+str(data))
             data["ok"]=True
             with open("/tmp/project-response.json","w",encoding="utf-8") as f:
