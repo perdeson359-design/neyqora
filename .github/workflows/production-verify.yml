@@ -21,17 +21,34 @@ jobs:
             echo "Production health check $attempt/30"
             if curl -fsS -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               "$NEYQORA_URL/api/health" > /tmp/health.json; then
               cat /tmp/health.json
-              python - <<'PY'
-          import json
+              if EXPECTED_VERSION="$EXPECTED_VERSION" python - <<'PY'
+          import json, os
           d=json.load(open("/tmp/health.json", encoding="utf-8"))
-          assert d.get("ok") is True, d
-          assert d.get("name") == "NEYQORA", d
-          assert d.get("version") == "4.4", d
-          assert d.get("router") is True, d
-          assert d.get("agent") is True, d
-          print("Production health: PASS")
+          expected=os.environ["EXPECTED_VERSION"]
+          if (
+              d.get("ok") is True
+              and d.get("name") == "NEYQORA"
+              and d.get("version") == expected
+              and d.get("router") is True
+              and d.get("agent") is True
+          ):
+              print("Production health: PASS")
+              raise SystemExit(0)
+          print("Production not ready yet:", {
+              "ok": d.get("ok"),
+              "name": d.get("name"),
+              "version": d.get("version"),
+              "expected": expected,
+              "router": d.get("router"),
+              "agent": d.get("agent")
+          })
+          raise SystemExit(1)
           PY
-              exit 0
+              then
+                exit 0
+              fi
+            else
+              echo "Worker is not reachable yet."
             fi
             sleep 20
           done
