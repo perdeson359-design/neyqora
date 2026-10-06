@@ -8,7 +8,7 @@ on:
 
 jobs:
   generate:
-    if: ${{ github.actor == 'perdeson359-design' }}
+    if: ${{ github.event_name == 'issues' || (github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'NEYQORA_CI_RESULT')) }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
