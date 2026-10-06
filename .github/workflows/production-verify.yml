@@ -265,6 +265,19 @@ jobs:
 
           echo "V6 productivity contracts: PASS"
 
+      - name: Verify Resend email delivery contract
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          email_code=$(curl -sS -o /tmp/resend-email.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --cookie /tmp/neyqora.cookies --cookie-jar /tmp/neyqora.cookies             --data-binary '{"userId":"production-resend-test","to":"delivered@resend.dev","subject":"NEYQORA Resend doğrulama","body":"NEYQORA Production Resend bağlantı testi."}'             "$NEYQORA_URL/api/email/send")
+          echo "Resend POST HTTP=$email_code"
+          cat /tmp/resend-email.json
+          test "$email_code" = "200"
+          jq -e '.ok == true and .email.status == "sent" and (.email.id | type == "string") and (.email.id | length > 0)' /tmp/resend-email.json >/dev/null
+
+          echo "Resend email contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
