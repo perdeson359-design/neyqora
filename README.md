@@ -4,7 +4,7 @@ Kişisel yapay zekâ asistanı.
 
 ## Sürüm
 
-Worker API sürümü: **4.6**.
+Worker API sürümü: **4.8**.
 
 ## Sistem şeması
 
@@ -82,6 +82,11 @@ Cloudflare Workers Builds, `main` dalındaki değişiklikleri otomatik olarak da
 - `POST /api/project`
 - `GET /api/project/ci`
 - `GET /api/search`
+- `POST /api/auth/owner`
+
+## Self-host hazırlık durumu
+
+Self-host çalışma katmanı ve Docker hazırlığı repoya eklendi; **henüz sunucuya geçiş yapılmıyor**. Gerçek geçiş, ayrı bir cutover aşamasında yapılacaktır. Owner sırrı GitHub'a konmaz; sunucu secret store kullanılmalıdır.
 
 ## Sonraki aşamalar
 
