@@ -60,7 +60,7 @@ pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wr
 <div id="project-panel" class="panel"><h3 id="project-title">Henüz proje oluşturulmadı</h3><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><pre id="project-files">Proje oluşturduğunda dosyalar burada görünecek.</pre></div>
 </section>
 </main>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div> role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
+<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
 window.neyqoraSend=async function(){
