@@ -1219,6 +1219,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/image/analyze") {
       try {
         const isOwner = await verifyOwnerSession(request, env);
+        const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!authenticatedUserId) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
         const contentLength = Number(request.headers.get("content-length") || "0");
         const maxBytes = isOwner ? 12_000_000 : 8_000_000;
         if (!contentLength || contentLength > maxBytes) return Response.json({ ok: false, error: "Görsel 8 MB ile sınırlıdır." }, { status: 413 });
@@ -1255,6 +1257,8 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/files/analyze") {
       try {
         const isOwner = await verifyOwnerSession(request, env);
+        const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
+        if (!authenticatedUserId) return Response.json({ ok: false, error: "Kullanıcı oturumu gerekli." }, { status: 401 });
         const contentLength = Number(request.headers.get("content-length") || "0");
         if (!isOwner && contentLength > 4_000_000) return Response.json({ ok: false, error: "Dosya yükleme toplamı 4 MB ile sınırlıdır." }, { status: 413 });
         const form = await request.formData();
