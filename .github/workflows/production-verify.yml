@@ -1,0 +1,68 @@
+name: Production Verification
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  verify-production:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    env:
+      NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
+      EXPECTED_VERSION: "4.3"
+    steps:
+      - name: Wait for production Worker
+        shell: bash
+        run: |
+          set -euo pipefail
+          for attempt in $(seq 1 30); do
+            echo "Production health check $attempt/30"
+            if curl -fsS -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               "$NEYQORA_URL/api/health" > /tmp/health.json; then
+              cat /tmp/health.json
+              python - <<'PY'
+          import json
+          d=json.load(open("/tmp/health.json", encoding="utf-8"))
+          assert d.get("ok") is True, d
+          assert d.get("name") == "NEYQORA", d
+          assert d.get("version") == "4.3", d
+          assert d.get("router") is True, d
+          assert d.get("agent") is True, d
+          print("Production health: PASS")
+          PY
+              exit 0
+            fi
+            sleep 20
+          done
+          echo "Production Worker did not become healthy in time."
+          exit 1
+
+      - name: Verify project generation contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import json
+          payload={"request":"Production doğrulama: basit bir Python hesap makinesi üret. test_hesap_makinesi.py ile toplama, çıkarma, çarpma, bölme ve sıfıra bölmeyi test et."}
+          json.dump(payload, open("/tmp/project-request.json","w",encoding="utf-8"), ensure_ascii=False)
+          PY
+          code=$(curl -sS -o /tmp/project.json -w "%{http_code}"             -A "NEYQORA-Production-Verify"             -H "Origin: $NEYQORA_URL"             -H "Content-Type: application/json"             --data-binary @/tmp/project-request.json             "$NEYQORA_URL/api/project")
+          echo "Project API HTTP=$code"
+          cat /tmp/project.json
+          test "$code" = "200"
+          python - <<'PY'
+          import json, re
+          d=json.load(open("/tmp/project.json", encoding="utf-8"))
+          assert d.get("ok") is True, d
+          files=d.get("files") or []
+          assert files, d
+          paths=[str(x.get("path","")) for x in files]
+          assert any(p.lower().startswith("test_") and p.lower().endswith(".py") for p in paths), paths
+          assert d.get("testable") is True, d
+          print("Production project contract: PASS")
+          print("Files:", paths)
+          PY
+
+      - name: Production gate
+        run: echo "NEYQORA production verification: PASS"
