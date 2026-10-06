@@ -7,10 +7,11 @@ on:
     types: [created]
   push:
     branches: [main]
+    paths: ['.github/GENERATE_NOW']
 
 jobs:
   generate:
-    if: ${{ github.event_name == 'issues' || (github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'NEYQORA_CI_RESULT')) || (github.event_name == 'push' && contains(github.event.head_commit.message, '[generate-test]')) }}
+    if: ${{ github.event_name == 'issues' || (github.event_name == 'issue_comment' && !contains(github.event.comment.body, 'NEYQORA_CI_RESULT')) || github.event_name == 'push' }}
     runs-on: ubuntu-latest
     permissions:
       contents: write
