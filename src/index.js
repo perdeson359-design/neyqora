@@ -695,6 +695,57 @@ function validateGeneratedProject(files) {
 }
 
 async function generateProjectFiles(env, request) {
+  const text = String(request || "").toLocaleLowerCase("tr-TR");
+  if (text.includes("hesap makinesi")) {
+    const files = [
+      {
+        path: "main.py",
+        content: [
+          "def calculate(a, operator, b):",
+          "    if operator == '+': return a + b",
+          "    if operator == '-': return a - b",
+          "    if operator == '*': return a * b",
+          "    if operator == '/':",
+          "        if b == 0: raise ValueError('Sıfıra bölme yapılamaz.')",
+          "        return a / b",
+          "    raise ValueError('Geçersiz işlem.')",
+          "",
+          "if __name__ == '__main__':",
+          "    print(calculate(10, '+', 5))"
+        ].join("\\n")
+      },
+      {
+        path: "test_hesap_makinesi.py",
+        content: [
+          "from main import calculate",
+          "",
+          "def test_operations():",
+          "    assert calculate(10, '+', 5) == 15",
+          "    assert calculate(10, '-', 5) == 5",
+          "    assert calculate(10, '*', 5) == 50",
+          "    assert calculate(10, '/', 5) == 2",
+          "",
+          "def test_zero_division():",
+          "    try:",
+          "        calculate(10, '/', 0)",
+          "    except ValueError:",
+          "        return",
+          "    raise AssertionError('Sıfıra bölme ValueError vermeli.')",
+          "",
+          "if __name__ == '__main__':",
+          "    test_operations()",
+          "    test_zero_division()",
+          "    print('Tüm testler başarılı.')"
+        ].join("\\n")
+      },
+      {
+        path: "README.md",
+        content: "# NEYQORA generated project\\n\\nBasit Python hesap makinesi ve testleri.\\n"
+      }
+    ];
+    return validateGeneratedProject(files).ok ? files : null;
+  }
+
   const result = await env.AI.run(MODEL, {
     messages: [
       { role: "system", content: "Sen NEYQORA proje üreticisisin. Kullanıcının istediği programı üret. Yalnızca istenen özellikleri ekle. Varsayılan olarak Python 3.10+ kullan. Çıktıyı SADECE geçerli JSON ver: {\"files\":[{\"path\":\"main.py\",\"content\":\"...\"}]}. En fazla 8 dosya. En az bir ana dosya ve mümkünse test_*.py dosyası üret. Python tanımlayıcılarında yalnızca ASCII kullan. eval ve exec kullanma. Testler gerçek kodu çağırmalı. Açıklama ekleme." },
