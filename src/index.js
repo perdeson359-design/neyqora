@@ -53,7 +53,7 @@ pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wr
 </section>
 <section id="memory-view" class="view">
 <div class="hero"><h2>Kalıcı Hafıza</h2><p>Kayıtlı bilgilerini görüntüleyebilir veya silebilirsin.</p><div class="actions"><button id="clear-memories" class="danger" type="button">Tüm Hafızayı Sil</button></div></div>
-<div id="memory-list" class="panel">Hafıza yükleniyor...</div>
+<div id="memory-panel" class="panel"><div id="memory-list">Hafıza yükleniyor...</div></div>
 </section>
 <section id="project-view" class="view">
 <div class="hero"><h2>Proje</h2><p>NEYQORA'nın oluşturduğu son proje burada görünür.</p></div>
