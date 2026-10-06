@@ -2,7 +2,7 @@ name: Generate Project From Issue Direct
 
 on:
   issues:
-    types: [opened]
+    types: [opened, reopened]
 
 jobs:
   generate:
