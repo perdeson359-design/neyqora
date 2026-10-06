@@ -27,6 +27,7 @@ jobs:
           [ "$code" = "200" ]
 
       - name: Generate project
+        id: generate
         shell: bash
         run: |
           set -euo pipefail
@@ -53,6 +54,8 @@ jobs:
           raise SystemExit(0 if ok else 1)
           PY
           then
+            printf "NEYQORA /api/project failed. HTTP=%s\n" "$code" > /tmp/generation-error.txt
+            cat /tmp/project-response.json >> /tmp/generation-error.txt 2>/dev/null || true
             echo "Direct /api/project başarısız veya files üretmedi; /api/chat fallback deneniyor."
 
             python - <<'PY'
@@ -66,7 +69,11 @@ jobs:
 
             echo "NEYQORA /api/chat HTTP status: $chat_code"
             cat /tmp/chat-response.json || true
-            [ "$chat_code" = "200" ]
+            if [ "$chat_code" != "200" ]; then
+              printf "\nNEYQORA /api/chat fallback failed. HTTP=%s\n" "$chat_code" >> /tmp/generation-error.txt
+              cat /tmp/chat-response.json >> /tmp/generation-error.txt 2>/dev/null || true
+              exit 1
+            fi
 
             python - <<'PY'
             import json
@@ -167,21 +174,28 @@ jobs:
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
+          GENERATION: ${{ steps.generate.outcome }}
           FIRST: ${{ steps.first.outcome }}
           FINAL: ${{ steps.final.outcome }}
           SYNTAX: ${{ steps.syntax.outcome }}
           SAFETY: ${{ steps.safety.outcome }}
         run: |
-          if [ "$FINAL" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then STATUS="passed"; else STATUS="failed"; fi
+          if [ "$GENERATION" = "success" ] && [ "$FINAL" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then STATUS="passed"; else STATUS="failed"; fi
           cat > /tmp/ci.md <<EOF
           <!-- NEYQORA_CI_RESULT {"status":"$STATUS","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"$FIRST","final_gate":"$FINAL"} -->
           NEYQORA CI sonucu: **$STATUS**
           - Run: ${{ github.run_id }}
+          - Üretim: $GENERATION
           - İlk test: $FIRST
           - Final test: $FINAL
           - Sözdizimi: $SYNTAX
           - Güvenlik: $SAFETY
           EOF
+          if [ -f /tmp/generation-error.txt ]; then
+            printf "\n### Üretim hata çıktısı\n\`\`\`text\n" >> /tmp/ci.md
+            tail -c 12000 /tmp/generation-error.txt >> /tmp/ci.md
+            printf "\n\`\`\`\n" >> /tmp/ci.md
+          fi
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
       - name: Verify CI result through NEYQORA
         if: steps.final.outcome == 'success'
