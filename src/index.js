@@ -167,8 +167,10 @@ function forgetRequest(message) {
 }
 
 function isProjectRequest(message) {
-  const t = String(message || "").toLocaleLowerCase("tr-TR");
-  return /\b(proje yap|proje oluştur|uygulama yap|uygulama oluştur|program yap|program oluştur|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t);
+  const t = String(message || "").toLocaleLowerCase("tr-TR").trim();
+  return /\b(proje yap|proje oluştur|proje üret|projesi yap|projesi oluştur|projesi üret|uygulama yap|uygulama oluştur|uygulama üret|program yap|program oluştur|program üret|bir app yap|bir uygulama yap|kodla|inşa et)\b/.test(t)
+    || /\b(hesap makinesi|todo|not uygulaması|hava durumu uygulaması)\b.*\b(yap|oluştur|üret|geliştir)\b/.test(t)
+    || /\b(yap|oluştur|üret|geliştir)\b.*\b(hesap makinesi|todo|not uygulaması|hava durumu uygulaması)\b/.test(t);
 }
 
 function formatToolResult(result) {
