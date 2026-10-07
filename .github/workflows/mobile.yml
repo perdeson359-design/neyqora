@@ -1,9 +1,9 @@
 name: Mobile Build
 on:
   push:
-    paths: ["mobile/**", ".github/workflows/mobile.yml"]
+    paths: ["mobile/**", "src/index.js", ".github/workflows/mobile.yml"]
   pull_request:
-    paths: ["mobile/**", ".github/workflows/mobile.yml"]
+    paths: ["mobile/**", "src/index.js", ".github/workflows/mobile.yml"]
   workflow_dispatch:
 permissions:
   contents: read
@@ -11,7 +11,7 @@ permissions:
 jobs:
   android:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     defaults: { run: { working-directory: mobile } }
     steps:
       - uses: actions/checkout@v5
@@ -23,8 +23,21 @@ jobs:
         run: curl --fail --silent --show-error --retry 5 --retry-delay 3 https://neyqora.kosseofficial.workers.dev/api/health
       - name: Install mobile dependencies
         run: npm install --no-audit --no-fund
-      - name: Validate Capacitor configuration
-        run: npx cap doctor
+      - name: Validate Capacitor configuration and native plugins
+        run: |
+          npx cap doctor
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
+          const cfg=fs.readFileSync("capacitor.config.ts","utf8");
+          for (const dep of ["@capacitor/core","@capacitor/app","@capacitor/haptics","@capacitor/share","@capacitor/status-bar","@capacitor/splash-screen","@capacitor/camera","@capacitor/filesystem","@capacitor/keyboard","@capacitor/local-notifications","@capacitor/network","@capacitor/push-notifications"]) {
+            if (!pkg.dependencies[dep]) throw new Error("Missing dependency: "+dep);
+          }
+          for (const token of ["com.neyqora.assistant","NEYQORA_APP_URL","cleartext: false","allowNavigation","PushNotifications","Keyboard"]) {
+            if (!cfg.includes(token)) throw new Error("Missing mobile contract: "+token);
+          }
+          console.log("NEYQORA native capability contract: PASS");
+          NODE
       - name: Generate Android project
         run: npx cap add android
       - name: Sync Android project
@@ -33,27 +46,40 @@ jobs:
         run: grep -R 'com.neyqora.assistant' android/app/src/main/AndroidManifest.xml android/app/build.gradle*
       - name: Build Android debug APK
         run: ./android/gradlew -p android assembleDebug --no-daemon
-      - name: Upload Android APK
+      - name: Build Android release AAB
+        run: ./android/gradlew -p android bundleRelease --no-daemon
+      - name: Upload Android artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: neyqora-android-debug
-          path: mobile/android/app/build/outputs/apk/debug/app-debug.apk
+          name: neyqora-android
+          path: |
+            mobile/android/app/build/outputs/apk/debug/app-debug.apk
+            mobile/android/app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
 
   ios:
     runs-on: macos-latest
-    timeout-minutes: 25
+    timeout-minutes: 30
     defaults: { run: { working-directory: mobile } }
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
-        with: { node-version: "20", cache: npm, cache-dependency-path: mobile/package.json }
+        with: { node-version: "20", cache: "npm", cache-dependency-path: mobile/package.json }
       - name: Verify production endpoint
         run: curl --fail --silent --show-error --retry 5 --retry-delay 3 https://neyqora.kosseofficial.workers.dev/api/health
       - name: Install mobile dependencies
         run: npm install --no-audit --no-fund
-      - name: Validate Capacitor configuration
-        run: npx cap doctor
+      - name: Validate native plugins
+        run: |
+          npx cap doctor
+          node --input-type=module <<'NODE'
+          import fs from "node:fs";
+          const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
+          for (const dep of ["@capacitor/camera","@capacitor/filesystem","@capacitor/keyboard","@capacitor/local-notifications","@capacitor/network","@capacitor/push-notifications"]) {
+            if (!pkg.dependencies[dep]) throw new Error("Missing dependency: "+dep);
+          }
+          console.log("NEYQORA iOS native plugin contract: PASS");
+          NODE
       - name: Generate iOS project
         run: npx cap add ios
       - name: Sync iOS project
@@ -62,16 +88,21 @@ jobs:
         run: grep -R 'com.neyqora.assistant' ios/App/App/Info.plist ios/App/App.xcodeproj/project.pbxproj
       - name: Build iOS Simulator target
         run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
+      - name: Package iOS Simulator app
+        run: ditto -c -k --sequesterRsrc --keepParent build/ios/Build/Products/Debug-iphonesimulator/App.app build/ios/NEYQORA-iOS-Simulator.zip
+      - name: Upload iOS Simulator artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neyqora-ios-simulator
+          path: mobile/build/ios/NEYQORA-iOS-Simulator.zip
+          if-no-files-found: error
       - name: Mobile config contract
         run: |
           node --input-type=module <<'NODE'
           import fs from "node:fs";
           const pkg=JSON.parse(fs.readFileSync("package.json","utf8"));
           const cfg=fs.readFileSync("capacitor.config.ts","utf8");
-          for (const dep of ["@capacitor/core","@capacitor/app","@capacitor/haptics","@capacitor/share","@capacitor/status-bar","@capacitor/splash-screen"]) {
-            if (!pkg.dependencies[dep]) throw new Error("Missing dependency: "+dep);
-          }
-          for (const token of ["com.neyqora.assistant","NEYQORA_APP_URL","cleartext: false","allowNavigation"]) {
+          for (const token of ["com.neyqora.assistant","NEYQORA_APP_URL","cleartext: false","allowNavigation","PushNotifications","Keyboard"]) {
             if (!cfg.includes(token)) throw new Error("Missing mobile contract: "+token);
           }
           console.log("NEYQORA mobile config contract: PASS");
