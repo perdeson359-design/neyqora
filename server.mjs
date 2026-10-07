@@ -8,12 +8,13 @@ const dbPath = process.env.NEYQORA_DB_PATH || "./data/neyqora.db";
 const aiBaseUrl = String(process.env.NEYQORA_AI_BASE_URL || "").replace(/\/$/, "");
 const aiModel = process.env.NEYQORA_AI_MODEL || "@cf/meta/llama-3.2-3b-instruct";
 const aiApiKey = process.env.NEYQORA_AI_API_KEY || "";
+const aiProviderMode = String(process.env.AI_PROVIDER_MODE || "auto").toLowerCase();
 
 if (!process.env.OWNER_AUTH_TOKEN) {
   throw new Error("OWNER_AUTH_TOKEN is required");
 }
-if (!aiBaseUrl || !aiApiKey) {
-  throw new Error("NEYQORA_AI_BASE_URL and NEYQORA_AI_API_KEY are required");
+if ((aiProviderMode === "cloud" || aiProviderMode === "auto") && (!aiBaseUrl || !aiApiKey) && !process.env.LOCAL_AI_BASE_URL) {
+  throw new Error("Cloud AI için NEYQORA_AI_BASE_URL ve NEYQORA_AI_API_KEY veya yerel AI için LOCAL_AI_BASE_URL yapılandırılmalı");
 }
 
 const db = new Database(dbPath);
@@ -40,7 +41,7 @@ const DB = {
   }
 };
 
-const AI = {
+const AI = aiBaseUrl && aiApiKey ? {
   async run(_model, options) {
     const response = await fetch(aiBaseUrl + "/chat/completions", {
       method: "POST",
@@ -69,7 +70,7 @@ const env = {
   USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   RESEND_FROM: process.env.RESEND_FROM || "onboarding@resend.dev",
-  AI_PROVIDER_MODE: process.env.AI_PROVIDER_MODE || "auto",
+  AI_PROVIDER_MODE: aiProviderMode,
   LOCAL_AI_BASE_URL: process.env.LOCAL_AI_BASE_URL || "",
   LOCAL_AI_API_KEY: process.env.LOCAL_AI_API_KEY || "",
   LOCAL_AI_MODEL: process.env.LOCAL_AI_MODEL || "",
