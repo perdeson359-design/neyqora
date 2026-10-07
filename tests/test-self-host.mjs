@@ -21,21 +21,23 @@ assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
 const sqlite = new Database(":memory:");
 const DB = {
   prepare(sql) {
+    const statement = sqlite.prepare(sql);
+    const execute = (params = []) => ({
+      async run() {
+        const info = statement.run(...params);
+        return { success: true, meta: { changes: info.changes, last_row_id: info.lastInsertRowid } };
+      },
+      async all() {
+        return { success: true, results: statement.all(...params) };
+      },
+      async first() {
+        return statement.get(...params) || null;
+      }
+    });
     return {
+      ...execute(),
       bind(...params) {
-        const statement = sqlite.prepare(sql);
-        return {
-          async run() {
-            const info = statement.run(...params);
-            return { success: true, meta: { changes: info.changes, last_row_id: info.lastInsertRowid } };
-          },
-          async all() {
-            return { success: true, results: statement.all(...params) };
-          },
-          async first() {
-            return statement.get(...params) || null;
-          }
-        };
+        return execute(params);
       }
     };
   }
@@ -70,7 +72,7 @@ const register = await request("/api/auth/register", {
   method: "POST",
   body: { name: "Auth Test", email: "auth-e2e@example.com", password: "Testpass123" }
 });
-assert.equal(register.status, 201, "Kayıt HTTP 201 olmalı");
+assert.equal(register.status, 201, "Kayıt HTTP 201 olmalı: " + await register.clone().text());
 const registerBody = await register.json();
 assert.equal(registerBody.ok, true);
 assert.equal(registerBody.user.email, "auth-e2e@example.com");
