@@ -58,7 +58,8 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .setting-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#0b1425}
 .setting-card h3{margin:0 0 6px;font-size:15px}.setting-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
 .memory-tools{display:flex;gap:8px;margin-bottom:12px}.memory-tools input{flex:1}
-.tool-categories{display:grid;gap:18px}.category-label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#8fa1c2;font-weight:900;margin-top:2px}.tool-card{width:100%;text-align:left}
+.tool-categories{display:grid;gap:22px}.category-label{display:flex;align-items:center;gap:8px;font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#8fa1c2;font-weight:900;margin-top:2px}.category-label:after{content:"";height:1px;flex:1;background:var(--line)}
+.tool-card{width:100%;text-align:left;position:relative;min-height:128px;transition:transform .16s ease,border-color .16s ease,background .16s ease}.tool-card:hover{transform:translateY(-2px)}.tool-card strong{font-size:16px}.tool-card span{max-width:520px}.tool-status{position:absolute;top:14px;right:14px;display:inline-flex;align-items:center;gap:5px;font-size:10px;font-weight:850;color:#8fa1c2}.tool-status-dot{width:6px;height:6px;border-radius:50%;background:#78e6a0;box-shadow:0 0 10px rgba(120,230,160,.4)}.tool-arrow{position:absolute;right:15px;bottom:13px;color:#7183a4;font-size:15px}
 .tool-page{max-width:1100px;margin:0 auto}.page-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.page-head h2{margin:0 0 5px}.page-head p{margin:0;color:var(--muted);font-size:13px}.back-button{border:1px solid var(--line);background:#0b1323;color:#dbe5ff;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer;white-space:nowrap}.tool-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tool-workspace .panel{margin-top:0}.tool-workspace .panel:last-child:nth-child(3){grid-column:1/-1}
 @media(max-width:700px){.tool-workspace{grid-template-columns:1fr}.page-head{gap:9px}.page-head h2{font-size:22px}}
 @media(max-width:700px){.project-workspace,.settings-grid{grid-template-columns:1fr}.project-tree{display:flex;gap:6px;overflow:auto}.project-tree button{min-width:max-content}.chat-toolbar{align-items:flex-start}.app{padding-bottom:calc(178px + env(safe-area-inset-bottom))}#form{bottom:calc(72px + env(safe-area-inset-bottom));}
@@ -85,23 +86,23 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </section>
 
 <section id="tools-view" class="view">
-<div class="hero"><h2>Araç Merkezi</h2><p>Her araç kendi çalışma alanında. İhtiyacını seç, doğrudan o sayfaya geç.</p></div>
+<div class="hero"><h2>Araç Merkezi</h2><p>NEYQORA'nın yeteneklerini tek yerden keşfet. Her araç kendi çalışma alanında açılır.</p></div>
 <div class="tool-categories">
 <div class="category-label">Yapay Zekâ</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="local-ai-view" type="button" onclick="return window.neyqoraNavigate('local-ai-view')"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>Yerel model bağlantısı, adres ve bağlantı testi.</span></button>
+<button class="tool-card" data-view="local-ai-view" type="button" onclick="return window.neyqoraNavigate('local-ai-view')"><div class="tool-status"><i class="tool-status-dot"></i>Hazır</div><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>Kendi model sunucuna bağlan, internet olmadan veya özel modelinle çalış.</span><div class="tool-arrow">→</div></button>
 </div>
 <div class="category-label">Üretkenlik</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="productivity-view" type="button" onclick="return window.neyqoraNavigate('productivity-view')"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Planla, gönder ve otomatikleştir.</span></button>
+<button class="tool-card" data-view="productivity-view" type="button" onclick="return window.neyqoraNavigate('productivity-view')"><div class="tool-status"><i class="tool-status-dot"></i>Hazır</div><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Etkinlik oluştur, e-posta gönder veya tekrar eden işleri otomatikleştir.</span><div class="tool-arrow">→</div></button>
 </div>
 <div class="category-label">Dosyalar</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="files-view" type="button" onclick="return window.neyqoraNavigate('files-view')"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını incele.</span></button>
+<button class="tool-card" data-view="files-view" type="button" onclick="return window.neyqoraNavigate('files-view')"><div class="tool-status"><i class="tool-status-dot"></i>Hazır</div><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını NEYQORA ile incele.</span><div class="tool-arrow">→</div></button>
 </div>
 <div class="category-label">Medya</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="media-view" type="button" onclick="return window.neyqoraNavigate('media-view')"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir ve görselleri analiz et.</span></button>
+<button class="tool-card" data-view="media-view" type="button" onclick="return window.neyqoraNavigate('media-view')"><div class="tool-status"><i class="tool-status-dot"></i>Hazır</div><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Ses dosyalarını yazıya çevir, görselleri analiz et ve sonuçları çalışma alanında gör.</span><div class="tool-arrow">→</div></button>
 </div>
 </section>
 
