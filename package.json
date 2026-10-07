@@ -2,10 +2,13 @@
   "name": "neyqora-self-host",
   "private": true,
   "type": "module",
-  "engines": { "node": ">=20" },
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/index.js"
+    "check": "node --check server.mjs && node --check src/index.js && node tests/test-ai-provider.mjs",
+    "test:provider": "node tests/test-ai-provider.mjs"
   },
   "dependencies": {
     "better-sqlite3": "^11.10.0"
