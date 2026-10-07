@@ -42,8 +42,28 @@ jobs:
         run: npx cap add android
       - name: Sync Android project
         run: npx cap sync android
-      - name: Verify Android application identity
-        run: grep -R 'com.neyqora.assistant' android/app/src/main/AndroidManifest.xml android/app/build.gradle*
+      - name: Configure Android deep link
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("android/app/src/main/AndroidManifest.xml")
+          s=p.read_text()
+          marker="</activity>"
+          intent='''        <intent-filter>
+                    <action android:name="android.intent.action.VIEW" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                    <category android:name="android.intent.category.BROWSABLE" />
+                    <data android:scheme="neyqora" android:host="open" />
+                </intent-filter>
+          '''
+          if 'android:scheme="neyqora"' not in s:
+              s=s.replace(marker,intent+"\n    "+marker,1)
+          p.write_text(s)
+          PY
+      - name: Verify Android application identity and deep link
+        run: |
+          grep -R 'com.neyqora.assistant' android/app/src/main/AndroidManifest.xml android/app/build.gradle*
+          grep -R 'android:scheme="neyqora"' android/app/src/main/AndroidManifest.xml
       - name: Build Android debug APK
         run: ./android/gradlew -p android assembleDebug --no-daemon
       - name: Build Android release AAB
@@ -84,8 +104,22 @@ jobs:
         run: npx cap add ios
       - name: Sync iOS project
         run: npx cap sync ios
-      - name: Verify iOS application identity
-        run: grep -R 'com.neyqora.assistant' ios/App/App/Info.plist ios/App/App.xcodeproj/project.pbxproj
+      - name: Configure iOS deep link
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+          p=Path("ios/App/App/Info.plist")
+          data=plistlib.loads(p.read_bytes())
+          types=data.setdefault("CFBundleURLTypes", [])
+          if not any("neyqora" in item.get("CFBundleURLSchemes", []) for item in types):
+              types.append({"CFBundleURLName":"com.neyqora.assistant","CFBundleURLSchemes":["neyqora"]})
+          p.write_bytes(plistlib.dumps(data, fmt=plistlib.FMT_XML))
+          PY
+      - name: Verify iOS application identity and deep link
+        run: |
+          grep -R 'com.neyqora.assistant' ios/App/App/Info.plist ios/App/App.xcodeproj/project.pbxproj
+          grep -R 'neyqora' ios/App/App/Info.plist
       - name: Build iOS Simulator target
         run: xcodebuild -workspace ios/App/App.xcworkspace -scheme App -sdk iphonesimulator -configuration Debug -derivedDataPath build/ios CODE_SIGNING_ALLOWED=NO build
       - name: Package iOS Simulator app
