@@ -103,7 +103,7 @@ assert.match(source, /codingValidation = result\?\.validation/);
 assert.match(source, /validation: codingValidation/);
 
 
-assert.match(source, /VERSION = "6\.1"/);
+assert.match(source, /VERSION = "6\.2"/);
 assert.match(source, /\/api\/calendar\/events/);
 assert.match(source, /\/api\/email\/drafts/);
 assert.match(source, /\/api\/email\/send/);
