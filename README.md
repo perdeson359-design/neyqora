@@ -154,3 +154,6 @@ GitHub repository secrets olarak şunlar gerekir:
 - `CLOUDFLARE_ACCOUNT_ID`
 
 Cloudflare Wrangler Action ile GitHub Actions üzerinden Worker deploy etmek desteklenir.
+
+
+CI verification trigger.
