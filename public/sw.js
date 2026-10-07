@@ -1,4 +1,4 @@
-const CACHE = "neyqora-shell-v1";
+const CACHE = "neyqora-shell-v2";
 const SHELL = ["/", "/manifest.webmanifest"];
 
 self.addEventListener("install", event => {
