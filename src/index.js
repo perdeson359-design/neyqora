@@ -52,7 +52,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .tool-page{max-width:1100px;margin:0 auto}.page-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.page-head h2{margin:0 0 5px}.page-head p{margin:0;color:var(--muted);font-size:13px}.back-button{border:1px solid var(--line);background:#0b1323;color:#dbe5ff;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer;white-space:nowrap}.tool-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tool-workspace .panel{margin-top:0}.tool-workspace .panel:last-child:nth-child(3){grid-column:1/-1}
 @media(max-width:700px){.tool-workspace{grid-template-columns:1fr}.page-head{gap:9px}.page-head h2{font-size:22px}}
 @media(max-width:700px){.project-workspace,.settings-grid{grid-template-columns:1fr}.project-tree{display:flex;gap:6px;overflow:auto}.project-tree button{min-width:max-content}.chat-toolbar{align-items:flex-start}.app{padding-bottom:calc(178px + env(safe-area-inset-bottom))}#form{bottom:calc(72px + env(safe-area-inset-bottom));}
-@media(max-width:700px){.app{padding-bottom:178px}header{padding:12px 16px}.brand-mark{width:42px;height:42px;flex-basis:42px}.brand-copy h1{font-size:18px}.brand-copy p{font-size:11px}header>.nav{display:none}main{padding:12px 12px 0}.hero{border-radius:22px;padding:22px 18px;margin-bottom:12px}.chat-hero{padding:30px 16px 24px}.hero-mark{width:52px;height:52px;font-size:24px;margin-bottom:14px}.hero h2{font-size:25px}.hero p{font-size:14px}.quick-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 22px}.quick-card{padding:14px;border-radius:16px}#chat{padding-bottom:110px}.msg{max-width:94%;font-size:15px}#form{bottom:72px;width:calc(100% - 24px);padding:8px;border-radius:18px}#input{font-size:16px;padding:12px}#send{padding:0 17px}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);left:0;right:0;bottom:0;height:64px;z-index:35;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(6,10,18,.96);backdrop-filter:blur(22px);border-top:1px solid rgba(48,69,104,.7)}.mobile-nav button{border:0;background:transparent;color:#7f8eaa;font-size:11px;font-weight:800;border-radius:12px;cursor:pointer}.mobile-nav button span{display:block;font-size:18px;margin-bottom:2px}.mobile-nav button.active{color:#eef3ff;background:#17243b}}
+@media(max-width:700px){.app{padding-bottom:178px}header{padding:12px 16px}.brand-mark{width:42px;height:42px;flex-basis:42px}.brand-copy h1{font-size:18px}.brand-copy p{font-size:11px}header>.nav{display:none}main{padding:12px 12px 0}.hero{border-radius:22px;padding:22px 18px;margin-bottom:12px}.chat-hero{padding:30px 16px 24px}.hero-mark{width:52px;height:52px;font-size:24px;margin-bottom:14px}.hero h2{font-size:25px}.hero p{font-size:14px}.quick-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 22px}.quick-card{padding:14px;border-radius:16px}#chat{padding-bottom:110px}.msg{max-width:94%;font-size:15px}#form{bottom:72px;width:calc(100% - 24px);padding:8px;border-radius:18px}#input{font-size:16px;padding:12px}#send{padding:0 17px}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);left:0;right:0;bottom:0;height:64px;z-index:100;pointer-events:auto;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(6,10,18,.96);backdrop-filter:blur(22px);border-top:1px solid rgba(48,69,104,.7)}.mobile-nav button{border:0;background:transparent;color:#7f8eaa;font-size:11px;font-weight:800;border-radius:12px;cursor:pointer}.mobile-nav button span{display:block;font-size:18px;margin-bottom:2px}.mobile-nav button.active{color:#eef3ff;background:#17243b}}
 </style>
 </head>
 <body>
@@ -131,7 +131,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="settings-grid"><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Güvenli alan, klavye ve dokunmatik kullanım optimize edildi.</p></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
 </section>
 </main>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü"><button class="active" data-view="chat-view" type="button"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button"><span>💻</span>Proje</button><button data-view="memory-view" type="button"><span>🧠</span>Hafıza</button></nav>
+<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button"><span>💻</span>Proje</button><button data-view="memory-view" type="button"><span>🧠</span>Hafıza</button></nav>
 </div>
 <script>
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }
@@ -213,7 +213,14 @@ function openView(view){
   window.scrollTo({top:0,behavior:"smooth"});
   if(view==="chat-view" && window.matchMedia("(min-width:701px)").matches) setTimeout(()=>document.querySelector("#input")?.focus(),120);
 }
-document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>openView(button.dataset.view)));
+document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",(event)=>{event.preventDefault();event.stopPropagation();openView(button.dataset.view);}));
+document.addEventListener("pointerup",(event)=>{
+  const button=event.target.closest(".mobile-nav [data-view]");
+  if(!button)return;
+  event.preventDefault();
+  event.stopPropagation();
+  openView(button.dataset.view);
+},{passive:false});
 document.querySelectorAll(".quick-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));
 
 const HISTORY_KEY="neyqora-chat-history-v1";
