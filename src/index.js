@@ -233,7 +233,13 @@ async function sendMessage(){
       panel.scrollIntoView({behavior:"smooth",block:"end"});
     }
   }catch(err){
-    pending.textContent=err?.name==="AbortError"?"NEYQORA yanıtı zaman aşımına uğradı.":"Bağlantı hatası: "+(err?.message||"Tekrar dene.");
+    try{
+      const localReply=await window.neyqoraLocalChat(message);
+      pending.textContent="(Yerel AI) "+(localReply||"Yerel AI boş yanıt verdi.");
+      if(localReply)rememberTurn("assistant",localReply);
+    }catch(localError){
+      pending.textContent=err?.name==="AbortError"?"NEYQORA yanıtı zaman aşımına uğradı.":"Bağlantı hatası: "+(err?.message||localError?.message||"Tekrar dene.");
+    }
   }finally{
     clearTimeout(timer);
     sending=false;
