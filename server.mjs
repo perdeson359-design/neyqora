@@ -40,6 +40,10 @@ const DB = {
           },
           async all() {
             return { success: true, results: statement.all(...params) };
+          },
+          async first() {
+            const row = statement.get(...params);
+            return row || null;
           }
         };
       }
