@@ -18,7 +18,7 @@ jobs:
       - uses: actions/setup-node@v5
         with: { node-version: "20", cache: "npm", cache-dependency-path: mobile/package.json }
       - uses: actions/setup-java@v5
-        with: { distribution: temurin, java-version: "17" }
+        with: { distribution: temurin, java-version: "21" }
       - name: Verify production endpoint
         run: curl --fail --silent --show-error --retry 5 --retry-delay 3 https://neyqora.kosseofficial.workers.dev/api/health
       - name: Install mobile dependencies
