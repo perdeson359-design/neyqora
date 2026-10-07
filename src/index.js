@@ -1680,12 +1680,13 @@ export default {
         display: "standalone",
         background_color: "#070b14",
         theme_color: "#070b14",
-        orientation: "portrait-primary"
+        orientation: "portrait-primary",
+        icons: [{ src: "/icon.svg", sizes: "any", type: "image/svg+xml", purpose: "any maskable" }]
       }), { headers: { "content-type": "application/manifest+json; charset=UTF-8", "cache-control": "public, max-age=3600" } });
     }
 
     if (request.method === "GET" && url.pathname === "/sw.js") {
-      return new Response(`const CACHE="neyqora-shell-v2";const SHELL=["/","/manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
+      return new Response(`const CACHE="neyqora-shell-v3";const SHELL=["/","/manifest.webmanifest","/icon.svg"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
     }
 
     if (request.method === "GET" && url.pathname === "/") {
