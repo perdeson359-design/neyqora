@@ -8,7 +8,8 @@
     "android": "cap run android",
     "ios": "cap run ios",
     "build": "cap sync",
-    "icons": "capacitor-assets generate"
+    "icons": "capacitor-assets generate",
+    "verify": "node scripts/verify-mobile.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",
@@ -16,7 +17,13 @@
     "@capacitor/haptics": "^7.0.0",
     "@capacitor/share": "^7.0.0",
     "@capacitor/status-bar": "^7.0.0",
-    "@capacitor/splash-screen": "^7.0.0"
+    "@capacitor/splash-screen": "^7.0.0",
+    "@capacitor/camera": "^7.0.0",
+    "@capacitor/filesystem": "^7.0.0",
+    "@capacitor/keyboard": "^7.0.0",
+    "@capacitor/local-notifications": "^7.0.0",
+    "@capacitor/network": "^7.0.0",
+    "@capacitor/push-notifications": "^7.0.0"
   },
   "devDependencies": {
     "@capacitor/cli": "^7.4.3",
