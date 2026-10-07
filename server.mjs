@@ -41,7 +41,7 @@ const DB = {
   }
 };
 
-const AI = aiBaseUrl && aiApiKey ? {
+const AI = (aiBaseUrl && aiApiKey) ? {
   async run(_model, options) {
     const response = await fetch(aiBaseUrl + "/chat/completions", {
       method: "POST",
@@ -61,7 +61,7 @@ const AI = aiBaseUrl && aiApiKey ? {
     const data = JSON.parse(text);
     return { response: data?.choices?.[0]?.message?.content || "" };
   }
-};
+} : null;
 
 const env = {
   AI,
