@@ -25,7 +25,7 @@ main{padding:24px 20px}.view{display:none}.view.active{display:block}.hero{paddi
 .view{display:none}.view.active{display:block}.view[hidden]{display:none}.panel{border:1px solid var(--line);border-radius:20px;background:#0d1628;padding:18px;margin-top:14px;box-shadow:var(--shadow)}.panel h3{margin:0 0 6px}.panel p{color:var(--muted);font-size:13px;margin:0 0 12px}.panel[hidden]{display:none}.field{width:100%;margin-top:8px;background:#080f1e;color:var(--text);border:1px solid var(--line);outline:0;padding:12px;border-radius:12px;font-size:15px}.field:focus{border-color:#526b9f}textarea.field{min-height:110px;resize:vertical}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.primary,.secondary,.danger{border:0;border-radius:12px;padding:11px 14px;font-weight:850;cursor:pointer}.primary{background:#eef3ff;color:#08101d}.secondary{background:#26385f;color:#fff}.danger{background:#4b2530;color:#fff}.result{margin-top:10px;padding:12px;border-radius:12px;background:#080f1e;border:1px solid var(--line);white-space:pre-wrap;color:#dbe5ff}.memory-row{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.memory-row span{flex:1;line-height:1.45}
 #form{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;width:min(1040px,calc(100% - 32px));display:flex;gap:9px;padding:9px;background:rgba(9,15,27,.93);backdrop-filter:blur(22px);border:1px solid #314462;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.42)}#input{flex:1;min-width:0;background:#080f1e;color:#fff;border:1px solid var(--line);outline:0;padding:13px 15px;border-radius:14px;font-size:16px}#input:focus{border-color:#526b9f}#send{border:0;border-radius:14px;padding:0 22px;background:#eef3ff;color:#0a0e18;font-weight:900;cursor:pointer}pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.mobile-nav{display:none}
 #form[hidden]{display:none}
-button:focus-visible,input:focus-visible,textarea:focus-visible,.tool-card:focus-visible,.quick-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.tool-card:focus-visible,.quick-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}\n.auth-overlay.open~*{pointer-events:none}.auth-overlay.open .auth-card{animation:auth-in .18s ease-out}@keyframes auth-in{from{opacity:0;transform:translateY(8px) scale(.985)}to{opacity:1;transform:none}}\n@media(max-width:700px){.auth-overlay{align-items:flex-end;padding:10px}.auth-card{width:100%;max-height:calc(100dvh - 20px);border-radius:22px;padding:20px 16px}.auth-card h2{font-size:21px}.auth-actions{position:sticky;bottom:0;padding-top:6px;background:linear-gradient(transparent,#0a1120 35%)}.profile-menu{width:min(320px,calc(100vw - 24px))}.nav{display:none}}
 button:disabled{opacity:.55;cursor:not-allowed}
 .chat-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:4px 0 10px}
 .chat-composer-hint{margin:0 0 10px;color:#8fa1c2;font-size:11px;text-align:center}
@@ -177,19 +177,6 @@ window.neyqoraNavigate=function(view){
   window.scrollTo(0,0);
   return false;
 };
-window.neyqoraAccount=function(){
-  var overlay=document.getElementById("auth-overlay");
-  if(!overlay)return false;
-  overlay.classList.add("open");
-  overlay.setAttribute("aria-hidden","false");
-  var email=document.getElementById("auth-email");
-  if(email)setTimeout(function(){email.focus();},80);
-  return false;
-};
-document.getElementById("account-button")?.addEventListener("click",function(event){
-  event.preventDefault();
-  return window.neyqoraAccount();
-});
 window.neyqoraSend=async function(){
   const input=document.querySelector("#input");
   const chat=document.querySelector("#chat");
@@ -492,7 +479,7 @@ function setAuthMode(m){
   document.getElementById("auth-subtitle").textContent=register?"Hesabını oluştur ve kişisel çalışma alanına bağlan.":forgot?"E-posta adresine güvenli bir sıfırlama bağlantısı göndereceğiz.":reset?"Yeni şifreni belirle.":profile?"Profil bilgilerini güncelle.":"Hesabınla giriş yaparak kişisel çalışma alanına devam et.";
 }
 window.neyqoraAccount=function(){var overlay=document.getElementById("auth-overlay"),menu=document.getElementById("profile-menu");if(window.currentAccount&&menu){menu.classList.toggle("open");return false}try{openAuth("login")}catch(error){if(overlay){overlay.classList.add("open");overlay.setAttribute("aria-hidden","false")}console.error("NEYQORA auth open error:",error)}return false};function openAuth(m="login"){authOverlay.classList.add("open");authOverlay.setAttribute("aria-hidden","false");try{setAuthMode(m)}catch(error){console.error("NEYQORA auth mode error:",error)}setTimeout(()=>authEmail?.focus(),80)}function closeAuth(){authOverlay.classList.remove("open");authOverlay.setAttribute("aria-hidden","true")}
-function renderAccount(u){currentAccount=u||null;window.currentAccount=currentAccount;accountName.textContent=u?.name||"Giriş yap";profileName.textContent=u?.name||"Misafir";profileEmail.textContent=u?.email||"Oturum açılmadı";logoutButton.hidden=!u;profileButton.hidden=!u}
+function renderAccount(u){currentAccount=u||null;window.currentAccount=currentAccount;accountName.textContent=u?.name||"Giriş yap";profileName.textContent=u?.name||"Misafir";profileEmail.textContent=u?.email||"Oturum açılmadı";logoutButton.hidden=!u;profileButton.hidden=!u;deleteAccountButton.hidden=!u;if(!u)profileMenu.classList.remove("open")}
 async function loadAccount(){try{const r=await fetch("/api/auth/me",{cache:"no-store"}),d=await r.json();renderAccount(d.ok?d.user:null)}catch{renderAccount(null)}}
 async function openProfile(){if(!currentAccount)return openAuth();authName.value=currentAccount.name||"";authEmail.value=currentAccount.email||"";authPassword.value="";setAuthMode("profile");authOverlay.classList.add("open");authOverlay.setAttribute("aria-hidden","false")}
 profileButton?.addEventListener("click",()=>{profileMenu.classList.remove("open");openProfile()});settingsProfile?.addEventListener("click",openProfile);deleteAccountButton?.addEventListener("click",async()=>{if(!currentAccount||!confirm("Hesabın, hafızan ve çalışma verilerin kalıcı olarak silinsin mi?"))return;const r=await fetch("/api/auth/account",{method:"DELETE"}),d=await r.json();if(!r.ok||!d.ok){alert(d.error||"Hesap silinemedi.");return}profileMenu.classList.remove("open");renderAccount(null);openAuth()});loginTab?.addEventListener("click",()=>setAuthMode("login"));registerTab?.addEventListener("click",()=>setAuthMode("register"));forgotButton?.addEventListener("click",()=>setAuthMode("forgot"));authClose?.addEventListener("click",closeAuth);authOverlay?.addEventListener("click",e=>{if(e.target===authOverlay)closeAuth()});logoutButton?.addEventListener("click",async()=>{await fetch("/api/auth/logout",{method:"POST"});profileMenu.classList.remove("open");renderAccount(null);openAuth()});
