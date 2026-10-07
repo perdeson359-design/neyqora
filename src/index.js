@@ -47,7 +47,8 @@ pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wr
 <div class="tools-grid">
 <div class="tool-card" data-tool="productivity"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Etkinlik oluştur, e-posta gönder veya zamanlanmış görev kur.</span></div>
 <div class="tool-card" data-tool="files"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını analiz et.</span></div>
-<div class="tool-card" data-tool="media"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir veya görselleri analiz et.</span></div>\n<div class="tool-card" data-tool="local-ai"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>İnternet yokken OpenAI-compatible yerel modeline bağlan.</span></div>
+<div class="tool-card" data-tool="media"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir veya görselleri analiz et.</span></div>
+<div class="tool-card data-tool="local-ai"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>İnternet yokken OpenAI-compatible yerel modeline bağlan.</span></div>
 </div>
 <div id="productivity-panel" class="panel" hidden><h3>Takvim · E-posta · Otomasyon</h3><p>İşlemini seç ve alanları doldur.</p><input id="event-title" class="field" placeholder="Takvim etkinliği"><input id="event-start" class="field" type="datetime-local"><input id="event-end" class="field" type="datetime-local"><div class="actions"><button id="create-event" class="secondary" type="button">Etkinlik Oluştur</button></div><input id="email-to" class="field" placeholder="E-posta alıcısı"><input id="email-subject" class="field" placeholder="Konu"><textarea id="email-body" class="field" placeholder="E-posta içeriği"></textarea><div class="actions"><button id="send-email" class="secondary" type="button">E-posta Gönder</button><button id="save-email" class="secondary" type="button">Taslağı Kaydet</button></div><input id="automation-title" class="field" placeholder="Otomasyon adı"><input id="automation-run" class="field" type="datetime-local"><input id="automation-prompt" class="field" placeholder="Görev"><div class="actions"><button id="create-automation" class="secondary" type="button">Otomasyon Oluştur</button></div></div>
 <div id="file-panel" class="panel" hidden><h3>Dosya Analizi</h3><p>Analiz etmek istediğin dosyaları seç.</p><input id="file-input" class="field" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log"><div class="actions"><button id="analyze-files" class="secondary" type="button">Dosyaları Analiz Et</button></div></div>
@@ -66,7 +67,9 @@ pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wr
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
 <script>
-if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }\n</script>\n<script>
+if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }
+</script>
+<script>
 window.neyqoraSend=async function(){
   const input=document.querySelector("#input");
   const chat=document.querySelector("#chat");
@@ -1360,7 +1363,9 @@ export default {
         agent: true,
         tools: ["calculator", "weather", "web", "coding", "project", "calendar", "email", "automation"],
         web: true,
-        ownerAuth: !!env.OWNER_AUTH_TOKEN,\n        aiProvider: env.AI?.info ? env.AI.info() : { mode: "cloud", cloud: !!env.AI, local: false, fallback: false }\n      });
+        ownerAuth: !!env.OWNER_AUTH_TOKEN,
+        aiProvider: env.AI?.info ? env.AI.info() : { mode: "cloud", cloud: !!env.AI, local: false, fallback: false }
+      });
     }
 
     if (request.method === "POST" && url.pathname === "/api/audio/transcribe") {
