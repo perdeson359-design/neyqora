@@ -1,0 +1,289 @@
+name: Mobile Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      android_track:
+        description: "Android publish target"
+        required: true
+        type: choice
+        options: [none, internal, production]
+        default: none
+      android_version_code:
+        description: "Android versionCode"
+        required: true
+        type: string
+        default: "1"
+      ios_upload:
+        description: "Upload signed iOS IPA to TestFlight"
+        required: true
+        type: boolean
+        default: false
+      app_version:
+        description: "Marketing version"
+        required: true
+        type: string
+        default: "1.0.0"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: neyqora-mobile-release
+  cancel-in-progress: false
+
+jobs:
+  preflight:
+    runs-on: ubuntu-latest
+    environment:
+      name: mobile-release
+      deployment: false
+    steps:
+      - name: Validate release credentials
+        env:
+          ANDROID_TRACK: ${{ inputs.android_track }}
+          IOS_UPLOAD: ${{ inputs.ios_upload }}
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          GOOGLE_PLAY_SERVICE_ACCOUNT_JSON: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          IOS_CERTIFICATE_P12_BASE64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          IOS_CERTIFICATE_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+          IOS_PROVISIONING_PROFILE_BASE64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          IOS_PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+          APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          APPLE_API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          APPLE_API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          APPLE_API_KEY_P8_BASE64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          missing=""
+          if [[ "$ANDROID_TRACK" != "none" ]]; then
+            for name in ANDROID_KEYSTORE_BASE64 ANDROID_KEYSTORE_PASSWORD ANDROID_KEY_ALIAS ANDROID_KEY_PASSWORD GOOGLE_PLAY_SERVICE_ACCOUNT_JSON; do
+              if [[ -z "${!name:-}" ]]; then missing="$missing $name"; fi
+            done
+          fi
+          if [[ "$IOS_UPLOAD" == "true" ]]; then
+            for name in IOS_CERTIFICATE_P12_BASE64 IOS_CERTIFICATE_PASSWORD IOS_PROVISIONING_PROFILE_BASE64 IOS_PROFILE_NAME APPLE_TEAM_ID APPLE_API_KEY_ID APPLE_API_ISSUER_ID APPLE_API_KEY_P8_BASE64; do
+              if [[ -z "${!name:-}" ]]; then missing="$missing $name"; fi
+            done
+          fi
+          if [[ -n "$missing" ]]; then
+            echo "Missing mobile-release environment secrets:$missing"
+            exit 1
+          fi
+          echo "Release credential preflight: PASS"
+
+  android:
+    if: ${{ inputs.android_track != 'none' }}
+    needs: preflight
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    environment:
+      name: mobile-release
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: "21"
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate and sync Android
+        run: |
+          npx cap add android
+          npx cap sync android
+      - name: Configure Android deep link
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p=Path("android/app/src/main/AndroidManifest.xml")
+          s=p.read_text()
+          if 'android:scheme="neyqora"' not in s:
+              marker="</activity>"
+              intent='''        <intent-filter>
+                    <action android:name="android.intent.action.VIEW" />
+                    <category android:name="android.intent.category.DEFAULT" />
+                    <category android:name="android.intent.category.BROWSABLE" />
+                    <data android:scheme="neyqora" android:host="open" />
+                </intent-filter>
+          '''
+              p.write_text(s.replace(marker,intent+"\n    "+marker,1))
+          PY
+      - name: Configure release signing
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          VERSION_CODE: ${{ inputs.android_version_code }}
+          VERSION_NAME: ${{ inputs.app_version }}
+        run: |
+          set -euo pipefail
+          echo "$KEYSTORE_B64" | base64 --decode > android/neyqora-release.jks
+          python3 - <<'PY'
+          from pathlib import Path
+          import os
+          p=Path("android/app/build.gradle")
+          s=p.read_text()
+          signing='''\n    signingConfigs {
+          release {
+              storeFile file("neyqora-release.jks")
+              storePassword System.getenv("KEYSTORE_PASSWORD")
+              keyAlias System.getenv("KEY_ALIAS")
+              keyPassword System.getenv("KEY_PASSWORD")
+          }
+      }
+      '''
+          if "storeFile file(\"neyqora-release.jks\")" not in s:
+              s=s.replace("    buildTypes {", signing+"    buildTypes {",1)
+          s=s.replace("versionCode 1","versionCode "+os.environ["VERSION_CODE"])
+          s=s.replace('versionName "1.0"','versionName "'+os.environ["VERSION_NAME"]+'"')
+          if "signingConfig signingConfigs.release" not in s:
+              s=s.replace("release {\n","release {\n            signingConfig signingConfigs.release\n",1)
+          p.write_text(s)
+          PY
+      - name: Build signed AAB
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: ./android/gradlew -p android bundleRelease --no-daemon
+      - name: Verify signed AAB
+        run: |
+          test -s android/app/build/outputs/bundle/release/app-release.aab
+          jarsigner -verify -verbose -certs android/app/build/outputs/bundle/release/app-release.aab >/dev/null
+          echo "Signed Android AAB: PASS"
+      - name: Upload AAB artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neyqora-android-release-${{ inputs.app_version }}-${{ inputs.android_version_code }}
+          path: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          if-no-files-found: error
+      - name: Publish to Google Play
+        uses: r0adkll/upload-google-play@v1.1.5
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.GOOGLE_PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.neyqora.assistant
+          releaseFiles: mobile/android/app/build/outputs/bundle/release/app-release.aab
+          tracks: ${{ inputs.android_track }}
+          status: ${{ inputs.android_track == 'internal' && 'completed' || 'draft' }}
+          releaseName: NEYQORA ${{ inputs.app_version }}
+
+  ios:
+    if: ${{ inputs.ios_upload }}
+    needs: preflight
+    runs-on: macos-latest
+    timeout-minutes: 40
+    environment:
+      name: mobile-release
+    defaults:
+      run:
+        working-directory: mobile
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: "20"
+          cache: npm
+          cache-dependency-path: mobile/package.json
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+      - name: Generate and sync iOS
+        run: |
+          npx cap add ios
+          npx cap sync ios
+      - name: Configure iOS deep link
+        run: |
+          python3 - <<'PY'
+          import plistlib
+          from pathlib import Path
+          p=Path("ios/App/App/Info.plist")
+          data=plistlib.loads(p.read_bytes())
+          types=data.setdefault("CFBundleURLTypes", [])
+          if not any("neyqora" in item.get("CFBundleURLSchemes", []) for item in types):
+              types.append({"CFBundleURLName":"com.neyqora.assistant","CFBundleURLSchemes":["neyqora"]})
+          p.write_bytes(plistlib.dumps(data, fmt=plistlib.FMT_XML))
+          PY
+      - name: Install Apple signing certificate
+        env:
+          P12_B64: ${{ secrets.IOS_CERTIFICATE_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_CERTIFICATE_PASSWORD }}
+        run: |
+          set -euo pipefail
+          KEYCHAIN="$RUNNER_TEMP/neyqora-signing.keychain-db"
+          security create-keychain -p "" "$KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN"
+          security unlock-keychain -p "" "$KEYCHAIN"
+          echo "$P12_B64" | base64 --decode > "$RUNNER_TEMP/dist.p12"
+          security import "$RUNNER_TEMP/dist.p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN"
+          security list-keychain -d user -s "$KEYCHAIN"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "" "$KEYCHAIN"
+      - name: Install provisioning profile
+        env:
+          PROFILE_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$PROFILE_B64" | base64 --decode > "$RUNNER_TEMP/neyqora.mobileprovision"
+          UUID=$(/usr/bin/security cms -D -i "$RUNNER_TEMP/neyqora.mobileprovision" | /usr/libexec/PlistBuddy -c "Print :UUID" /dev/stdin)
+          mkdir -p "$HOME/Library/MobileDevice/Provisioning Profiles"
+          cp "$RUNNER_TEMP/neyqora.mobileprovision" "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision"
+      - name: Archive signed IPA
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+          API_KEY_B64: ${{ secrets.APPLE_API_KEY_P8_BASE64 }}
+        run: |
+          set -euo pipefail
+          echo "$API_KEY_B64" | base64 --decode > "$RUNNER_TEMP/AuthKey_$API_KEY_ID.p8"
+          xcodebuild             -workspace ios/App/App.xcworkspace             -scheme App             -configuration Release             -archivePath "$RUNNER_TEMP/NEYQORA.xcarchive"             -destination "generic/platform=iOS"             DEVELOPMENT_TEAM="$TEAM_ID"             CODE_SIGN_STYLE=Manual             CODE_SIGN_IDENTITY="Apple Distribution"             PROVISIONING_PROFILE_SPECIFIER="$PROFILE_NAME"             -allowProvisioningUpdates             -authenticationKeyPath "$RUNNER_TEMP/AuthKey_$API_KEY_ID.p8"             -authenticationKeyID "$API_KEY_ID"             -authenticationKeyIssuerID "$API_ISSUER_ID"             archive
+      - name: Export IPA
+        env:
+          TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+          PROFILE_NAME: ${{ secrets.IOS_PROFILE_NAME }}
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          cat > "$RUNNER_TEMP/ExportOptions.plist" <<PLIST
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict>
+          <key>method</key><string>app-store-connect</string>
+          <key>teamID</key><string>$TEAM_ID</string>
+          <key>signingStyle</key><string>manual</string>
+          <key>provisioningProfiles</key><dict>
+          <key>com.neyqora.assistant</key><string>$PROFILE_NAME</string>
+          </dict></dict></plist>
+          PLIST
+          xcodebuild -exportArchive             -archivePath "$RUNNER_TEMP/NEYQORA.xcarchive"             -exportPath "$RUNNER_TEMP/export"             -exportOptionsPlist "$RUNNER_TEMP/ExportOptions.plist"             -authenticationKeyPath "$RUNNER_TEMP/AuthKey_$API_KEY_ID.p8"             -authenticationKeyID "$API_KEY_ID"             -authenticationKeyIssuerID "$API_ISSUER_ID"             -allowProvisioningUpdates
+      - name: Verify signed IPA
+        run: |
+          test -s "$RUNNER_TEMP/export/App.ipa"
+          unzip -q "$RUNNER_TEMP/export/App.ipa" -d "$RUNNER_TEMP/ipa-check"
+          codesign --verify --deep --strict "$RUNNER_TEMP/ipa-check/Payload/App.app"
+          echo "Signed iOS IPA: PASS"
+      - name: Upload IPA artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: neyqora-ios-release-${{ inputs.app_version }}
+          path: /Users/runner/work/_temp/export/App.ipa
+          if-no-files-found: error
+      - name: Upload to TestFlight
+        env:
+          API_KEY_ID: ${{ secrets.APPLE_API_KEY_ID }}
+          API_ISSUER_ID: ${{ secrets.APPLE_API_ISSUER_ID }}
+        run: |
+          set -euo pipefail
+          xcrun iTMSTransporter -m upload -assetFile "$RUNNER_TEMP/export/App.ipa" -apiKey "$API_KEY_ID" -apiIssuer "$API_ISSUER_ID"
