@@ -57,7 +57,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </head>
 <body>
 <div class="app">
-<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button">Sohbet</button><button data-view="tools-view" type="button">Araçlar</button><button data-view="project-view" type="button">Proje</button><button data-view="memory-view" type="button">Hafıza</button><button data-view="settings-view" type="button">Ayarlar</button></nav></header>
+<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')">Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')">Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')">Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')">Hafıza</button><button data-view="settings-view" type="button" onclick="return window.neyqoraNavigate('settings-view')">Ayarlar</button></nav></header>
 <main>
 <section id="chat-view" class="view active">
 <div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div>
@@ -72,24 +72,24 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="tool-categories">
 <div class="category-label">Yapay Zekâ</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="local-ai-view" type="button"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>Yerel model bağlantısı, adres ve bağlantı testi.</span></button>
+<button class="tool-card" data-view="local-ai-view" type="button" onclick="return window.neyqoraNavigate('local-ai-view')"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>Yerel model bağlantısı, adres ve bağlantı testi.</span></button>
 </div>
 <div class="category-label">Üretkenlik</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="productivity-view" type="button"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Planla, gönder ve otomatikleştir.</span></button>
+<button class="tool-card" data-view="productivity-view" type="button" onclick="return window.neyqoraNavigate('productivity-view')"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Planla, gönder ve otomatikleştir.</span></button>
 </div>
 <div class="category-label">Dosyalar</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="files-view" type="button"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını incele.</span></button>
+<button class="tool-card" data-view="files-view" type="button" onclick="return window.neyqoraNavigate('files-view')"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını incele.</span></button>
 </div>
 <div class="category-label">Medya</div>
 <div class="tools-grid">
-<button class="tool-card" data-view="media-view" type="button"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir ve görselleri analiz et.</span></button>
+<button class="tool-card" data-view="media-view" type="button" onclick="return window.neyqoraNavigate('media-view')"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir ve görselleri analiz et.</span></button>
 </div>
 </section>
 
 <section id="productivity-view" class="view tool-page">
-<div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Takvim · E-posta · Otomasyon</h2><p>Günlük işlerini tek çalışma alanından yönet.</p></div></div>
+<div class="page-head"><button class="back-button" data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')">← Araçlar</button><div><h2>Takvim · E-posta · Otomasyon</h2><p>Günlük işlerini tek çalışma alanından yönet.</p></div></div>
 <div class="tool-workspace">
 <div class="panel"><h3>📅 Takvim</h3><input id="event-title" class="field" placeholder="Takvim etkinliği"><input id="event-start" class="field" type="datetime-local"><input id="event-end" class="field" type="datetime-local"><div class="actions"><button id="create-event" class="secondary" type="button">Etkinlik Oluştur</button></div></div>
 <div class="panel"><h3>✉️ E-posta</h3><input id="email-to" class="field" placeholder="E-posta alıcısı"><input id="email-subject" class="field" placeholder="Konu"><textarea id="email-body" class="field" placeholder="E-posta içeriği"></textarea><div class="actions"><button id="send-email" class="secondary" type="button">E-posta Gönder</button><button id="save-email" class="secondary" type="button">Taslağı Kaydet</button></div></div>
@@ -131,12 +131,24 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="settings-grid"><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Güvenli alan, klavye ve dokunmatik kullanım optimize edildi.</p></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
 </section>
 </main>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button"><span>💻</span>Proje</button><button data-view="memory-view" type="button"><span>🧠</span>Hafıza</button></nav>
+<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')"><span>💻</span>Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')"><span>🧠</span>Hafıza</button></nav>
 </div>
 <script>
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }
 </script>
 <script>
+window.neyqoraNavigate=function(view){
+  if(!view)return false;
+  document.querySelectorAll(".view").forEach(function(v){v.classList.toggle("active",v.id===view);});
+  document.querySelectorAll("[data-view]").forEach(function(b){b.classList.toggle("active",b.dataset.view===view);});
+  var form=document.getElementById("form");
+  if(form)form.hidden=view!=="chat-view";
+  if(view==="chat-view" && window.matchMedia && window.matchMedia("(min-width:701px)").matches){
+    setTimeout(function(){document.getElementById("input")?.focus();},80);
+  }
+  window.scrollTo(0,0);
+  return false;
+};
 window.neyqoraSend=async function(){
   const input=document.querySelector("#input");
   const chat=document.querySelector("#chat");
@@ -204,15 +216,7 @@ document.querySelector("#test-local-ai")?.addEventListener("click",async()=>{
   const result=document.querySelector("#local-ai-result"); if(result){result.hidden=false;result.textContent="Bağlantı test ediliyor...";}
   try{const reply=await window.neyqoraLocalChat("Bağlantı testi. Sadece 'NEYQORA yerel AI hazır.' yaz."); if(result)result.textContent=reply||"Yerel AI yanıt verdi.";}catch(error){if(result)result.textContent="Hata: "+(error?.message||"Bağlantı kurulamadı.");}
 });
-function openView(view){
-  if(!view)return;
-  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===view));
-  const form=document.querySelector("#form");
-  if(form)form.hidden=view!=="chat-view";
-  window.scrollTo({top:0,behavior:"smooth"});
-  if(view==="chat-view" && window.matchMedia("(min-width:701px)").matches) setTimeout(()=>document.querySelector("#input")?.focus(),120);
-}
+function openView(view){ return window.neyqoraNavigate(view); }
 document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",(event)=>{event.preventDefault();event.stopPropagation();openView(button.dataset.view);}));
 document.addEventListener("pointerup",(event)=>{
   const button=event.target.closest(".mobile-nav [data-view]");
