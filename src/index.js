@@ -16,7 +16,7 @@ const HTML = `<!doctype html>
 *{box-sizing:border-box} :root{color-scheme:dark;--bg:#060a12;--panel:#0d1526;--line:#22314d;--muted:#8796b5;--text:#f2f5ff;--accent:#7f91ff;--accent2:#9b83ff;--shadow:0 18px 60px rgba(0,0,0,.28)}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow-x:hidden}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% -10%,rgba(104,122,255,.13),transparent 38%)}
 .app{width:min(100%,1100px);margin:auto;min-height:100vh;padding-bottom:120px}
-header{position:sticky;top:0;z-index:30;padding:14px 20px;padding-top:max(14px,env(safe-area-inset-top));background:rgba(6,10,18,.88);backdrop-filter:blur(22px);border-bottom:1px solid rgba(48,69,104,.55);display:flex;align-items:center;justify-content:space-between;gap:20px}.account-area{display:flex;align-items:center;gap:8px;position:relative;z-index:500;flex:0 0 auto}.account-button{border:1px solid var(--line);background:#0b1323;color:var(--text);border-radius:12px;padding:9px 12px;font-weight:850;cursor:pointer}.account-button:hover{background:#1a2945;border-color:#425a85}.account-name{display:none;color:#b9c6df;font-size:11px;font-weight:800}.auth-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px;background:rgba(2,5,12,.78);backdrop-filter:blur(16px)}.auth-overlay.open{display:flex}.auth-card{width:min(430px,100%);border:1px solid #314462;border-radius:24px;background:linear-gradient(145deg,#101a2d,#0a1120);box-shadow:0 30px 90px rgba(0,0,0,.55);padding:24px}.auth-card h2{margin:0 0 6px}.auth-card p{color:var(--muted);font-size:13px;line-height:1.5}.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:16px 0}.auth-tab{border:1px solid var(--line);background:#0b1323;color:#9eacc7;border-radius:11px;padding:10px;font-weight:850;cursor:pointer}.auth-tab.active{background:#25385f;color:#fff}.auth-error{min-height:20px;color:#ff8292;font-size:12px;margin-top:8px}.auth-actions{display:flex;gap:8px;margin-top:12px}.auth-actions button{flex:1}.auth-close{float:right;border:0;background:transparent;color:#8292b0;font-size:22px;cursor:pointer}.auth-note{text-align:center;margin:12px 0 0!important;font-size:11px!important}.auth-forgot{text-align:right;margin:4px 0 8px}.auth-forgot button{border:0;background:transparent;color:#9daeff;font-size:11px;cursor:pointer}.auth-forgot button:hover{text-decoration:underline}.profile-menu{position:fixed;right:20px;top:70px;width:260px;display:none;z-index:490;border:1px solid var(--line);border-radius:18px;background:#0d1628;box-shadow:var(--shadow);padding:14px}.profile-menu.open{display:block}.profile-menu strong{display:block}.profile-menu span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.profile-menu button{width:100%;margin-top:12px}@media(max-width:700px){.account-name{display:inline}.account-button{padding:8px 10px}.profile-menu{right:12px;top:64px}}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:22px;font-weight:950;color:#080d1a;box-shadow:0 10px 32px rgba(127,145,255,.22)}.brand-copy h1{margin:0;font-size:19px;letter-spacing:.7px}.brand-copy p{margin:3px 0 0;color:var(--muted);font-size:12px}
+header{position:sticky;top:0;z-index:30;padding:14px 20px;padding-top:max(14px,env(safe-area-inset-top));background:rgba(6,10,18,.88);backdrop-filter:blur(22px);border-bottom:1px solid rgba(48,69,104,.55);display:flex;align-items:center;justify-content:space-between;gap:20px}.account-area{display:flex;align-items:center;gap:8px;position:relative;z-index:500;flex:0 0 auto}.account-button{border:1px solid var(--line);background:#0b1323;color:var(--text);border-radius:12px;padding:9px 12px;font-weight:850;cursor:pointer}.account-button:hover{background:#1a2945;border-color:#425a85}.account-name{display:none;color:#b9c6df;font-size:11px;font-weight:800}.auth-overlay{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;padding:20px;overflow:auto;-webkit-overflow-scrolling:touch;background:rgba(2,5,12,.78);backdrop-filter:blur(16px)}.auth-overlay.open{display:flex}.auth-card{width:min(430px,100%);max-height:calc(100dvh - 40px);overflow:auto;margin:auto;border:1px solid #314462;border-radius:24px;background:linear-gradient(145deg,#101a2d,#0a1120);box-shadow:0 30px 90px rgba(0,0,0,.55);padding:24px}.auth-card h2{margin:0 0 6px}.auth-card p{color:var(--muted);font-size:13px;line-height:1.5}.auth-tabs{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:16px 0}.auth-tab{border:1px solid var(--line);background:#0b1323;color:#9eacc7;border-radius:11px;padding:10px;font-weight:850;cursor:pointer}.auth-tab.active{background:#25385f;color:#fff}.auth-error{min-height:20px;color:#ff8292;font-size:12px;margin-top:8px}.auth-actions{display:flex;gap:8px;margin-top:12px}.auth-actions button{flex:1}.auth-close{float:right;border:0;background:transparent;color:#8292b0;font-size:22px;cursor:pointer}.auth-note{text-align:center;margin:12px 0 0!important;font-size:11px!important}.auth-forgot{text-align:right;margin:4px 0 8px}.auth-forgot button{border:0;background:transparent;color:#9daeff;font-size:11px;cursor:pointer}.auth-forgot button:hover{text-decoration:underline}.profile-menu{position:fixed;right:20px;top:70px;width:260px;display:none;z-index:490;border:1px solid var(--line);border-radius:18px;background:#0d1628;box-shadow:var(--shadow);padding:14px}.profile-menu.open{display:block}.profile-menu strong{display:block}.profile-menu span{display:block;color:var(--muted);font-size:12px;margin-top:3px}.profile-menu button{width:100%;margin-top:12px}@media(max-width:700px){.account-name{display:inline}.account-button{padding:8px 10px}.profile-menu{right:12px;top:64px}}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:22px;font-weight:950;color:#080d1a;box-shadow:0 10px 32px rgba(127,145,255,.22)}.brand-copy h1{margin:0;font-size:19px;letter-spacing:.7px}.brand-copy p{margin:3px 0 0;color:var(--muted);font-size:12px}
 .nav{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.nav button{border:1px solid var(--line);background:#0b1323;color:var(--text);border-radius:12px;padding:9px 13px;font-weight:800;cursor:pointer}.nav button.active,.nav button:hover{background:#1a2945;border-color:#425a85}
 main{padding:24px 20px}.view{display:none}.view.active{display:block}.hero{padding:28px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(17,28,49,.96),rgba(9,15,27,.96));box-shadow:var(--shadow);margin-bottom:18px}.chat-hero{text-align:center;padding:42px 24px 30px}.hero-mark{width:58px;height:58px;margin:0 auto 18px;border-radius:19px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#090e1a;font-size:27px;font-weight:950}.hero h2{margin:0 0 8px;font-size:clamp(25px,5vw,34px);letter-spacing:-.7px}.hero p{margin:0;color:var(--muted);line-height:1.55;font-size:15px}
 .quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 26px}.quick-card{border:1px solid var(--line);background:#0b1323;border-radius:18px;padding:16px;text-align:left;color:var(--text);cursor:pointer}.quick-card:hover{border-color:#40567e;background:#101b31}.quick-card b{display:block;font-size:14px;margin-bottom:4px}.quick-card span{display:block;color:var(--muted);font-size:12px;line-height:1.4}.section-label{margin:0 0 10px;color:#aab6d0;font-size:12px;font-weight:850;text-transform:uppercase;letter-spacing:1px}
@@ -141,7 +141,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 <section id="local-ai-view" class="view tool-page">
 <div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Yerel AI</h2><p>İnternet olmadan veya kendi model sunucunla çalış.</p></div></div>
-<div class="panel"><h3>🧠 Yerel AI Bağlantısı</h3><p>OpenAI-compatible yerel model sunucunun adresini gir.</p><input id="local-ai-url" class="field" placeholder="http://127.0.0.1:11434/v1"><div class="actions"><button id="save-local-ai" class="secondary" type="button">Adresi Kaydet</button><button id="test-local-ai" class="secondary" type="button">Bağlantıyı Test Et</button></div><div id="local-ai-result" class="result" hidden></div></div>
+<div class="panel"><h3>🧠 Yerel AI Bağlantısı</h3><p>OpenAI-compatible yerel model sunucunun adresini gir.</p><input id="local-ai-url" class="field" placeholder="http://127.0.0.1:11434/v1"><input id="local-ai-model" class="field" placeholder="Model adı (ör. llama3.2)"><div class="actions"><button id="save-local-ai" class="secondary" type="button">Adresi Kaydet</button><button id="test-local-ai" class="secondary" type="button">Bağlantıyı Test Et</button></div><div id="local-ai-result" class="result" hidden></div></div>
 </section>
 
 <section id="memory-view" class="view">
@@ -247,25 +247,62 @@ if(!userId){
 let conversation=[];
 function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.dataset.raw=String(text||"");el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el;}
 function rememberTurn(role,content){conversation.push({role,content:String(content||"")});if(conversation.length>10)conversation=conversation.slice(-10);}
+function getLocalAIConfig(){
+  let url="";
+  let model="";
+  try{
+    url=localStorage.getItem("neyqora_local_ai_url")||"";
+    model=localStorage.getItem("neyqora_local_ai_model")||"";
+  }catch{}
+  if(!url)url=document.querySelector("#local-ai-url")?.value?.trim()||"";
+  if(!model)model=document.querySelector("#local-ai-model")?.value?.trim()||"llama3.2";
+  url=String(url).trim().replace(/\\/$/,"");
+  model=String(model).trim()||"llama3.2";
+  return {url,model};
+}
+window.neyqoraLocalChat=async function(message){
+  const config=getLocalAIConfig();
+  if(!config.url)throw new Error("Önce Yerel AI adresini kaydet.");
+  if(!/^https?:\\/\\//i.test(config.url))throw new Error("Yerel AI adresi http:// veya https:// ile başlamalı.");
+  const endpoint=/\\/chat\\/completions$/i.test(config.url)?config.url:config.url+"/chat/completions";
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),30000);
+  try{
+    const response=await fetch(endpoint,{
+      method:"POST",
+      headers:{"content-type":"application/json","accept":"application/json"},
+      body:JSON.stringify({model:config.model,messages:[{role:"user",content:String(message||"")}],stream:false}),
+      signal:controller.signal
+    });
+    const raw=await response.text();
+    let data={};
+    try{data=raw?JSON.parse(raw):{};}catch{}
+    if(!response.ok)throw new Error("Yerel AI "+response.status+": "+String(data?.error?.message||data?.error||raw||"yanıt vermedi").slice(0,300));
+    const reply=String(data?.choices?.[0]?.message?.content||data?.response||"").trim();
+    if(!reply)throw new Error("Yerel AI boş yanıt döndürdü.");
+    return reply;
+  }finally{
+    clearTimeout(timer);
+  }
+};
 document.querySelector("#local-ai-url")?.setAttribute("value", (()=>{try{return localStorage.getItem("neyqora_local_ai_url")||"";}catch{return "";}})());
+document.querySelector("#local-ai-model")?.setAttribute("value", (()=>{try{return localStorage.getItem("neyqora_local_ai_model")||"llama3.2";}catch{return "llama3.2";}})());
 document.querySelector("#save-local-ai")?.addEventListener("click",()=>{
   const value=document.querySelector("#local-ai-url")?.value.trim().replace(/\/$/,"")||"";
-  try{if(value)localStorage.setItem("neyqora_local_ai_url",value);else localStorage.removeItem("neyqora_local_ai_url");}catch{}
-  const result=document.querySelector("#local-ai-result"); if(result){result.hidden=false;result.textContent=value?"Yerel AI adresi kaydedildi.":"Yerel AI adresi temizlendi.";}
+  const model=document.querySelector("#local-ai-model")?.value.trim()||"llama3.2";
+  try{
+    if(value)localStorage.setItem("neyqora_local_ai_url",value);else localStorage.removeItem("neyqora_local_ai_url");
+    localStorage.setItem("neyqora_local_ai_model",model);
+  }catch{}
+  const result=document.querySelector("#local-ai-result");
+  if(result){result.hidden=false;result.textContent=value?"Yerel AI adresi ve model kaydedildi.":"Yerel AI adresi temizlendi.";}
 });
 document.querySelector("#test-local-ai")?.addEventListener("click",async()=>{
   const result=document.querySelector("#local-ai-result"); if(result){result.hidden=false;result.textContent="Bağlantı test ediliyor...";}
   try{const reply=await window.neyqoraLocalChat("Bağlantı testi. Sadece 'NEYQORA yerel AI hazır.' yaz."); if(result)result.textContent=reply||"Yerel AI yanıt verdi.";}catch(error){if(result)result.textContent="Hata: "+(error?.message||"Bağlantı kurulamadı.");}
 });
 function openView(view){ return window.neyqoraNavigate(view); }
-document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",(event)=>{event.preventDefault();event.stopPropagation();openView(button.dataset.view);}));
-document.addEventListener("pointerup",(event)=>{
-  const button=event.target.closest(".mobile-nav [data-view]");
-  if(!button)return;
-  event.preventDefault();
-  event.stopPropagation();
-  openView(button.dataset.view);
-},{passive:false});
+
 document.querySelectorAll(".quick-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));
 document.querySelectorAll(".prompt-chip").forEach(chip=>chip.addEventListener("click",()=>{
   const field=document.querySelector("#input");
