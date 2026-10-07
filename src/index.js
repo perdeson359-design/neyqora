@@ -1213,7 +1213,8 @@ async function webSearch(query) {
 
 export default {
   async fetch(request, env) {
-    env = withAIProvider(env);\n    const url = new URL(request.url);
+    env = withAIProvider(env);
+    const url = new URL(request.url);
 
     if (request.method === "GET" && url.pathname === "/manifest.webmanifest") {
       return new Response(JSON.stringify({
@@ -1893,7 +1894,8 @@ export default {
     return new Response("NEYQORA", { status: 404 });
   },
   async scheduled(controller, env) {
-    env = withAIProvider(env);\n    try {
+    env = withAIProvider(env);
+    try {
       await runDueAutomations(env);
     } catch (error) {
       console.error("NEYQORA automation scheduler error:", error?.message || error);
