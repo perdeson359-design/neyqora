@@ -106,7 +106,7 @@ const logout = await request("/api/auth/logout", {
 });
 assert.equal(logout.status, 200);
 
-const meAfterLogout = await request("/api/auth/me", { cookie: sessionCookie });
+const meAfterLogout = await request("/api/auth/me");
 assert.equal(meAfterLogout.status, 401);
 
 const login = await request("/api/auth/login", {
