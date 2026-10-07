@@ -142,3 +142,15 @@ Mobil PWA / Web / PC
 ```
 
 Aynı API sözleşmesi korunur; ileride native mobil istemci bu backend'e doğrudan bağlanabilir.
+
+
+## Production CI/CD
+
+`main` dalına gelen değişiklikler `.github/workflows/deploy-production.yml` ile Cloudflare Workers'a deploy edilir. Deployment başarılı olduktan sonra `.github/workflows/production-verify.yml` production sağlık, oturum, güvenlik, agent/project, generated-project, V6 productivity ve Resend kontrollerini çalıştırır.
+
+GitHub repository secrets olarak şunlar gerekir:
+
+- `CLOUDFLARE_API_TOKEN`
+- `CLOUDFLARE_ACCOUNT_ID`
+
+Cloudflare Wrangler Action ile GitHub Actions üzerinden Worker deploy etmek desteklenir.
