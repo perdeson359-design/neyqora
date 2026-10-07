@@ -67,6 +67,11 @@ const env = {
   DB,
   OWNER_AUTH_TOKEN: process.env.OWNER_AUTH_TOKEN,
   USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,\n  RESEND_API_KEY: process.env.RESEND_API_KEY || "",\n  RESEND_FROM: process.env.RESEND_FROM || "onboarding@resend.dev",
+  AI_PROVIDER_MODE: process.env.AI_PROVIDER_MODE || "auto",
+  LOCAL_AI_BASE_URL: process.env.LOCAL_AI_BASE_URL || "",
+  LOCAL_AI_API_KEY: process.env.LOCAL_AI_API_KEY || "",
+  LOCAL_AI_MODEL: process.env.LOCAL_AI_MODEL || "",
+  LOCAL_AI_TIMEOUT_MS: process.env.LOCAL_AI_TIMEOUT_MS || "30000",
   NEYQORA_SELF_HOSTED: "1"
 };
 
