@@ -126,7 +126,17 @@ document.querySelector("#test-local-ai")?.addEventListener("click",async()=>{
   const result=document.querySelector("#local-ai-result"); if(result){result.hidden=false;result.textContent="Bağlantı test ediliyor...";}
   try{const reply=await window.neyqoraLocalChat("Bağlantı testi. Sadece 'NEYQORA yerel AI hazır.' yaz."); if(result)result.textContent=reply||"Yerel AI yanıt verdi.";}catch(error){if(result)result.textContent="Hata: "+(error?.message||"Bağlantı kurulamadı.");}
 });
-document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>{const view=button.dataset.view;if(!view)return;document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));document.querySelector("#"+view)?.classList.add("active");window.scrollTo({top:0,behavior:"smooth"});}));document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>{document.querySelectorAll(".panel").forEach(p=>p.hidden=true);const p=document.querySelector("#"+card.dataset.tool+"-panel");if(p)p.hidden=false;}));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
+function openView(view){
+  if(!view)return;
+  document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
+  document.querySelector("#"+view)?.classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
+  if(view==="chat-view")setTimeout(()=>document.querySelector("#input")?.focus(),120);
+}
+document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>openView(button.dataset.view)));
+document.querySelectorAll(".quick-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));
+document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>{document.querySelectorAll(".panel").forEach(p=>p.hidden=true);const p=document.querySelector("#"+card.dataset.tool+"-panel");if(p)p.hidden=false;}));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
 async function loadMemories(){
   const list=document.querySelector("#memory-list");
