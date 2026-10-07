@@ -107,7 +107,8 @@ const logout = await request("/api/auth/logout", {
 assert.equal(logout.status, 200);
 
 const meAfterLogout = await request("/api/auth/me");
-assert.equal(meAfterLogout.status, 401);
+assert.equal(meAfterLogout.status, 200);
+assert.equal((await meAfterLogout.json()).ok, false);
 
 const login = await request("/api/auth/login", {
   method: "POST",
