@@ -459,6 +459,7 @@ document.querySelector("#analyze-image")?.addEventListener("click",async()=>{
 });
 const authOverlay=document.getElementById("auth-overlay"),authForm=document.getElementById("auth-form"),authName=document.getElementById("auth-name"),authEmail=document.getElementById("auth-email"),authPassword=document.getElementById("auth-password"),authError=document.getElementById("auth-error"),authSubmit=document.getElementById("auth-submit"),loginTab=document.getElementById("login-tab"),registerTab=document.getElementById("register-tab"),authClose=document.getElementById("auth-close"),accountButton=document.getElementById("account-button"),accountName=document.getElementById("account-name"),profileMenu=document.getElementById("profile-menu"),profileName=document.getElementById("profile-name"),profileEmail=document.getElementById("profile-email"),logoutButton=document.getElementById("logout-button"),profileButton=document.getElementById("profile-button"),deleteAccountButton=document.getElementById("delete-account-button"),forgotButton=document.getElementById("forgot-password"),resetTokenWrap=document.getElementById("reset-token-wrap"),resetTokenInput=document.getElementById("reset-token"),settingsProfile=document.getElementById("settings-profile");
 let authMode="login",currentAccount=null;
+document.getElementById("account-button")?.addEventListener("click",function(event){event.preventDefault();return window.neyqoraAccount()});
 function setAuthMode(m){
   authMode=m;
   const register=m==="register",forgot=m==="forgot",reset=m==="reset",profile=m==="profile";
