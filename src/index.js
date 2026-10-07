@@ -1,3 +1,5 @@
+import { withAIProvider } from "./ai/provider.js";
+
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const VERSION = "6.1";
 const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";
@@ -7,7 +9,7 @@ const HTML = `<!doctype html>
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1">\n<link rel="manifest" href="/manifest.webmanifest">
 <title>NEYQORA</title>
 <style>
 *{box-sizing:border-box}
@@ -62,7 +64,7 @@ pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wr
 </main>
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div>
 </div>
-<script>
+<script>\nif ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }\n</script>\n<script>
 window.neyqoraSend=async function(){
   const input=document.querySelector("#input");
   const chat=document.querySelector("#chat");
@@ -1198,8 +1200,25 @@ async function webSearch(query) {
 }
 
 export default {
-  async fetch(request, env) {
-    const url = new URL(request.url);
+  async fetch(request, env) {\n    env = withAIProvider(env);\n    const url = new URL(request.url);
+
+    if (request.method === "GET" && url.pathname === "/manifest.webmanifest") {
+      return new Response(JSON.stringify({
+        name: "NEYQORA",
+        short_name: "NEYQORA",
+        description: "Bulut ve yerel yapay zekâ destekli kişisel asistan.",
+        lang: "tr",
+        start_url: "/",
+        display: "standalone",
+        background_color: "#070b14",
+        theme_color: "#070b14",
+        orientation: "portrait-primary"
+      }), { headers: { "content-type": "application/manifest+json; charset=UTF-8", "cache-control": "public, max-age=3600" } });
+    }
+
+    if (request.method === "GET" && url.pathname === "/sw.js") {
+      return new Response(\`const CACHE="neyqora-shell-v1";const SHELL=["/","/manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});\`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
+    }
 
     if (request.method === "GET" && url.pathname === "/") {
       const headers = new Headers({
@@ -1327,8 +1346,7 @@ export default {
         agent: true,
         tools: ["calculator", "weather", "web", "coding", "project", "calendar", "email", "automation"],
         web: true,
-        ownerAuth: !!env.OWNER_AUTH_TOKEN
-      });
+        ownerAuth: !!env.OWNER_AUTH_TOKEN,\n        aiProvider: env.AI?.info ? env.AI.info() : { mode: "cloud", cloud: !!env.AI, local: false, fallback: false }\n      });
     }
 
     if (request.method === "POST" && url.pathname === "/api/audio/transcribe") {
@@ -1861,8 +1879,7 @@ export default {
 
     return new Response("NEYQORA", { status: 404 });
   },
-  async scheduled(controller, env) {
-    try {
+  async scheduled(controller, env) {\n    env = withAIProvider(env);\n    try {
       await runDueAutomations(env);
     } catch (error) {
       console.error("NEYQORA automation scheduler error:", error?.message || error);
