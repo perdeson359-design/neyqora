@@ -19,8 +19,8 @@ jobs:
     timeout-minutes: 10
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
-      EXPECTED_VERSION: "6.2"
-      EXPECTED_COMMIT: ${{ github.sha }}
+      EXPECTED_VERSION: "6.3"
+      EXPECTED_COMMIT: ${{ github.event.workflow_run.head_sha || github.sha }}
 
     steps:
       - name: Verification target
