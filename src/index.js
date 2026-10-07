@@ -28,6 +28,16 @@ main{padding:24px 20px}.view{display:none}.view.active{display:block}.hero{paddi
 button:focus-visible,input:focus-visible,textarea:focus-visible,.tool-card:focus-visible,.quick-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 button:disabled{opacity:.55;cursor:not-allowed}
 .chat-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:4px 0 10px}
+.chat-composer-hint{margin:0 0 10px;color:#8fa1c2;font-size:11px;text-align:center}
+.prompt-chips{display:flex;gap:8px;overflow:auto;padding:2px 1px 10px;scrollbar-width:none}
+.prompt-chips::-webkit-scrollbar{display:none}
+.prompt-chip{flex:0 0 auto;border:1px solid var(--line);background:#0b1323;color:#cbd7ed;border-radius:999px;padding:8px 11px;font-size:12px;font-weight:750;cursor:pointer}
+.prompt-chip:hover{border-color:#526b9f;background:#111d33;color:#fff}
+.chat-empty{padding:18px 4px 8px;color:var(--muted);font-size:12px;text-align:center}
+.chat-empty strong{color:#dce5f7}
+.chat-meta{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:12px;color:#7f8eaa;font-size:11px}
+.chat-meta kbd{padding:3px 6px;border:1px solid var(--line);border-radius:6px;background:#0b1323;color:#aab6d0}
+
 .chat-toolbar-actions{display:flex;gap:7px;flex-wrap:wrap}
 .status-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#0b1323;color:#b9c6df;font-size:11px;font-weight:850}
 .status-dot{width:7px;height:7px;border-radius:50%;background:#78e6a0;box-shadow:0 0 12px rgba(120,230,160,.55)}
@@ -60,11 +70,18 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')">Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')">Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')">Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')">Hafıza</button><button data-view="settings-view" type="button" onclick="return window.neyqoraNavigate('settings-view')">Ayarlar</button></nav></header>
 <main>
 <section id="chat-view" class="view active">
-<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div>
+<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p><div class="chat-meta"><span>Hızlı, özel ve senin projelerine odaklı</span><kbd>Enter</kbd><span>gönder</span></div></div>
 <div class="chat-toolbar"><div class="status-pill" id="ai-status"><span class="status-dot"></span><span id="ai-status-text">Hazır · Otomatik AI</span></div><div class="chat-toolbar-actions"><button class="secondary" id="new-chat" type="button">+ Yeni Sohbet</button><button class="secondary" id="toggle-history" type="button">Geçmiş</button></div></div>
 <div id="history-panel" class="history-panel" hidden><div class="history-list" id="history-list"></div></div>
 <div class="section-label">Sohbet</div>
-<div id="chat"><div class="msg ai" data-message="1">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
+<div class="prompt-chips" aria-label="Hızlı komutlar">
+<button class="prompt-chip" type="button" data-prompt="Bana bugün yapmam gerekenleri planla.">📋 Günümü planla</button>
+<button class="prompt-chip" type="button" data-prompt="Bir proje fikrimi birlikte geliştirelim.">💡 Proje geliştir</button>
+<button class="prompt-chip" type="button" data-prompt="Bu kodu inceleyip hatalarını bul.">💻 Kodu incele</button>
+<button class="prompt-chip" type="button" data-prompt="Bir konuyu araştırıp özetle.">🔎 Araştır</button>
+</div>
+<p class="chat-composer-hint">Bir komut seçebilir veya doğrudan mesajını yazabilirsin.</p>
+<div id="chat"><div class="chat-empty"><strong>Yeni sohbet hazır.</strong><br>İlk mesajını göndererek başlayabilirsin.</div></div>
 </section>
 
 <section id="tools-view" class="view">
@@ -204,7 +221,7 @@ if(!userId){
   try{localStorage.setItem("neyqora_user_id",userId);}catch{}
 }
 let conversation=[];
-function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el;}
+function add(text,cls){const el=document.createElement("div");el.className="msg "+cls;el.dataset.raw=String(text||"");el.textContent=text;chat.appendChild(el);el.scrollIntoView({behavior:"smooth",block:"end"});return el;}
 function rememberTurn(role,content){conversation.push({role,content:String(content||"")});if(conversation.length>10)conversation=conversation.slice(-10);}
 document.querySelector("#local-ai-url")?.setAttribute("value", (()=>{try{return localStorage.getItem("neyqora_local_ai_url")||"";}catch{return "";}})());
 document.querySelector("#save-local-ai")?.addEventListener("click",()=>{
@@ -226,6 +243,13 @@ document.addEventListener("pointerup",(event)=>{
   openView(button.dataset.view);
 },{passive:false});
 document.querySelectorAll(".quick-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));
+document.querySelectorAll(".prompt-chip").forEach(chip=>chip.addEventListener("click",()=>{
+  const field=document.querySelector("#input");
+  if(!field)return;
+  field.value=chip.dataset.prompt||"";
+  openView("chat-view");
+  field.focus();
+}));
 
 const HISTORY_KEY="neyqora-chat-history-v1";
 function setAIStatus(text,busy=false){const el=document.querySelector("#ai-status");const label=document.querySelector("#ai-status-text");if(label)label.textContent=text;if(el)el.classList.toggle("busy",busy);}
@@ -233,7 +257,7 @@ function saveHistory(){try{const messages=[...document.querySelectorAll("#chat .
 function loadHistory(){try{const data=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");if(!Array.isArray(data)||!data.length)return;const chat=document.querySelector("#chat");if(!chat)return;chat.innerHTML="";data.forEach(m=>appendMessage(m.role,m.text,false));}catch{}}
 function appendMessage(role,text,save=true){const chat=document.querySelector("#chat");if(!chat)return;const el=document.createElement("div");el.className="msg "+(role==="user"?"user":"ai");el.dataset.raw=String(text);el.textContent=String(text);if(role!=="user"){const actions=document.createElement("div");actions.className="message-actions";actions.innerHTML='<button type="button" data-copy-message="1">Kopyala</button><button type="button" data-regenerate="1">Yeniden üret</button>';el.appendChild(actions);}chat.appendChild(el);chat.scrollIntoView({block:"end"});if(save)saveHistory();}
 function renderHistory(){const list=document.querySelector("#history-list");if(!list)return;try{const data=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");list.innerHTML="";if(!data.length){list.innerHTML='<span style="color:var(--muted);font-size:12px">Henüz kayıtlı sohbet yok.</span>';return;}const preview=data.filter(x=>x.role==="user").slice(-8).reverse();preview.forEach((m,i)=>{const b=document.createElement("button");b.className="history-item";b.type="button";b.textContent=String(m.text).slice(0,80)||"Boş mesaj";b.addEventListener("click",()=>{document.querySelector("#input").value=m.text;openView("chat-view");document.querySelector("#input").focus();});list.appendChild(b);});}catch{}}
-document.querySelector("#new-chat")?.addEventListener("click",()=>{document.querySelector("#chat").innerHTML='<div class="msg ai" data-raw="Yeni sohbet hazır.">Yeni sohbet hazır.</div>';localStorage.removeItem(HISTORY_KEY);renderHistory();openView("chat-view");});
+document.querySelector("#new-chat")?.addEventListener("click",()=>{document.querySelector("#chat").innerHTML='<div class="chat-empty"><strong>Yeni sohbet hazır.</strong><br>İlk mesajını göndererek başlayabilirsin.</div>';conversation=[];localStorage.removeItem(HISTORY_KEY);renderHistory();openView("chat-view");});
 document.querySelector("#toggle-history")?.addEventListener("click",()=>{const p=document.querySelector("#history-panel");if(p){p.hidden=!p.hidden;if(!p.hidden)renderHistory();}});
 document.addEventListener("click",async event=>{const copy=event.target.closest("[data-copy-message]");if(copy){const msg=copy.closest(".msg");try{await navigator.clipboard.writeText(msg?.dataset.raw||msg?.textContent||"");copy.textContent="Kopyalandı ✓";setTimeout(()=>copy.textContent="Kopyala",1200);}catch{}}const regen=event.target.closest("[data-regenerate]");if(regen){const msg=regen.closest(".msg");const raw=msg?.dataset.raw||"";if(raw){const input=document.querySelector("#input");if(input){input.value=raw;openView("chat-view");input.focus();}}}});
 loadHistory();
