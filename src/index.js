@@ -49,11 +49,21 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .history-item:hover{border-color:var(--line)}
 .message-actions{display:flex;gap:6px;margin-top:8px}
 .message-actions button{border:1px solid var(--line);background:#101b2f;color:#b9c6df;border-radius:9px;padding:5px 8px;font-size:11px;font-weight:750;cursor:pointer}
-.project-workspace{display:grid;grid-template-columns:220px minmax(0,1fr);gap:12px}
-.project-tree{border:1px solid var(--line);border-radius:16px;background:#09111f;padding:10px}
-.project-tree button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#cbd7ed;padding:8px;border-radius:9px;cursor:pointer}
+.project-overview{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin:12px 0}
+.project-stat{border:1px solid var(--line);border-radius:14px;background:#0a1323;padding:11px 13px}
+.project-stat small{display:block;color:#8192b0;font-size:10px;font-weight:850;text-transform:uppercase;letter-spacing:.8px}
+.project-stat strong{display:block;margin-top:3px;font-size:14px}
+.project-workspace{display:grid;grid-template-columns:240px minmax(0,1fr);gap:12px}
+.project-tree{border:1px solid var(--line);border-radius:16px;background:#09111f;padding:10px;min-height:300px}
+.project-tree-head{display:flex;align-items:center;justify-content:space-between;padding:3px 4px 9px;color:#aab6d0;font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:.8px}
+.project-tree button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#cbd7ed;padding:9px;border-radius:9px;cursor:pointer;font-family:inherit}
 .project-tree button.active,.project-tree button:hover{background:#17243b;color:#fff}
 .project-code{min-width:0}
+.project-code-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.project-code-head span{color:#8fa1c2;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.project-code pre{margin:0;min-height:300px;border:1px solid var(--line);border-radius:16px;background:#070d18;padding:15px;line-height:1.6;font-size:12px}
+.project-empty{display:grid;place-items:center;min-height:270px;color:#7486a7;text-align:center}
+@media(max-width:700px){.project-overview{grid-template-columns:repeat(3,1fr)}.project-stat{padding:9px}.project-stat strong{font-size:12px}.project-tree{min-height:auto}}
 .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .setting-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#0b1425}
 .setting-card h3{margin:0 0 6px;font-size:15px}.setting-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
@@ -141,7 +151,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 <section id="project-view" class="view">
 <div class="hero"><h2>Proje Çalışma Alanı</h2><p>NEYQORA'nın oluşturduğu projeyi dosya ağacı, kod ve doğrulama alanlarıyla yönet.</p></div>
-<div id="project-panel" class="panel"><h3 id="project-title">Henüz proje oluşturulmadı</h3><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><span style="color:var(--muted);font-size:12px">Proje dosyaları burada listelenir.</span></div><div class="project-code"><pre id="project-files">Proje oluşturduğunda dosyalar burada görünecek.</pre></div></div></div>
+<div id="project-panel" class="panel"><div class="project-code-head"><div><h3 id="project-title">Henüz proje oluşturulmadı</h3><span id="project-subtitle">NEYQORA proje çıktısı burada görünecek.</span></div><span class="status-pill"><span class="status-dot"></span>Çalışma alanı hazır</span></div><div class="project-overview"><div class="project-stat"><small>Dosyalar</small><strong id="project-file-count">0</strong></div><div class="project-stat"><small>Durum</small><strong id="project-state">Bekliyor</strong></div><div class="project-stat"><small>Kaynak</small><strong>NEYQORA</strong></div></div><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><div class="project-tree-head"><span>Dosyalar</span><span id="project-tree-count">0</span></div><div class="project-empty">Henüz proje dosyası yok.<br>Bir proje oluşturduğunda burada görünecek.</div></div><div class="project-code"><div class="project-code-head"><span id="project-file-name">Dosya seçilmedi</span><span>Salt okunur önizleme</span></div><pre id="project-files"><div class="project-empty">Proje oluşturduğunda dosyalar burada görünecek.</div></pre></div></div></div>
 </section>
 
 <section id="settings-view" class="view">
@@ -362,10 +372,34 @@ async function sendMessage(){
     if(data.intent==="project"&&data.files){
       const panel=document.querySelector("#project-panel");
       const title=document.querySelector("#project-title");
-      const files=document.querySelector("#project-files");
-      title.textContent="Proje: "+(data.project||"NEYQORA projesi")+" · "+data.files.length+" dosya";
-      files.textContent=data.files.map(f=>"--- "+f.path+" ---\n"+f.content).join("\n\n");
-      panel.hidden=false;document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("active",b.dataset.view==="project-view"));document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id==="project-view"));
+      const subtitle=document.querySelector("#project-subtitle");
+      const tree=document.querySelector("#project-tree");
+      const filesEl=document.querySelector("#project-files");
+      const count=document.querySelector("#project-file-count");
+      const treeCount=document.querySelector("#project-tree-count");
+      const state=document.querySelector("#project-state");
+      const fileName=document.querySelector("#project-file-name");
+      const files=Array.isArray(data.files)?data.files:[];
+      title.textContent="Proje: "+(data.project||"NEYQORA projesi");
+      subtitle.textContent=files.length+" dosyalık proje çıktısı";
+      count.textContent=String(files.length);
+      treeCount.textContent=String(files.length);
+      state.textContent=files.length?"Hazır":"Bekliyor";
+      tree.querySelectorAll("button").forEach(x=>x.remove());
+      tree.querySelector(".project-empty")?.remove();
+      files.forEach((file,index)=>{
+        const button=document.createElement("button");
+        button.type="button";button.textContent="📄 "+file.path;
+        button.addEventListener("click",()=>{
+          tree.querySelectorAll("button").forEach(x=>x.classList.remove("active"));
+          button.classList.add("active");
+          fileName.textContent=file.path;
+          filesEl.textContent=String(file.content||"");
+        });
+        tree.appendChild(button);
+        if(index===0)button.click();
+      });
+      panel.hidden=false;openView("project-view");
       panel.scrollIntoView({behavior:"smooth",block:"end"});
     }
   }catch(err){
