@@ -1,0 +1,67 @@
+name: Generate and test project
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  generate-and-test-project:
+    if: >-
+      github.event_name == 'workflow_dispatch' ||
+      github.actor == 'github-actions[bot]' ||
+      contains(github.event.head_commit.message || '', 'Generate and test project') ||
+      contains(github.event.pull_request.title || '', 'Generate and test project') ||
+      contains(github.event.pull_request.body || '', 'Generate and test project')
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install dependencies
+        run: npm install --no-audit --no-fund
+
+      - name: Syntax check
+        run: |
+          node --check server.mjs
+          node --check src/index.js
+          node --check src/ai/provider.js
+
+      - name: Core tests
+        run: npm run check
+
+      - name: Python bytecode check
+        shell: bash
+        run: |
+          set -euo pipefail
+          mapfile -t PY_FILES < <(find . -type f -name '*.py' -not -path './.git/*' -not -path './node_modules/*' | sort)
+          if [ "${#PY_FILES[@]}" -eq 0 ]; then
+            echo "No Python files found; bytecode check skipped."
+            exit 0
+          fi
+          python3 -m compileall -q "${PY_FILES[@]}"
+          echo "Python bytecode compilation: PASS"
+
+      - name: Project test discovery
+        shell: bash
+        run: |
+          set -euo pipefail
+          TEST_COUNT=$(find . -type f \( -name 'test_*.py' -o -name '*_test.py' \) -not -path './.git/*' -not -path './node_modules/*' | wc -l)
+          echo "Python test files: $TEST_COUNT"
+          if [ "$TEST_COUNT" -gt 0 ]; then
+            python3 -m pytest -q
+          else
+            echo "No Python project tests found; Node core tests are authoritative."
+          fi
