@@ -13,8 +13,14 @@ const aiProviderMode = String(process.env.AI_PROVIDER_MODE || "auto").toLowerCas
 if (!process.env.OWNER_AUTH_TOKEN) {
   throw new Error("OWNER_AUTH_TOKEN is required");
 }
-if ((aiProviderMode === "cloud" || aiProviderMode === "auto") && (!aiBaseUrl || !aiApiKey) && !process.env.LOCAL_AI_BASE_URL) {
-  throw new Error("Cloud AI için NEYQORA_AI_BASE_URL ve NEYQORA_AI_API_KEY veya yerel AI için LOCAL_AI_BASE_URL yapılandırılmalı");
+if (aiProviderMode === "cloud" && (!aiBaseUrl || !aiApiKey)) {
+  throw new Error("AI_PROVIDER_MODE=cloud için NEYQORA_AI_BASE_URL ve NEYQORA_AI_API_KEY gerekli");
+}
+if (aiProviderMode === "local" && !process.env.LOCAL_AI_BASE_URL) {
+  throw new Error("AI_PROVIDER_MODE=local için LOCAL_AI_BASE_URL gerekli");
+}
+if (aiProviderMode === "auto" && (!aiBaseUrl || !aiApiKey) && !process.env.LOCAL_AI_BASE_URL) {
+  throw new Error("AI_PROVIDER_MODE=auto için Cloud AI veya LOCAL_AI_BASE_URL yapılandırılmalı");
 }
 
 const db = new Database(dbPath);
