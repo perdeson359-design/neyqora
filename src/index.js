@@ -48,50 +48,87 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .setting-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#0b1425}
 .setting-card h3{margin:0 0 6px;font-size:15px}.setting-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
 .memory-tools{display:flex;gap:8px;margin-bottom:12px}.memory-tools input{flex:1}
+.tool-categories{display:grid;gap:18px}.category-label{font-size:11px;text-transform:uppercase;letter-spacing:1.2px;color:#8fa1c2;font-weight:900;margin-top:2px}.tool-card{width:100%;text-align:left}
+.tool-page{max-width:1100px;margin:0 auto}.page-head{display:flex;align-items:flex-start;gap:14px;margin-bottom:14px}.page-head h2{margin:0 0 5px}.page-head p{margin:0;color:var(--muted);font-size:13px}.back-button{border:1px solid var(--line);background:#0b1323;color:#dbe5ff;border-radius:12px;padding:9px 12px;font-weight:800;cursor:pointer;white-space:nowrap}.tool-workspace{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tool-workspace .panel{margin-top:0}.tool-workspace .panel:last-child:nth-child(3){grid-column:1/-1}
+@media(max-width:700px){.tool-workspace{grid-template-columns:1fr}.page-head{gap:9px}.page-head h2{font-size:22px}}
 @media(max-width:700px){.project-workspace,.settings-grid{grid-template-columns:1fr}.project-tree{display:flex;gap:6px;overflow:auto}.project-tree button{min-width:max-content}.chat-toolbar{align-items:flex-start}.app{padding-bottom:calc(178px + env(safe-area-inset-bottom))}#form{bottom:calc(72px + env(safe-area-inset-bottom));}
 @media(max-width:700px){.app{padding-bottom:178px}header{padding:12px 16px}.brand-mark{width:42px;height:42px;flex-basis:42px}.brand-copy h1{font-size:18px}.brand-copy p{font-size:11px}header>.nav{display:none}main{padding:12px 12px 0}.hero{border-radius:22px;padding:22px 18px;margin-bottom:12px}.chat-hero{padding:30px 16px 24px}.hero-mark{width:52px;height:52px;font-size:24px;margin-bottom:14px}.hero h2{font-size:25px}.hero p{font-size:14px}.quick-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 22px}.quick-card{padding:14px;border-radius:16px}#chat{padding-bottom:110px}.msg{max-width:94%;font-size:15px}#form{bottom:72px;width:calc(100% - 24px);padding:8px;border-radius:18px}#input{font-size:16px;padding:12px}#send{padding:0 17px}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);left:0;right:0;bottom:0;height:64px;z-index:35;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(6,10,18,.96);backdrop-filter:blur(22px);border-top:1px solid rgba(48,69,104,.7)}.mobile-nav button{border:0;background:transparent;color:#7f8eaa;font-size:11px;font-weight:800;border-radius:12px;cursor:pointer}.mobile-nav button span{display:block;font-size:18px;margin-bottom:2px}.mobile-nav button.active{color:#eef3ff;background:#17243b}}
 </style>
 </head>
 <body>
 <div class="app">
-<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button">Sohbet</button><button data-view="tools-view" type="button">Araçlar</button><button data-view="memory-view" type="button">Hafıza</button><button data-view="project-view" type="button">Proje</button><button data-view="settings-view" type="button">Ayarlar</button></nav></header>
+<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button">Sohbet</button><button data-view="tools-view" type="button">Araçlar</button><button data-view="project-view" type="button">Proje</button><button data-view="memory-view" type="button">Hafıza</button><button data-view="settings-view" type="button">Ayarlar</button></nav></header>
 <main>
 <section id="chat-view" class="view active">
-<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div><div class="quick-grid"><button class="quick-card" data-view="chat-view"><b>💬 Sohbet</b><span>NEYQORA ile konuş.</span></button><button class="quick-card" data-view="project-view"><b>💻 Proje</b><span>Bir proje oluştur veya devam et.</span></button><button class="quick-card" data-view="tools-view"><b>🧰 Araçlar</b><span>Dosya, web, medya ve verimlilik.</span></button><button class="quick-card" data-view="memory-view"><b>🧠 Hafıza</b><span>Kayıtlı bilgilerini yönet.</span></button></div><div class="chat-toolbar"><div class="status-pill" id="ai-status"><span class="status-dot"></span><span id="ai-status-text">Hazır · Otomatik AI</span></div><div class="chat-toolbar-actions"><button class="secondary" id="new-chat" type="button">+ Yeni Sohbet</button><button class="secondary" id="toggle-history" type="button">Geçmiş</button></div></div>
+<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div>
+<div class="chat-toolbar"><div class="status-pill" id="ai-status"><span class="status-dot"></span><span id="ai-status-text">Hazır · Otomatik AI</span></div><div class="chat-toolbar-actions"><button class="secondary" id="new-chat" type="button">+ Yeni Sohbet</button><button class="secondary" id="toggle-history" type="button">Geçmiş</button></div></div>
 <div id="history-panel" class="history-panel" hidden><div class="history-list" id="history-list"></div></div>
 <div class="section-label">Sohbet</div>
 <div id="chat"><div class="msg ai" data-message="1">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
 </section>
+
 <section id="tools-view" class="view">
-<div class="hero"><h2>Araçlar</h2><p>Günlük işlerini tek bir yerden yönet.</p></div>
+<div class="hero"><h2>Araç Merkezi</h2><p>Her araç kendi çalışma alanında. İhtiyacını seç, doğrudan o sayfaya geç.</p></div>
+<div class="tool-categories">
+<div class="category-label">Yapay Zekâ</div>
 <div class="tools-grid">
-<div class="tool-card" data-tool="productivity"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Etkinlik oluştur, e-posta gönder veya zamanlanmış görev kur.</span></div>
-<div class="tool-card" data-tool="files"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını analiz et.</span></div>
-<div class="tool-card" data-tool="media"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir veya görselleri analiz et.</span></div>
-<div class="tool-card" data-tool="local-ai"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>İnternet yokken OpenAI-compatible yerel modeline bağlan.</span></div>
+<button class="tool-card" data-view="local-ai-view" type="button"><div class="tool-icon">🧠</div><strong>Yerel AI</strong><span>Yerel model bağlantısı, adres ve bağlantı testi.</span></button>
 </div>
-<div id="productivity-panel" class="panel" hidden><h3>Takvim · E-posta · Otomasyon</h3><p>İşlemini seç ve alanları doldur.</p><input id="event-title" class="field" placeholder="Takvim etkinliği"><input id="event-start" class="field" type="datetime-local"><input id="event-end" class="field" type="datetime-local"><div class="actions"><button id="create-event" class="secondary" type="button">Etkinlik Oluştur</button></div><input id="email-to" class="field" placeholder="E-posta alıcısı"><input id="email-subject" class="field" placeholder="Konu"><textarea id="email-body" class="field" placeholder="E-posta içeriği"></textarea><div class="actions"><button id="send-email" class="secondary" type="button">E-posta Gönder</button><button id="save-email" class="secondary" type="button">Taslağı Kaydet</button></div><input id="automation-title" class="field" placeholder="Otomasyon adı"><input id="automation-run" class="field" type="datetime-local"><input id="automation-prompt" class="field" placeholder="Görev"><div class="actions"><button id="create-automation" class="secondary" type="button">Otomasyon Oluştur</button></div></div>
-<div id="file-panel" class="panel" hidden><h3>Dosya Analizi</h3><p>Analiz etmek istediğin dosyaları seç.</p><input id="file-input" class="field" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log"><div class="actions"><button id="analyze-files" class="secondary" type="button">Dosyaları Analiz Et</button></div></div>
-<div id="local-ai-panel" class="panel" hidden><h3>Yerel AI Bağlantısı</h3><p>Örn: http://127.0.0.1:11434/v1 veya ağdaki yerel AI sunucunun adresi.</p><input id="local-ai-url" class="field" placeholder="http://127.0.0.1:11434/v1"><div class="actions"><button id="save-local-ai" class="secondary" type="button">Yerel AI Adresini Kaydet</button><button id="test-local-ai" class="secondary" type="button">Bağlantıyı Test Et</button></div><div id="local-ai-result" class="result" hidden></div></div>
-<div id="media-panel" class="panel" hidden><h3>Ses ve Görüntü</h3><p>Ses veya görsel seçerek analiz başlat.</p><input id="audio-input" class="field" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm"><div class="actions"><button id="transcribe-audio" class="secondary" type="button">Sesi Yazıya Çevir</button></div><input id="image-input" class="field" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><div class="actions"><button id="analyze-image" class="secondary" type="button">Görseli Analiz Et</button></div></div>
-<div id="productivity-result" class="result" hidden></div><div id="file-result" class="result" hidden></div><div id="media-result" class="result" hidden></div>
+<div class="category-label">Üretkenlik</div>
+<div class="tools-grid">
+<button class="tool-card" data-view="productivity-view" type="button"><div class="tool-icon">📅</div><strong>Takvim · E-posta · Otomasyon</strong><span>Planla, gönder ve otomatikleştir.</span></button>
+</div>
+<div class="category-label">Dosyalar</div>
+<div class="tools-grid">
+<button class="tool-card" data-view="files-view" type="button"><div class="tool-icon">📎</div><strong>Dosya Analizi</strong><span>Metin, kod, JSON, CSV ve Markdown dosyalarını incele.</span></button>
+</div>
+<div class="category-label">Medya</div>
+<div class="tools-grid">
+<button class="tool-card" data-view="media-view" type="button"><div class="tool-icon">🎙️</div><strong>Ses · Görüntü</strong><span>Sesleri yazıya çevir ve görselleri analiz et.</span></button>
+</div>
 </section>
+
+<section id="productivity-view" class="view tool-page">
+<div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Takvim · E-posta · Otomasyon</h2><p>Günlük işlerini tek çalışma alanından yönet.</p></div></div>
+<div class="tool-workspace">
+<div class="panel"><h3>📅 Takvim</h3><input id="event-title" class="field" placeholder="Takvim etkinliği"><input id="event-start" class="field" type="datetime-local"><input id="event-end" class="field" type="datetime-local"><div class="actions"><button id="create-event" class="secondary" type="button">Etkinlik Oluştur</button></div></div>
+<div class="panel"><h3>✉️ E-posta</h3><input id="email-to" class="field" placeholder="E-posta alıcısı"><input id="email-subject" class="field" placeholder="Konu"><textarea id="email-body" class="field" placeholder="E-posta içeriği"></textarea><div class="actions"><button id="send-email" class="secondary" type="button">E-posta Gönder</button><button id="save-email" class="secondary" type="button">Taslağı Kaydet</button></div></div>
+<div class="panel"><h3>⚡ Otomasyon</h3><input id="automation-title" class="field" placeholder="Otomasyon adı"><input id="automation-run" class="field" type="datetime-local"><input id="automation-prompt" class="field" placeholder="Görev"><div class="actions"><button id="create-automation" class="secondary" type="button">Otomasyon Oluştur</button></div></div>
+</div><div id="productivity-result" class="result" hidden></div>
+</section>
+
+<section id="files-view" class="view tool-page">
+<div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Dosya Analizi</h2><p>Dosya seç, NEYQORA içeriği analiz etsin.</p></div></div>
+<div class="panel"><h3>📎 Dosyalar</h3><input id="file-input" class="field" type="file" multiple accept=".txt,.md,.csv,.json,.js,.mjs,.ts,.tsx,.jsx,.py,.java,.c,.cpp,.h,.hpp,.css,.html,.xml,.yaml,.yml,.sql,.sh,.log"><div class="actions"><button id="analyze-files" class="secondary" type="button">Dosyaları Analiz Et</button></div></div>
+<div id="file-result" class="result" hidden></div>
+</section>
+
+<section id="media-view" class="view tool-page">
+<div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Ses · Görüntü</h2><p>Medya dosyalarını ayrı çalışma alanında işle.</p></div></div>
+<div class="tool-workspace">
+<div class="panel"><h3>🎙️ Ses</h3><input id="audio-input" class="field" type="file" accept="audio/*,.wav,.mp3,.m4a,.ogg,.webm"><div class="actions"><button id="transcribe-audio" class="secondary" type="button">Sesi Yazıya Çevir</button></div></div>
+<div class="panel"><h3>🖼️ Görüntü</h3><input id="image-input" class="field" type="file" accept="image/png,image/jpeg,image/webp,image/gif"><div class="actions"><button id="analyze-image" class="secondary" type="button">Görseli Analiz Et</button></div></div>
+</div><div id="media-result" class="result" hidden></div>
+</section>
+
+<section id="local-ai-view" class="view tool-page">
+<div class="page-head"><button class="back-button" data-view="tools-view" type="button">← Araçlar</button><div><h2>Yerel AI</h2><p>İnternet olmadan veya kendi model sunucunla çalış.</p></div></div>
+<div class="panel"><h3>🧠 Yerel AI Bağlantısı</h3><p>OpenAI-compatible yerel model sunucunun adresini gir.</p><input id="local-ai-url" class="field" placeholder="http://127.0.0.1:11434/v1"><div class="actions"><button id="save-local-ai" class="secondary" type="button">Adresi Kaydet</button><button id="test-local-ai" class="secondary" type="button">Bağlantıyı Test Et</button></div><div id="local-ai-result" class="result" hidden></div></div>
+</section>
+
 <section id="memory-view" class="view">
 <div class="hero"><h2>Kalıcı Hafıza</h2><p>Kayıtlı bilgilerini görüntüleyebilir veya silebilirsin.</p><div class="actions"><button id="clear-memories" class="danger" type="button">Tüm Hafızayı Sil</button></div></div>
 <div id="memory-panel" class="panel"><div class="memory-tools"><input id="memory-search" class="field" placeholder="Hafızada ara..." aria-label="Hafızada ara"><button id="memory-refresh" class="secondary" type="button">Yenile</button></div><div id="memory-list">Hafıza yükleniyor...</div></div>
 </section>
+
 <section id="project-view" class="view">
 <div class="hero"><h2>Proje Çalışma Alanı</h2><p>NEYQORA'nın oluşturduğu projeyi dosya ağacı, kod ve doğrulama alanlarıyla yönet.</p></div>
 <div id="project-panel" class="panel"><h3 id="project-title">Henüz proje oluşturulmadı</h3><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><span style="color:var(--muted);font-size:12px">Proje dosyaları burada listelenir.</span></div><div class="project-code"><pre id="project-files">Proje oluşturduğunda dosyalar burada görünecek.</pre></div></div></div>
 </section>
+
 <section id="settings-view" class="view">
 <div class="hero"><h2>Ayarlar</h2><p>NEYQORA'nın çalışma şeklini ve cihaz deneyimini yönet.</p></div>
-<div class="settings-grid">
-<div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Otomatik modda bulut AI kullanılır; uygun yapılandırmada yerel AI yedeğine geçilebilir.</p></div>
-<div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafızayı Hafıza ekranından inceleyebilir ve güvenli biçimde temizleyebilirsin.</p></div>
-<div class="setting-card"><h3>📱 PWA / Mobil</h3><p>Mobil görünüm, güvenli alan ve klavye çakışmaları için optimize edildi.</p></div>
-<div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması güvenlik başlıklarını, oturumu ve temel API sözleşmelerini kontrol eder.</p></div>
-</div>
+<div class="settings-grid"><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Güvenli alan, klavye ve dokunmatik kullanım optimize edildi.</p></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
 </section>
 </main>
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü"><button class="active" data-view="chat-view" type="button"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button"><span>💻</span>Proje</button><button data-view="memory-view" type="button"><span>🧠</span>Hafıza</button></nav>
@@ -190,7 +227,7 @@ document.querySelector("#toggle-history")?.addEventListener("click",()=>{const p
 document.addEventListener("click",async event=>{const copy=event.target.closest("[data-copy-message]");if(copy){const msg=copy.closest(".msg");try{await navigator.clipboard.writeText(msg?.dataset.raw||msg?.textContent||"");copy.textContent="Kopyalandı ✓";setTimeout(()=>copy.textContent="Kopyala",1200);}catch{}}const regen=event.target.closest("[data-regenerate]");if(regen){const msg=regen.closest(".msg");const raw=msg?.dataset.raw||"";if(raw){const input=document.querySelector("#input");if(input){input.value=raw;openView("chat-view");input.focus();}}}});
 loadHistory();
 openView("chat-view");
-document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>{document.querySelectorAll(".panel").forEach(p=>p.hidden=true);const p=document.querySelector("#"+card.dataset.tool+"-panel");if(p)p.hidden=false;}));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
+document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
 async function loadMemories(){
   const list=document.querySelector("#memory-list");
