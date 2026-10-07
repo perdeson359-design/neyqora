@@ -175,7 +175,7 @@ jobs:
           packageName: com.neyqora.assistant
           releaseFiles: mobile/android/app/build/outputs/bundle/release/app-release.aab
           tracks: ${{ inputs.android_track }}
-          status: ${{ inputs.android_track == 'internal' && 'completed' || 'draft' }}
+          status: completed
           releaseName: NEYQORA ${{ inputs.app_version }}
 
   ios:
