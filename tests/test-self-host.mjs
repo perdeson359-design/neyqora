@@ -136,7 +136,7 @@ const deleteAccount = await request("/api/auth/account", {
 assert.equal(deleteAccount.status, 200);
 
 const meAfterDelete = await request("/api/auth/me", { cookie: loginCookie });
-assert.equal(meAfterDelete.status, 200);
+assert.equal(meAfterDelete.status, 200, await meAfterDelete.clone().text());
 assert.equal((await meAfterDelete.json()).ok, false);
 
 sqlite.close();
