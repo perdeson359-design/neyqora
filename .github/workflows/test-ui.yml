@@ -36,3 +36,24 @@ jobs:
           for file in /tmp/browser-*.js; do
             node --check "$file"
           done
+          python - <<'PY'
+          from pathlib import Path
+          import re
+          source=Path("src/index.js").read_text(encoding="utf-8")
+          assert 'id="account-button"' in source
+          assert 'window.neyqoraAccount=function' in source
+          assert 'document.getElementById("account-button")?.addEventListener("click"' in source
+          assert source.count('id="account-button"') == 1
+          assert 'authPassword.required=!(forgot||profile)' in source
+          assert 'authPassword.hidden=forgot||profile' in source
+          assert 'authName.required=register||profile' in source
+          assert 'window.neyqoraLocalChat=async function' in source
+          assert 'localStorage.getItem("neyqora_local_ai_url")' in source
+          assert 'localStorage.getItem("neyqora_local_ai_model")' in source
+          assert source.count('accountButton?.addEventListener("click"') == 0
+          assert 'onpointerup=' not in source
+          assert 'auth-overlay' in source and '.auth-overlay.open{display:flex}' in source
+          assert 'max-height:calc(100dvh - 40px)' in source
+          assert 'overflow:auto;-webkit-overflow-scrolling:touch' in source
+          print("NEYQORA auth/mobile/local-AI UI contract: PASS")
+          PY
