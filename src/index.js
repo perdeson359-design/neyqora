@@ -62,7 +62,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 .project-code-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
 .project-code-head span{color:#8fa1c2;font-size:11px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .project-code pre{margin:0;min-height:300px;border:1px solid var(--line);border-radius:16px;background:#070d18;padding:15px;line-height:1.6;font-size:12px}
-.project-empty{display:grid;place-items:center;min-height:270px;color:#7486a7;text-align:center}
+.project-ci-bar{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:12px 0;padding:12px 14px;border:1px solid var(--line);border-radius:14px;background:#0a1323}.project-ci-copy{display:grid;gap:4px;min-width:0}.project-ci-copy small{color:#8192b0;font-size:11px}.project-ci-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#7d8aa5;margin-right:7px}.project-ci-dot.ok{background:#45d483}.project-ci-dot.fail{background:#ff6578}.project-ci-dot.pending{background:#f2b84b}.project-ci-actions{display:flex;align-items:center;gap:7px;flex:0 0 auto}.project-ci-actions input{width:90px;border:1px solid var(--line);border-radius:10px;background:#070d18;color:#fff;padding:9px 10px;font:inherit;font-size:12px}.project-empty{display:grid;place-items:center;min-height:270px;color:#7486a7;text-align:center}
 @media(max-width:700px){.project-overview{grid-template-columns:repeat(3,1fr)}.project-stat{padding:9px}.project-stat strong{font-size:12px}.project-tree{min-height:auto}}
 .settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
 .setting-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#0b1425}
@@ -151,7 +151,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 <section id="project-view" class="view">
 <div class="hero"><h2>Proje Çalışma Alanı</h2><p>NEYQORA'nın oluşturduğu projeyi dosya ağacı, kod ve doğrulama alanlarıyla yönet.</p></div>
-<div id="project-panel" class="panel"><div class="project-code-head"><div><h3 id="project-title">Henüz proje oluşturulmadı</h3><span id="project-subtitle">NEYQORA proje çıktısı burada görünecek.</span></div><span class="status-pill"><span class="status-dot"></span>Çalışma alanı hazır</span></div><div class="project-overview"><div class="project-stat"><small>Dosyalar</small><strong id="project-file-count">0</strong></div><div class="project-stat"><small>Durum</small><strong id="project-state">Bekliyor</strong></div><div class="project-stat"><small>Kaynak</small><strong>NEYQORA</strong></div></div><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><div class="project-tree-head"><span>Dosyalar</span><span id="project-tree-count">0</span></div><div class="project-empty">Henüz proje dosyası yok.<br>Bir proje oluşturduğunda burada görünecek.</div></div><div class="project-code"><div class="project-code-head"><span id="project-file-name">Dosya seçilmedi</span><span>Salt okunur önizleme</span></div><pre id="project-files"><div class="project-empty">Proje oluşturduğunda dosyalar burada görünecek.</div></pre></div></div></div>
+<div id="project-panel" class="panel"><div class="project-code-head"><div><h3 id="project-title">Henüz proje oluşturulmadı</h3><span id="project-subtitle">NEYQORA proje çıktısı burada görünecek.</span></div><span class="status-pill"><span class="status-dot"></span>Çalışma alanı hazır</span></div><div class="project-overview"><div class="project-stat"><small>Dosyalar</small><strong id="project-file-count">0</strong></div><div class="project-stat"><small>Durum</small><strong id="project-state">Bekliyor</strong></div><div class="project-stat"><small>CI</small><strong id="project-ci-state">Bekliyor</strong></div></div><div class="project-ci-bar"><div class="project-ci-copy"><div><span class="project-ci-dot" id="project-ci-dot"></span><strong id="project-ci-label">CI sonucu bekleniyor</strong></div><small id="project-ci-detail">GitHub görevini oluşturduktan sonra issue numarasını gir.</small></div><div class="project-ci-actions"><input id="project-issue-number" inputmode="numeric" pattern="[0-9]*" placeholder="Issue #"><button id="project-ci-refresh" class="secondary" type="button">CI'yı kontrol et</button></div></div><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><div class="project-tree-head"><span>Dosyalar</span><span id="project-tree-count">0</span></div><div class="project-empty">Henüz proje dosyası yok.<br>Bir proje oluşturduğunda burada görünecek.</div></div><div class="project-code"><div class="project-code-head"><span id="project-file-name">Dosya seçilmedi</span><span>Salt okunur önizleme</span></div><pre id="project-files"><div class="project-empty">Proje oluşturduğunda dosyalar burada görünecek.</div></pre></div></div></div>
 </section>
 
 <section id="settings-view" class="view">
@@ -273,7 +273,26 @@ document.querySelector("#toggle-history")?.addEventListener("click",()=>{const p
 document.addEventListener("click",async event=>{const copy=event.target.closest("[data-copy-message]");if(copy){const msg=copy.closest(".msg");try{await navigator.clipboard.writeText(msg?.dataset.raw||msg?.textContent||"");copy.textContent="Kopyalandı ✓";setTimeout(()=>copy.textContent="Kopyala",1200);}catch{}}const regen=event.target.closest("[data-regenerate]");if(regen){const msg=regen.closest(".msg");const raw=msg?.dataset.raw||"";if(raw){const input=document.querySelector("#input");if(input){input.value=raw;openView("chat-view");input.focus();}}}});
 loadHistory();
 openView("chat-view");
-document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
+document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));async function refreshProjectCi(){
+  const input=document.querySelector("#project-issue-number");
+  const label=document.querySelector("#project-ci-label");
+  const detail=document.querySelector("#project-ci-detail");
+  const dot=document.querySelector("#project-ci-dot");
+  const ciState=document.querySelector("#project-ci-state");
+  const state=document.querySelector("#project-state");
+  const issue=Number(input?.value||0);
+  if(!Number.isInteger(issue)||issue<1){label.textContent="Issue numarası gerekli";detail.textContent="GitHub'da oluşturduğun proje görevinin numarasını gir.";dot.className="project-ci-dot pending";ciState.textContent="Bekliyor";return;}
+  label.textContent="CI kontrol ediliyor…";detail.textContent="GitHub Actions sonucu okunuyor.";dot.className="project-ci-dot pending";
+  try{
+    const response=await fetch("/api/project/ci?issue="+encodeURIComponent(issue),{cache:"no-store"});
+    const result=await response.json();
+    if(result.status==="passed"){label.textContent="CI başarılı";detail.textContent="Test: "+(result.firstTest||"success")+" · Run: "+(result.runId||"—");dot.className="project-ci-dot ok";ciState.textContent="Başarılı";state.textContent="Doğrulandı";}
+    else if(result.status==="failed"){label.textContent="CI başarısız";detail.textContent="Testler veya güvenlik kapısı başarısız.";dot.className="project-ci-dot fail";ciState.textContent="Başarısız";state.textContent="Kontrol gerekli";}
+    else{label.textContent="CI beklemede";detail.textContent="GitHub Actions henüz sonuç yayınlamadı.";dot.className="project-ci-dot pending";ciState.textContent="Bekliyor";}
+  }catch(error){label.textContent="CI kontrol edilemedi";detail.textContent=error?.message||"Geçici bağlantı hatası.";dot.className="project-ci-dot fail";ciState.textContent="Bilinmiyor";}
+}
+document.querySelector("#project-ci-refresh")?.addEventListener("click",refreshProjectCi);
+document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
 async function loadMemories(){
   const list=document.querySelector("#memory-list");
@@ -380,7 +399,7 @@ async function sendMessage(){
       const state=document.querySelector("#project-state");
       const fileName=document.querySelector("#project-file-name");
       const files=Array.isArray(data.files)?data.files:[];
-      title.textContent="Proje: "+(data.project||"NEYQORA projesi");
+      title.textContent="Proje: "+(data.project||"NEYQORA projesi");document.querySelector("#project-issue-number").value="";document.querySelector("#project-ci-state").textContent="Bekliyor";document.querySelector("#project-ci-label").textContent="CI sonucu bekleniyor";document.querySelector("#project-ci-detail").textContent="GitHub görevini oluşturduktan sonra issue numarasını gir.";document.querySelector("#project-ci-dot").className="project-ci-dot";
       subtitle.textContent=files.length+" dosyalık proje çıktısı";
       count.textContent=String(files.length);
       treeCount.textContent=String(files.length);
