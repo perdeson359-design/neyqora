@@ -139,4 +139,4 @@ const meAfterDelete = await request("/api/auth/me", { cookie: loginCookie });
 assert.equal(meAfterDelete.status, 401);
 
 sqlite.close();
-console.log("NEYQORA self-host auth E2E: PASS");
+console.log("NEYQORA self-host auth E2E: PASS"); // protocol-aware auth cookie regression covered
