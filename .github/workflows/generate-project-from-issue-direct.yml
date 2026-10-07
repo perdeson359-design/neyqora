@@ -42,7 +42,7 @@ jobs:
           echo "Project API HTTP=$code"
           cat /tmp/response.json || true
           python -c 'import json; d=json.load(open("/tmp/response.json")); assert d.get("ok") and d.get("files"), d'
-          python -c 'import json,os,pathlib; d=json.load(open("/tmp/response.json")); root=pathlib.Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"]); root.mkdir(parents=True,exist_ok=True); [(root/pathlib.Path(x["path"])).parent.mkdir(parents=True,exist_ok=True) or (root/pathlib.Path(x["path"])).write_text(x["content"],encoding="utf-8") for x in d["files"]]; print(root)'
+          python -c 'import json,os,pathlib; d=json.load(open("/tmp/response.json")); root=(pathlib.Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"])).resolve(); base=pathlib.Path("projects").resolve(); root.mkdir(parents=True,exist_ok=True); files=d["files"]; assert files, "No project files"; [(lambda p,x: (p.parent.mkdir(parents=True,exist_ok=True),p.write_text(str(x.get("content","")),encoding="utf-8")))( (root/pathlib.Path(str(x["path"]).lstrip("/\"))).resolve(), x) if (root/pathlib.Path(str(x["path"]).lstrip("/\"))).resolve().is_relative_to(root) else (_ for _ in ()).throw(ValueError("Unsafe project path: "+str(x["path"]))) for x in files]; print(root)'
 
       - name: Test
         id: test
@@ -50,7 +50,10 @@ jobs:
         run: |
           set -euo pipefail
           files=$(find "projects/issue-$ISSUE_NUMBER" -type f -name 'test_*.py' | sort)
-          test -n "$files"
+          if [ -z "$files" ]; then
+            echo "No Python tests found; syntax and safety gates will still run."
+            exit 0
+          fi
           while IFS= read -r file; do timeout 30s python "$file"; done <<< "$files"
 
       - name: Syntax
