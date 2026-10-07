@@ -1,7 +1,7 @@
 import { withAIProvider } from "./ai/provider.js";
 
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
-const VERSION = "6.2";
+const VERSION = "6.3";
 const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";
 const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
@@ -142,8 +142,6 @@ window.neyqoraSend=async function(){
     if(button)button.disabled=false;
     setAIStatus("Hazır · Otomatik AI",false);
     saveHistory();
-    setAIStatus("Hazır · Otomatik AI",false);
-    saveHistory();
   }
   return false;
 };
@@ -215,6 +213,10 @@ async function loadMemories(){
 }
 document.querySelector("#memory-refresh")?.addEventListener("click",()=>loadMemories());
 document.querySelector("#memory-search")?.addEventListener("input",()=>filterMemories());
+function filterMemories(){
+  const q=(document.querySelector("#memory-search")?.value||"").trim().toLowerCase();
+  document.querySelectorAll("#memory-list .memory-row").forEach(row=>{row.hidden=!!q&&!row.textContent.toLowerCase().includes(q);});
+}
 document.querySelector("#clear-memories")?.addEventListener("click",async()=>{
   if(!confirm("Kayıtlı tüm hafıza silinsin mi?"))return;
   const button=document.querySelector("#clear-memories");
