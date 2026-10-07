@@ -9,31 +9,58 @@ const HTML = `<!doctype html>
 <html lang="tr">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <link rel="manifest" href="/manifest.webmanifest">
 <title>NEYQORA</title>
 <style>
 *{box-sizing:border-box} :root{color-scheme:dark;--bg:#060a12;--panel:#0d1526;--line:#22314d;--muted:#8796b5;--text:#f2f5ff;--accent:#7f91ff;--accent2:#9b83ff;--shadow:0 18px 60px rgba(0,0,0,.28)}
 html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}body{overflow-x:hidden}body:before{content:"";position:fixed;inset:0;pointer-events:none;background:radial-gradient(circle at 50% -10%,rgba(104,122,255,.13),transparent 38%)}
 .app{width:min(100%,1100px);margin:auto;min-height:100vh;padding-bottom:120px}
-header{position:sticky;top:0;z-index:30;padding:14px 20px;background:rgba(6,10,18,.88);backdrop-filter:blur(22px);border-bottom:1px solid rgba(48,69,104,.55);display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:22px;font-weight:950;color:#080d1a;box-shadow:0 10px 32px rgba(127,145,255,.22)}.brand-copy h1{margin:0;font-size:19px;letter-spacing:.7px}.brand-copy p{margin:3px 0 0;color:var(--muted);font-size:12px}
+header{position:sticky;top:0;z-index:30;padding:14px 20px;padding-top:max(14px,env(safe-area-inset-top));background:rgba(6,10,18,.88);backdrop-filter:blur(22px);border-bottom:1px solid rgba(48,69,104,.55);display:flex;align-items:center;justify-content:space-between;gap:20px}.brand{display:flex;align-items:center;gap:12px;min-width:0}.brand-mark{width:44px;height:44px;flex:0 0 44px;border-radius:14px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;font-size:22px;font-weight:950;color:#080d1a;box-shadow:0 10px 32px rgba(127,145,255,.22)}.brand-copy h1{margin:0;font-size:19px;letter-spacing:.7px}.brand-copy p{margin:3px 0 0;color:var(--muted);font-size:12px}
 .nav{display:flex;gap:7px;flex-wrap:wrap;justify-content:flex-end}.nav button{border:1px solid var(--line);background:#0b1323;color:var(--text);border-radius:12px;padding:9px 13px;font-weight:800;cursor:pointer}.nav button.active,.nav button:hover{background:#1a2945;border-color:#425a85}
 main{padding:24px 20px}.view{display:none}.view.active{display:block}.hero{padding:28px;border:1px solid var(--line);border-radius:26px;background:linear-gradient(145deg,rgba(17,28,49,.96),rgba(9,15,27,.96));box-shadow:var(--shadow);margin-bottom:18px}.chat-hero{text-align:center;padding:42px 24px 30px}.hero-mark{width:58px;height:58px;margin:0 auto 18px;border-radius:19px;background:linear-gradient(135deg,var(--accent),var(--accent2));display:grid;place-items:center;color:#090e1a;font-size:27px;font-weight:950}.hero h2{margin:0 0 8px;font-size:clamp(25px,5vw,34px);letter-spacing:-.7px}.hero p{margin:0;color:var(--muted);line-height:1.55;font-size:15px}
 .quick-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0 26px}.quick-card{border:1px solid var(--line);background:#0b1323;border-radius:18px;padding:16px;text-align:left;color:var(--text);cursor:pointer}.quick-card:hover{border-color:#40567e;background:#101b31}.quick-card b{display:block;font-size:14px;margin-bottom:4px}.quick-card span{display:block;color:var(--muted);font-size:12px;line-height:1.4}.section-label{margin:0 0 10px;color:#aab6d0;font-size:12px;font-weight:850;text-transform:uppercase;letter-spacing:1px}
 #chat{padding:4px 0 120px;min-height:260px}.msg{max-width:82%;padding:13px 16px;margin:11px 0;border:1px solid var(--line);border-radius:18px;line-height:1.55;white-space:pre-wrap;box-shadow:0 8px 25px rgba(0,0,0,.1)}.user{margin-left:auto;background:#25385f;border-color:#40598d}.ai{background:#0e1729}
 .tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tool-card{border:1px solid var(--line);border-radius:20px;background:linear-gradient(145deg,#101a2d,#0b1220);padding:18px;cursor:pointer}.tool-card:hover{border-color:#405477}.tool-card strong{display:block;font-size:16px}.tool-card span{display:block;color:var(--muted);font-size:13px;margin-top:5px;line-height:1.45}.tool-icon{font-size:23px;margin-bottom:11px}
-.panel{border:1px solid var(--line);border-radius:20px;background:#0d1628;padding:18px;margin-top:14px;box-shadow:var(--shadow)}.panel h3{margin:0 0 6px}.panel p{color:var(--muted);font-size:13px;margin:0 0 12px}.panel[hidden]{display:none}.field{width:100%;margin-top:8px;background:#080f1e;color:var(--text);border:1px solid var(--line);outline:0;padding:12px;border-radius:12px;font-size:15px}.field:focus{border-color:#526b9f}textarea.field{min-height:110px;resize:vertical}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.primary,.secondary,.danger{border:0;border-radius:12px;padding:11px 14px;font-weight:850;cursor:pointer}.primary{background:#eef3ff;color:#08101d}.secondary{background:#26385f;color:#fff}.danger{background:#4b2530;color:#fff}.result{margin-top:10px;padding:12px;border-radius:12px;background:#080f1e;border:1px solid var(--line);white-space:pre-wrap;color:#dbe5ff}.memory-row{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.memory-row span{flex:1;line-height:1.45}
-#form{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:40;width:min(1040px,calc(100% - 32px));display:flex;gap:9px;padding:9px;background:rgba(9,15,27,.93);backdrop-filter:blur(22px);border:1px solid #314462;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.42)}#input{flex:1;min-width:0;background:#080f1e;color:#fff;border:1px solid var(--line);outline:0;padding:13px 15px;border-radius:14px;font-size:16px}#input:focus{border-color:#526b9f}#send{border:0;border-radius:14px;padding:0 22px;background:#eef3ff;color:#0a0e18;font-weight:900;cursor:pointer}pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.mobile-nav{display:none}
+.view{display:none}.view.active{display:block}.view[hidden]{display:none}.panel{border:1px solid var(--line);border-radius:20px;background:#0d1628;padding:18px;margin-top:14px;box-shadow:var(--shadow)}.panel h3{margin:0 0 6px}.panel p{color:var(--muted);font-size:13px;margin:0 0 12px}.panel[hidden]{display:none}.field{width:100%;margin-top:8px;background:#080f1e;color:var(--text);border:1px solid var(--line);outline:0;padding:12px;border-radius:12px;font-size:15px}.field:focus{border-color:#526b9f}textarea.field{min-height:110px;resize:vertical}.actions{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.primary,.secondary,.danger{border:0;border-radius:12px;padding:11px 14px;font-weight:850;cursor:pointer}.primary{background:#eef3ff;color:#08101d}.secondary{background:#26385f;color:#fff}.danger{background:#4b2530;color:#fff}.result{margin-top:10px;padding:12px;border-radius:12px;background:#080f1e;border:1px solid var(--line);white-space:pre-wrap;color:#dbe5ff}.memory-row{display:flex;gap:8px;align-items:flex-start;padding:10px 0;border-bottom:1px solid var(--line)}.memory-row span{flex:1;line-height:1.45}
+#form{position:fixed;left:50%;bottom:max(18px,env(safe-area-inset-bottom));transform:translateX(-50%);z-index:40;width:min(1040px,calc(100% - 32px));display:flex;gap:9px;padding:9px;background:rgba(9,15,27,.93);backdrop-filter:blur(22px);border:1px solid #314462;border-radius:20px;box-shadow:0 18px 50px rgba(0,0,0,.42)}#input{flex:1;min-width:0;background:#080f1e;color:#fff;border:1px solid var(--line);outline:0;padding:13px 15px;border-radius:14px;font-size:16px}#input:focus{border-color:#526b9f}#send{border:0;border-radius:14px;padding:0 22px;background:#eef3ff;color:#0a0e18;font-weight:900;cursor:pointer}pre{max-height:420px;overflow:auto}.project-actions{display:flex;gap:8px;flex-wrap:wrap;margin:10px 0}.mobile-nav{display:none}
+#form[hidden]{display:none}
+button:focus-visible,input:focus-visible,textarea:focus-visible,.tool-card:focus-visible,.quick-card:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+button:disabled{opacity:.55;cursor:not-allowed}
+.chat-toolbar{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:4px 0 10px}
+.chat-toolbar-actions{display:flex;gap:7px;flex-wrap:wrap}
+.status-pill{display:inline-flex;align-items:center;gap:7px;padding:7px 10px;border:1px solid var(--line);border-radius:999px;background:#0b1323;color:#b9c6df;font-size:11px;font-weight:850}
+.status-dot{width:7px;height:7px;border-radius:50%;background:#78e6a0;box-shadow:0 0 12px rgba(120,230,160,.55)}
+.status-pill.busy .status-dot{background:#ffd166;box-shadow:0 0 12px rgba(255,209,102,.45)}
+.history-panel{margin:8px 0 12px;padding:12px;border:1px solid var(--line);border-radius:16px;background:#0a1220}
+.history-panel[hidden]{display:none}
+.history-list{display:grid;gap:6px;max-height:220px;overflow:auto}
+.history-item{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:9px 10px;border:1px solid transparent;border-radius:12px;background:#0d1729;color:#dce5f7;cursor:pointer;text-align:left}
+.history-item:hover{border-color:var(--line)}
+.message-actions{display:flex;gap:6px;margin-top:8px}
+.message-actions button{border:1px solid var(--line);background:#101b2f;color:#b9c6df;border-radius:9px;padding:5px 8px;font-size:11px;font-weight:750;cursor:pointer}
+.project-workspace{display:grid;grid-template-columns:220px minmax(0,1fr);gap:12px}
+.project-tree{border:1px solid var(--line);border-radius:16px;background:#09111f;padding:10px}
+.project-tree button{display:block;width:100%;text-align:left;border:0;background:transparent;color:#cbd7ed;padding:8px;border-radius:9px;cursor:pointer}
+.project-tree button.active,.project-tree button:hover{background:#17243b;color:#fff}
+.project-code{min-width:0}
+.settings-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+.setting-card{border:1px solid var(--line);border-radius:16px;padding:15px;background:#0b1425}
+.setting-card h3{margin:0 0 6px;font-size:15px}.setting-card p{margin:0;color:var(--muted);font-size:12px;line-height:1.45}
+.memory-tools{display:flex;gap:8px;margin-bottom:12px}.memory-tools input{flex:1}
+@media(max-width:700px){.project-workspace,.settings-grid{grid-template-columns:1fr}.project-tree{display:flex;gap:6px;overflow:auto}.project-tree button{min-width:max-content}.chat-toolbar{align-items:flex-start}.app{padding-bottom:calc(178px + env(safe-area-inset-bottom))}#form{bottom:calc(72px + env(safe-area-inset-bottom));}
 @media(max-width:700px){.app{padding-bottom:178px}header{padding:12px 16px}.brand-mark{width:42px;height:42px;flex-basis:42px}.brand-copy h1{font-size:18px}.brand-copy p{font-size:11px}header>.nav{display:none}main{padding:12px 12px 0}.hero{border-radius:22px;padding:22px 18px;margin-bottom:12px}.chat-hero{padding:30px 16px 24px}.hero-mark{width:52px;height:52px;font-size:24px;margin-bottom:14px}.hero h2{font-size:25px}.hero p{font-size:14px}.quick-grid{grid-template-columns:repeat(2,1fr);gap:8px;margin:12px 0 22px}.quick-card{padding:14px;border-radius:16px}#chat{padding-bottom:110px}.msg{max-width:94%;font-size:15px}#form{bottom:72px;width:calc(100% - 24px);padding:8px;border-radius:18px}#input{font-size:16px;padding:12px}#send{padding:0 17px}.mobile-nav{position:fixed;display:grid;grid-template-columns:repeat(4,1fr);left:0;right:0;bottom:0;height:64px;z-index:35;padding:7px 8px calc(7px + env(safe-area-inset-bottom));background:rgba(6,10,18,.96);backdrop-filter:blur(22px);border-top:1px solid rgba(48,69,104,.7)}.mobile-nav button{border:0;background:transparent;color:#7f8eaa;font-size:11px;font-weight:800;border-radius:12px;cursor:pointer}.mobile-nav button span{display:block;font-size:18px;margin-bottom:2px}.mobile-nav button.active{color:#eef3ff;background:#17243b}}
 </style>
 </head>
 <body>
 <div class="app">
-<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.2</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view">Sohbet</button><button data-view="tools-view">Araçlar</button><button data-view="memory-view">Hafıza</button><button data-view="project-view">Proje</button></nav></header>
+<header><div class="brand"><div class="brand-mark">N</div><div class="brand-copy"><h1>NEYQORA</h1><p>Kişisel yapay zekâ asistanın · V6.3</p></div></div><nav class="nav" aria-label="Ana menü"><button class="active" data-view="chat-view" type="button">Sohbet</button><button data-view="tools-view" type="button">Araçlar</button><button data-view="memory-view" type="button">Hafıza</button><button data-view="project-view" type="button">Proje</button><button data-view="settings-view" type="button">Ayarlar</button></nav></header>
 <main>
 <section id="chat-view" class="view active">
-<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div><div class="quick-grid"><button class="quick-card" data-view="chat-view"><b>💬 Sohbet</b><span>NEYQORA ile konuş.</span></button><button class="quick-card" data-view="project-view"><b>💻 Proje</b><span>Bir proje oluştur veya devam et.</span></button><button class="quick-card" data-view="tools-view"><b>🧰 Araçlar</b><span>Dosya, web, medya ve verimlilik.</span></button><button class="quick-card" data-view="memory-view"><b>🧠 Hafıza</b><span>Kayıtlı bilgilerini yönet.</span></button></div><div class="section-label">Sohbet</div>
-<div id="chat"><div class="msg ai">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
+<div class="hero chat-hero"><div class="hero-mark">N</div><h2>Nasıl yardımcı olabilirim?</h2><p>Sor, araştır, kod yazdır veya birlikte bir proje geliştirelim.</p></div><div class="quick-grid"><button class="quick-card" data-view="chat-view"><b>💬 Sohbet</b><span>NEYQORA ile konuş.</span></button><button class="quick-card" data-view="project-view"><b>💻 Proje</b><span>Bir proje oluştur veya devam et.</span></button><button class="quick-card" data-view="tools-view"><b>🧰 Araçlar</b><span>Dosya, web, medya ve verimlilik.</span></button><button class="quick-card" data-view="memory-view"><b>🧠 Hafıza</b><span>Kayıtlı bilgilerini yönet.</span></button></div><div class="chat-toolbar"><div class="status-pill" id="ai-status"><span class="status-dot"></span><span id="ai-status-text">Hazır · Otomatik AI</span></div><div class="chat-toolbar-actions"><button class="secondary" id="new-chat" type="button">+ Yeni Sohbet</button><button class="secondary" id="toggle-history" type="button">Geçmiş</button></div></div>
+<div id="history-panel" class="history-panel" hidden><div class="history-list" id="history-list"></div></div>
+<div class="section-label">Sohbet</div>
+<div id="chat"><div class="msg ai" data-message="1">Merhaba. Ben NEYQORA. Nasıl yardımcı olabilirim?</div></div>
 </section>
 <section id="tools-view" class="view">
 <div class="hero"><h2>Araçlar</h2><p>Günlük işlerini tek bir yerden yönet.</p></div>
@@ -51,14 +78,23 @@ main{padding:24px 20px}.view{display:none}.view.active{display:block}.hero{paddi
 </section>
 <section id="memory-view" class="view">
 <div class="hero"><h2>Kalıcı Hafıza</h2><p>Kayıtlı bilgilerini görüntüleyebilir veya silebilirsin.</p><div class="actions"><button id="clear-memories" class="danger" type="button">Tüm Hafızayı Sil</button></div></div>
-<div id="memory-panel" class="panel"><div id="memory-list">Hafıza yükleniyor...</div></div>
+<div id="memory-panel" class="panel"><div class="memory-tools"><input id="memory-search" class="field" placeholder="Hafızada ara..." aria-label="Hafızada ara"><button id="memory-refresh" class="secondary" type="button">Yenile</button></div><div id="memory-list">Hafıza yükleniyor...</div></div>
 </section>
 <section id="project-view" class="view">
-<div class="hero"><h2>Proje</h2><p>NEYQORA'nın oluşturduğu son proje burada görünür.</p></div>
-<div id="project-panel" class="panel"><h3 id="project-title">Henüz proje oluşturulmadı</h3><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><pre id="project-files">Proje oluşturduğunda dosyalar burada görünecek.</pre></div>
+<div class="hero"><h2>Proje Çalışma Alanı</h2><p>NEYQORA'nın oluşturduğu projeyi dosya ağacı, kod ve doğrulama alanlarıyla yönet.</p></div>
+<div id="project-panel" class="panel"><h3 id="project-title">Henüz proje oluşturulmadı</h3><div class="project-actions"><button id="copy-project" class="primary" type="button">Kodu Kopyala</button><button id="send-project" class="secondary" type="button">GitHub'da Proje Görevi Oluştur</button></div><div class="project-workspace"><div class="project-tree" id="project-tree"><span style="color:var(--muted);font-size:12px">Proje dosyaları burada listelenir.</span></div><div class="project-code"><pre id="project-files">Proje oluşturduğunda dosyalar burada görünecek.</pre></div></div></div>
+</section>
+<section id="settings-view" class="view">
+<div class="hero"><h2>Ayarlar</h2><p>NEYQORA'nın çalışma şeklini ve cihaz deneyimini yönet.</p></div>
+<div class="settings-grid">
+<div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Otomatik modda bulut AI kullanılır; uygun yapılandırmada yerel AI yedeğine geçilebilir.</p></div>
+<div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafızayı Hafıza ekranından inceleyebilir ve güvenli biçimde temizleyebilirsin.</p></div>
+<div class="setting-card"><h3>📱 PWA / Mobil</h3><p>Mobil görünüm, güvenli alan ve klavye çakışmaları için optimize edildi.</p></div>
+<div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması güvenlik başlıklarını, oturumu ve temel API sözleşmelerini kontrol eder.</p></div>
+</div>
 </section>
 </main>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü"><button class="active" data-view="chat-view"><span>💬</span>Sohbet</button><button data-view="tools-view"><span>🧰</span>Araçlar</button><button data-view="project-view"><span>💻</span>Proje</button><button data-view="memory-view"><span>🧠</span>Hafıza</button></nav>
+<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><nav class="mobile-nav" aria-label="Mobil menü"><button class="active" data-view="chat-view" type="button"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button"><span>💻</span>Proje</button><button data-view="memory-view" type="button"><span>🧠</span>Hafıza</button></nav>
 </div>
 <script>
 if ("serviceWorker" in navigator) { window.addEventListener("load", () => navigator.serviceWorker.register("/sw.js").catch(() => {})); }
@@ -71,14 +107,17 @@ window.neyqoraSend=async function(){
   const message=(input?.value||"").trim();
   if(!message)return false;
   if(button)button.disabled=true;
+  setAIStatus("Düşünüyor…",true);
   const user=document.createElement("div");
   user.className="msg user";
   user.textContent=message;
   chat.appendChild(user);
+  user.dataset.raw=message;
   input.value="";
+  saveHistory();
   const pending=document.createElement("div");
-  pending.className="msg ai";
-  pending.textContent="NEYQORA düşünüyor...";
+  pending.className="msg ai"; pending.dataset.raw="NEYQORA düşünüyor…";
+  pending.textContent="NEYQORA düşünüyor…";
   chat.appendChild(pending);
   try{
     let userId="";
@@ -101,6 +140,10 @@ window.neyqoraSend=async function(){
     pending.textContent="Hata: "+(error?.message||"Bağlantı kurulamadı.");
   }finally{
     if(button)button.disabled=false;
+    setAIStatus("Hazır · Otomatik AI",false);
+    saveHistory();
+    setAIStatus("Hazır · Otomatik AI",false);
+    saveHistory();
   }
   return false;
 };
@@ -129,13 +172,26 @@ document.querySelector("#test-local-ai")?.addEventListener("click",async()=>{
 function openView(view){
   if(!view)return;
   document.querySelectorAll("[data-view]").forEach(b=>b.classList.toggle("active",b.dataset.view===view));
-  document.querySelectorAll(".view").forEach(v=>v.classList.remove("active"));
-  document.querySelector("#"+view)?.classList.add("active");
+  document.querySelectorAll(".view").forEach(v=>v.classList.toggle("active",v.id===view));
+  const form=document.querySelector("#form");
+  if(form)form.hidden=view!=="chat-view";
   window.scrollTo({top:0,behavior:"smooth"});
-  if(view==="chat-view")setTimeout(()=>document.querySelector("#input")?.focus(),120);
+  if(view==="chat-view" && window.matchMedia("(min-width:701px)").matches) setTimeout(()=>document.querySelector("#input")?.focus(),120);
 }
 document.querySelectorAll("[data-view]").forEach(button=>button.addEventListener("click",()=>openView(button.dataset.view)));
 document.querySelectorAll(".quick-card").forEach(card=>card.addEventListener("click",()=>openView(card.dataset.view)));
+
+const HISTORY_KEY="neyqora-chat-history-v1";
+function setAIStatus(text,busy=false){const el=document.querySelector("#ai-status");const label=document.querySelector("#ai-status-text");if(label)label.textContent=text;if(el)el.classList.toggle("busy",busy);}
+function saveHistory(){try{const messages=[...document.querySelectorAll("#chat .msg")].map(x=>({role:x.classList.contains("user")?"user":"ai",text:x.dataset.raw||x.textContent}));localStorage.setItem(HISTORY_KEY,JSON.stringify(messages.slice(-50)));}catch{}}
+function loadHistory(){try{const data=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");if(!Array.isArray(data)||!data.length)return;const chat=document.querySelector("#chat");if(!chat)return;chat.innerHTML="";data.forEach(m=>appendMessage(m.role,m.text,false));}catch{}}
+function appendMessage(role,text,save=true){const chat=document.querySelector("#chat");if(!chat)return;const el=document.createElement("div");el.className="msg "+(role==="user"?"user":"ai");el.dataset.raw=String(text);el.textContent=String(text);if(role!=="user"){const actions=document.createElement("div");actions.className="message-actions";actions.innerHTML='<button type="button" data-copy-message="1">Kopyala</button><button type="button" data-regenerate="1">Yeniden üret</button>';el.appendChild(actions);}chat.appendChild(el);chat.scrollIntoView({block:"end"});if(save)saveHistory();}
+function renderHistory(){const list=document.querySelector("#history-list");if(!list)return;try{const data=JSON.parse(localStorage.getItem(HISTORY_KEY)||"[]");list.innerHTML="";if(!data.length){list.innerHTML='<span style="color:var(--muted);font-size:12px">Henüz kayıtlı sohbet yok.</span>';return;}const preview=data.filter(x=>x.role==="user").slice(-8).reverse();preview.forEach((m,i)=>{const b=document.createElement("button");b.className="history-item";b.type="button";b.textContent=String(m.text).slice(0,80)||"Boş mesaj";b.addEventListener("click",()=>{document.querySelector("#input").value=m.text;openView("chat-view");document.querySelector("#input").focus();});list.appendChild(b);});}catch{}}
+document.querySelector("#new-chat")?.addEventListener("click",()=>{document.querySelector("#chat").innerHTML='<div class="msg ai" data-raw="Yeni sohbet hazır.">Yeni sohbet hazır.</div>';localStorage.removeItem(HISTORY_KEY);renderHistory();openView("chat-view");});
+document.querySelector("#toggle-history")?.addEventListener("click",()=>{const p=document.querySelector("#history-panel");if(p){p.hidden=!p.hidden;if(!p.hidden)renderHistory();}});
+document.addEventListener("click",async event=>{const copy=event.target.closest("[data-copy-message]");if(copy){const msg=copy.closest(".msg");try{await navigator.clipboard.writeText(msg?.dataset.raw||msg?.textContent||"");copy.textContent="Kopyalandı ✓";setTimeout(()=>copy.textContent="Kopyala",1200);}catch{}}const regen=event.target.closest("[data-regenerate]");if(regen){const msg=regen.closest(".msg");const raw=msg?.dataset.raw||"";if(raw){const input=document.querySelector("#input");if(input){input.value=raw;openView("chat-view");input.focus();}}}});
+loadHistory();
+openView("chat-view");
 document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("click",()=>{document.querySelectorAll(".panel").forEach(p=>p.hidden=true);const p=document.querySelector("#"+card.dataset.tool+"-panel");if(p)p.hidden=false;}));document.querySelector("#send-project").addEventListener("click",()=>{const title=document.querySelector("#project-title").textContent;const body="NEYQORA tarafından oluşturulan proje görevi.\n\n"+document.querySelector("#project-files").textContent;const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");window.open(url,"_blank");});
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
 async function loadMemories(){
@@ -157,6 +213,8 @@ async function loadMemories(){
     }
   }catch{list.textContent="Hafıza yüklenemedi.";}
 }
+document.querySelector("#memory-refresh")?.addEventListener("click",()=>loadMemories());
+document.querySelector("#memory-search")?.addEventListener("input",()=>filterMemories());
 document.querySelector("#clear-memories")?.addEventListener("click",async()=>{
   if(!confirm("Kayıtlı tüm hafıza silinsin mi?"))return;
   const button=document.querySelector("#clear-memories");
