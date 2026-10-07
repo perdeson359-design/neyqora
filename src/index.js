@@ -292,6 +292,21 @@ document.querySelectorAll(".tool-card").forEach(card=>card.addEventListener("cli
   }catch(error){label.textContent="CI kontrol edilemedi";detail.textContent=error?.message||"Geçici bağlantı hatası.";dot.className="project-ci-dot fail";ciState.textContent="Bilinmiyor";}
 }
 document.querySelector("#project-ci-refresh")?.addEventListener("click",refreshProjectCi);
+let projectCiTimer=null;
+function startProjectCiWatch(){
+  if(projectCiTimer)clearInterval(projectCiTimer);
+  const issue=Number(document.querySelector("#project-issue-number")?.value||0);
+  if(!Number.isInteger(issue)||issue<1)return;
+  refreshProjectCi();
+  projectCiTimer=setInterval(async()=>{
+    const state=document.querySelector("#project-ci-state")?.textContent||"";
+    if(state==="Başarılı"||state==="Başarısız"){clearInterval(projectCiTimer);projectCiTimer=null;return;}
+    await refreshProjectCi();
+  },15000);
+}
+document.querySelector("#project-issue-number")?.addEventListener("change",startProjectCiWatch);
+document.querySelector("#project-issue-number")?.addEventListener("keydown",event=>{if(event.key==="Enter"){event.preventDefault();startProjectCiWatch();}});
+
 let projectFiles=[];
 let projectSelectedIndex=-1;
 let projectOriginalContent="";
@@ -337,6 +352,7 @@ document.querySelector("#send-project").addEventListener("click",()=>{
   const url="https://github.com/perdeson359-design/neyqora/issues/new?title="+encodeURIComponent(title)+"&body="+encodeURIComponent(body)+"&labels="+encodeURIComponent("neyqora-project");
   window.open(url,"_blank");
   document.querySelector("#project-ci-detail").textContent="Issue oluşturduktan sonra numarasını girip CI'yı kontrol et.";
+  document.querySelector("#project-ci-state").textContent="Issue bekleniyor";
 });
 document.querySelector("#copy-project").addEventListener("click",async()=>{const text=document.querySelector("#project-files").textContent;if(!text)return;try{await navigator.clipboard.writeText(text);document.querySelector("#copy-project").textContent="Kopyalandı ✓";setTimeout(()=>document.querySelector("#copy-project").textContent="Kodu Kopyala",1500);}catch{document.querySelector("#copy-project").textContent="Kopyalanamadı";}});
 async function loadMemories(){
