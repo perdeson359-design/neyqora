@@ -263,8 +263,8 @@ function getLocalAIConfig(){
 window.neyqoraLocalChat=async function(message){
   const config=getLocalAIConfig();
   if(!config.url)throw new Error("Önce Yerel AI adresini kaydet.");
-  if(!/^https?:\\/\\//i.test(config.url))throw new Error("Yerel AI adresi http:// veya https:// ile başlamalı.");
-  const endpoint=/\\/chat\\/completions$/i.test(config.url)?config.url:config.url+"/chat/completions";
+  if(!/^https?:\/\//i.test(config.url))throw new Error("Yerel AI adresi http:// veya https:// ile başlamalı.");
+  const endpoint=/\/chat\/completions$/i.test(config.url)?config.url:config.url+"/chat/completions";
   const controller=new AbortController();
   const timer=setTimeout(()=>controller.abort(),30000);
   try{
