@@ -109,3 +109,36 @@ Self-host çalışma katmanı ve Docker hazırlığı repoya eklendi; **henüz s
 - `AUTOMATION_WEBHOOK_URL` ile harici eylem entegrasyonu
 - UI üzerinden takvim, e-posta ve otomasyon yönetimi
 - Owner yetkisiyle sınırsız yönetim
+## AI Provider Mimarisi
+
+NEYQORA tek bir AI arayüzü üzerinden üç çalışma modunu destekler:
+
+- **cloud**: Cloudflare Workers AI binding.
+- **local**: OpenAI-compatible yerel AI sunucusu.
+- **auto**: Önce bulut, hata olursa yerel provider'a fallback.
+
+Self-host için isteğe bağlı değişkenler:
+
+- `AI_PROVIDER_MODE=auto|cloud|local`
+- `LOCAL_AI_BASE_URL=http://127.0.0.1:11434/v1`
+- `LOCAL_AI_API_KEY=`
+- `LOCAL_AI_MODEL=...`
+- `LOCAL_AI_TIMEOUT_MS=30000`
+
+Tarayıcı tarafında PWA kabuğu `/manifest.webmanifest` ve `/sw.js` üzerinden kurulabilir. API çağrıları service-worker cache'ine alınmaz; çevrimdışı AI için yerel OpenAI-compatible endpoint kullanılmalıdır.
+
+### Mobil / Web / PC yolu
+
+```text
+Mobil PWA / Web / PC
+        ↓
+     /api/chat
+        ↓
+   Agent Router
+        ↓
+  Unified AI Provider
+     ↙        ↘
+ Cloud AI    Local AI
+```
+
+Aynı API sözleşmesi korunur; ileride native mobil istemci bu backend'e doğrudan bağlanabilir.
