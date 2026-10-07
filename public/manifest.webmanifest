@@ -1,0 +1,11 @@
+{
+  "name": "NEYQORA",
+  "short_name": "NEYQORA",
+  "description": "Bulut ve yerel yapay zekâ destekli kişisel asistan.",
+  "lang": "tr",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "orientation": "portrait-primary"
+}
