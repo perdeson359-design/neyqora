@@ -57,17 +57,17 @@ export function createAIProvider(env) {
 
     if (mode === "local") {
       if (!localBaseUrl) throw new Error("AI_PROVIDER_MODE=local fakat LOCAL_AI_BASE_URL yapılandırılmamış.");
-      return runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs });
+      return { ...(await runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs })), provider: "local", model: localModelName };
     }
 
     if (mode === "cloud") {
       if (!cloud?.run) throw new Error("Cloud AI binding (env.AI) yapılandırılmamış.");
-      return cloud.run(requestedModel, options);
+      return { ...(await cloud.run(requestedModel, options)), provider: "cloud", model: requestedModel };
     }
 
     if (cloud?.run) {
       try {
-        return await cloud.run(requestedModel, options);
+        return { ...(await cloud.run(requestedModel, options)), provider: "cloud", model: requestedModel };
       } catch (cloudError) {
         if (!localBaseUrl) throw cloudError;
         try {
@@ -93,6 +93,7 @@ export function createAIProvider(env) {
       cloud: cloudAvailable,
       local: localAvailable,
       fallback: mode === "auto" && cloudAvailable && localAvailable,
+      primary: mode === "local" ? (localAvailable ? "local" : "unavailable") : "cloud",
       localModel: localAvailable ? localModelNameOrDefault(localModel) : null
     };
   }
