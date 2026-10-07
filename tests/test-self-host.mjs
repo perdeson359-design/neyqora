@@ -53,7 +53,7 @@ async function request(path, options = {}) {
   if (options.cookie) headers.set("cookie", options.cookie);
   const body = options.body === undefined ? undefined : JSON.stringify(options.body);
   if (body !== undefined) headers.set("content-type", "application/json");
-  return worker.fetch(new Request("https://neyqora.test" + path, {
+  return worker.fetch(new Request("http://neyqora.test" + path, {
     method: options.method || "GET",
     headers,
     body
@@ -75,6 +75,7 @@ const registerBody = await register.json();
 assert.equal(registerBody.ok, true);
 assert.equal(registerBody.user.email, "auth-e2e@example.com");
 const sessionCookie = cookieFrom(register);
+assert.ok(!register.headers.get("set-cookie").includes("; Secure"), "Self-host HTTP cookie Secure olmamalı");
 
 const meAfterRegister = await request("/api/auth/me", { cookie: sessionCookie });
 assert.equal(meAfterRegister.status, 200);
