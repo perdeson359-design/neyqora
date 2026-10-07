@@ -1,7 +1,7 @@
 import { withAIProvider } from "./ai/provider.js";
 
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
-const VERSION = "6.1";
+const VERSION = "6.2";
 const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";
 const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";
 
