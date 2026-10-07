@@ -5,9 +5,9 @@ Capacitor 7 tabanlı Android/iOS uygulama kabuğu.
 - App ID: `com.neyqora.assistant`
 - Production URL: `https://neyqora.kosseofficial.workers.dev`
 - `NEYQORA_APP_URL` ile yalnızca HTTPS hedefi değiştirilebilir.
-- Native özellik köprüsü: titreşim, paylaşım, kamera, dosya sistemi, klavye, ağ durumu, yerel bildirim ve push bildirimleri.
+- Native özellik köprüsü: titreşim, paylaşım, kamera, dosya kaydetme, klavye, ağ durumu, yerel bildirim ve push bildirimleri.
 - `neyqora://open?view=chat-view` deep link'i uygulamayı ilgili görünüme yönlendirebilir.
-- Android CI: debug APK + imzasız release AAB üretir.
+- Android CI: debug APK + imzasız release AAB üretir; store signing için gerçek Android keystore gereklidir.
 - iOS CI: imzasız Simulator `.app` paketi üretir.
 - CI, production `/api/health` endpoint'ini, Capacitor yapılandırmasını, native plugin sözleşmesini ve deep-link yapılandırmasını doğrular.
 
@@ -21,9 +21,9 @@ Uygulama açıldığında web köprüsü native Push Notifications API'sini kull
 
 ## Signed store release
 
-`.github/workflows/mobile-release.yml` manuel bir mağaza release pipeline'ıdır. Varsayılan çalıştırmada Android/iOS yayınlamaz; yalnızca açıkça seçilen hedefi işler.
+Mağaza signing için gerekli sertifika ve hesaplar repo dışındaki GitHub secrets / platform hesaplarında tutulmalıdır. Mevcut CI imzasız paketleri doğrular; gerçek mağaza yükleme credentials olmadan otomatik olarak sahte signed release üretmez.
 
-GitHub'da `mobile-release` Environment oluşturulmalı ve şu secret'lar eklenmelidir:
+Gerekli secret örnekleri:
 
 ### Android
 
