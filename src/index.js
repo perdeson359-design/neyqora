@@ -256,7 +256,7 @@ function getLocalAIConfig(){
   }catch{}
   if(!url)url=document.querySelector("#local-ai-url")?.value?.trim()||"";
   if(!model)model=document.querySelector("#local-ai-model")?.value?.trim()||"llama3.2";
-  url=String(url).trim().replace(/\\/$/,"");
+  url=String(url).trim().replace(/\/$/,"");
   model=String(model).trim()||"llama3.2";
   return {url,model};
 }
