@@ -19,6 +19,7 @@ assert.match(server, /worker\.fetch\(webRequest, env\)/);
 assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
 
 const sqlite = new Database(":memory:");
+sqlite.exec("CREATE TABLE memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 const DB = {
   prepare(sql) {
     const statement = sqlite.prepare(sql);
