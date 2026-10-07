@@ -8,8 +8,7 @@
     "android": "cap run android",
     "ios": "cap run ios",
     "build": "cap sync",
-    "icons": "capacitor-assets generate",
-    "verify": "node scripts/verify-mobile.mjs"
+    "icons": "capacitor-assets generate"
   },
   "dependencies": {
     "@capacitor/core": "^7.4.3",
