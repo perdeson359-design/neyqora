@@ -71,7 +71,7 @@ export function createAIProvider(env) {
       } catch (cloudError) {
         if (!localBaseUrl) throw cloudError;
         try {
-          return await runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs });
+          return { ...(await runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs })), provider: "local", model: localModelName, fallbackFrom: "cloud" };
         } catch (localError) {
           throw new Error("Cloud AI başarısız: " + (cloudError?.message || "bilinmeyen hata") + " | Local AI fallback başarısız: " + (localError?.message || "bilinmeyen hata"));
         }
@@ -79,7 +79,7 @@ export function createAIProvider(env) {
     }
 
     if (localBaseUrl) {
-      return runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs });
+      return { ...(await runOpenAICompatible(localBaseUrl, localApiKey, localModelName, { ...options, timeoutMs })), provider: "local", model: localModelName };
     }
 
     throw new Error("Hiçbir AI provider yapılandırılmamış.");
