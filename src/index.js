@@ -156,7 +156,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 
 <section id="settings-view" class="view">
 <div class="hero"><h2>Ayarlar</h2><p>NEYQORA'nın çalışma şeklini ve cihaz deneyimini yönet.</p></div>
-<div class="settings-grid"><div class="setting-card"><h3>👤 Hesap</h3><p>Profilini, şifreni ve hesabını yönet.</p><div class="actions"><button id="settings-profile" class="secondary" type="button">Profil / Hesap</button></div></div><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Native uygulamada titreşim, paylaşım, kamera, dosya kaydetme ve bildirim izinleri desteklenir.</p><div class="actions"><button id="install-app" class="secondary" type="button" hidden>Uygulamayı yükle</button><button id="mobile-share" class="secondary" type="button">Paylaş</button><button id="mobile-camera" class="secondary" type="button">Kamera</button><button id="mobile-notifications" class="secondary" type="button">Bildirimleri aç</button><button id="mobile-haptic" class="secondary" type="button">Titreşim testi</button></div><div id="mobile-status" class="result" hidden></div></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
+<div class="settings-grid"><div class="setting-card"><h3>👤 Hesap</h3><p>Profilini, şifreni ve hesabını yönet.</p><div class="actions"><button id="settings-profile" class="secondary" type="button">Profil / Hesap</button></div></div><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Native uygulamada titreşim, paylaşım, kamera, sohbet kaydetme ve yerel bildirim desteği bulunur.</p><div class="actions"><button id="install-app" class="secondary" type="button" hidden>Uygulamayı yükle</button><button id="mobile-share" class="secondary" type="button">Paylaş</button><button id="mobile-camera" class="secondary" type="button">Kamera</button><button id="mobile-save" class="secondary" type="button">Sohbeti kaydet</button><button id="mobile-notifications" class="secondary" type="button">Bildirimleri aç</button><button id="mobile-reminder" class="secondary" type="button">1 dk hatırlat</button><button id="mobile-haptic" class="secondary" type="button">Titreşim testi</button></div><div id="mobile-status" class="result" hidden></div></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
 </section>
 </main>
 <div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><div class="auth-overlay" id="auth-overlay" aria-hidden="true"><div class="auth-card"><button class="auth-close" id="auth-close" type="button">×</button><div class="hero-mark" style="margin-bottom:12px">N</div><h2 id="auth-title">NEYQORA’ya giriş yap</h2><p id="auth-subtitle">Hesabınla giriş yap veya yeni hesap oluştur.</p><div class="auth-tabs"><button class="auth-tab active" id="login-tab" type="button">Giriş Yap</button><button class="auth-tab" id="register-tab" type="button">Kayıt Ol</button></div><div class="auth-forgot"><button id="forgot-password" type="button">Şifremi unuttum</button></div><form id="auth-form"><input id="auth-name" class="field" placeholder="Adın" autocomplete="name" hidden><input id="auth-email" class="field" type="email" placeholder="E-posta" autocomplete="email" required><input id="auth-password" class="field" type="password" placeholder="Şifre" autocomplete="current-password" minlength="8" required><div class="auth-actions"><button class="primary" id="auth-submit" type="submit">Giriş Yap</button></div><div class="auth-error" id="auth-error"></div></form><p class="auth-note">Hafızan ve çalışma verilerin hesabına bağlanır.</p><div id="reset-token-wrap" hidden><input id="reset-token" class="field" placeholder="Sıfırlama kodu" autocomplete="one-time-code"></div></div></div><div class="profile-menu" id="profile-menu"><strong id="profile-name">Misafir</strong><span id="profile-email">Oturum açılmadı</span><button class="secondary" id="profile-button" type="button">Profil / Hesap</button><button class="danger" id="delete-account-button" type="button">Hesabı sil</button><button class="secondary" id="logout-button" type="button">Çıkış yap</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')"><span>💻</span>Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')"><span>🧠</span>Hafıza</button><button data-view="settings-view" type="button" onclick="return window.neyqoraNavigate('settings-view')"><span>⚙️</span>Ayarlar</button></nav>
@@ -222,6 +222,23 @@ window.addEventListener("appinstalled",()=>{
       input.click();
     }catch(e){setMobileStatus("Kamera kullanılamadı: "+(e?.message||"izin verilmedi."),false);}
   }
+  async function saveChat(){
+    const p=nativePlugins().Filesystem;
+    const messages=[...document.querySelectorAll("#chat .msg")].map(node=>node.textContent.trim()).filter(Boolean);
+    if(!messages.length){setMobileStatus("Kaydedilecek sohbet yok.",false);return;}
+    const content="NEYQORA sohbeti\\n\\n"+messages.map((text,index)=>((index%2===0?"Kullanıcı":"NEYQORA")+": "+text)).join("\\n\\n");
+    try{
+      if(p?.writeFile){
+        await p.writeFile({path:"neyqora-sohbet.txt",data:content,directory:"DOCUMENTS",encoding:"utf8"});
+        setMobileStatus("Sohbet dosyaya kaydedildi.");
+        return;
+      }
+      const blob=new Blob([content],{type:"text/plain;charset=utf-8"});
+      const url=URL.createObjectURL(blob);
+      const a=document.createElement("a");a.href=url;a.download="neyqora-sohbet.txt";a.click();URL.revokeObjectURL(url);
+      setMobileStatus("Sohbet indirildi.");
+    }catch(e){setMobileStatus("Sohbet kaydedilemedi: "+(e?.message||"bilinmeyen hata"),false);}
+  }
   async function notifications(){
     const p=nativePlugins().PushNotifications;
     try{
@@ -229,7 +246,7 @@ window.addEventListener("appinstalled",()=>{
         const perm=await p.requestPermissions();
         if(perm.receive!=="granted"){setMobileStatus("Bildirim izni verilmedi.",false);return;}
         await p.register();
-        setMobileStatus("Bildirim kaydı başlatıldı.");
+        setMobileStatus("Push bildirim kaydı başlatıldı.");
         return;
       }
       if("Notification" in window){
@@ -240,11 +257,23 @@ window.addEventListener("appinstalled",()=>{
       setMobileStatus("Bu cihaz bildirimleri desteklemiyor.",false);
     }catch(e){setMobileStatus("Bildirim kurulamadı: "+(e?.message||"bilinmeyen hata"),false);}
   }
-  window.neyqoraMobile={haptic,share,camera,notifications};
+  async function reminder(){
+    const p=nativePlugins().LocalNotifications;
+    try{
+      if(!p?.requestPermissions||!p?.schedule){setMobileStatus("Yerel bildirimler bu ortamda desteklenmiyor.",false);return;}
+      const perm=await p.requestPermissions();
+      if(perm.display!=="granted"){setMobileStatus("Yerel bildirim izni verilmedi.",false);return;}
+      await p.schedule({notifications:[{id:Math.floor(Date.now()%2147483647),title:"NEYQORA",body:"1 dakikalık hatırlatman hazır.",schedule:{at:new Date(Date.now()+60000)}}]});
+      setMobileStatus("1 dakika sonrası için hatırlatma kuruldu.");
+    }catch(e){setMobileStatus("Hatırlatma kurulamadı: "+(e?.message||"bilinmeyen hata"),false);}
+  }
+  window.neyqoraMobile={haptic,share,camera,saveChat,notifications,reminder};
   document.getElementById("mobile-haptic")?.addEventListener("click",haptic);
   document.getElementById("mobile-share")?.addEventListener("click",share);
   document.getElementById("mobile-camera")?.addEventListener("click",camera);
+  document.getElementById("mobile-save")?.addEventListener("click",saveChat);
   document.getElementById("mobile-notifications")?.addEventListener("click",notifications);
+  document.getElementById("mobile-reminder")?.addEventListener("click",reminder);
   const p=nativePlugins();
   if(p.App?.addListener){
     p.App.addListener("appUrlOpen",event=>{
@@ -1656,7 +1685,7 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/sw.js") {
-      return new Response(`const CACHE="neyqora-shell-v1";const SHELL=["/","/manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
+      return new Response(`const CACHE="neyqora-shell-v2";const SHELL=["/","/manifest.webmanifest"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
     }
 
     if (request.method === "GET" && url.pathname === "/") {
