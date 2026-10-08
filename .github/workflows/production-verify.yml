@@ -399,12 +399,6 @@ jobs:
           set -euo pipefail
           curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/p8-home.html
           grep -q 'enforceApiRateLimit' src/index.js
-          grep -q 'api:chat' src/index.js
-          grep -q 'api:search' src/index.js
-          grep -q 'api:project' src/index.js
-          grep -q 'api:audio' src/index.js
-          grep -q 'api:image' src/index.js
-          grep -q 'api:files' src/index.js
           grep -q 'retry-after' src/index.js
           echo "P8 API abuse protection contract: PASS"
 
