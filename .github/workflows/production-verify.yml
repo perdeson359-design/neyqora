@@ -9,7 +9,7 @@ on:
   workflow_dispatch:
 
 concurrency:
-  group: neyqora-production-verification
+  group: neyqora-production-verification-v2
   cancel-in-progress: false
 
 jobs:
