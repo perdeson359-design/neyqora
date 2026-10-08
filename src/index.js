@@ -1703,8 +1703,12 @@ export default {
         "x-content-type-options": "nosniff",
         "x-frame-options": "DENY",
         "referrer-policy": "no-referrer",
-        "permissions-policy": "camera=(), microphone=(), geolocation=()"
+        "permissions-policy": "camera=(), microphone=(), geolocation=()",
+        "cross-origin-opener-policy": "same-origin",
+        "cross-origin-resource-policy": "same-origin",
+        "x-permitted-cross-domain-policies": "none"
       });
+      if (url.protocol === "https:") headers.set("strict-transport-security", "max-age=31536000; includeSubDomains");
       await ensureAuthTables(env);
       const currentUserId = await getAuthenticatedUserId(request, env);
       if (!currentUserId) {
