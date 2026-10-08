@@ -1862,7 +1862,24 @@ export default {
       const rows=await env.DB.prepare("SELECT id,email,name,role,created_at,last_login_at FROM users ORDER BY created_at DESC LIMIT 100").all();
       return Response.json({ok:true,users:(rows.results||[]).map(x=>({id:x.id,email:x.email,name:x.name,role:x.role||"user",createdAt:x.created_at,lastLoginAt:x.last_login_at}))});
     }
-    if (request.method === "POST" && url.pathname === "/api/owner/claim-account") {\n      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});\n      const user=await getAccountUser(request,env);\n      if(!user)return Response.json({ok:false,error:"Aynı tarayıcıda kullanıcı hesabıyla da giriş yapmalısın."},{status:401});\n      await ensureAuthTables(env);\n      await env.DB.prepare("UPDATE users SET role='owner' WHERE id=?").bind(user.id).run();\n      return Response.json({ok:true,user:{id:user.id,email:user.email,name:user.name,role:"owner"}});\n    }\n    if (request.method === "POST" && url.pathname === "/api/owner/users/role") {\n      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});\n      await ensureAuthTables(env);\n      const body=await request.json(),email=normalizeEmail(body?.email),role=String(body?.role||"user")==="owner"?"owner":"user";\n      if(!email)return Response.json({ok:false,error:"E-posta gerekli."},{status:400});\n      const result=await env.DB.prepare("UPDATE users SET role=? WHERE email=?").bind(role,email).run();\n      if(!result.meta?.changes)return Response.json({ok:false,error:"Bu e-posta ile kullanıcı bulunamadı."},{status:404});\n      return Response.json({ok:true,email,role});\n    }\n
+    if (request.method === "POST" && url.pathname === "/api/owner/claim-account") {
+      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});
+      const user=await getAccountUser(request,env);
+      if(!user)return Response.json({ok:false,error:"Aynı tarayıcıda kullanıcı hesabıyla da giriş yapmalısın."},{status:401});
+      await ensureAuthTables(env);
+      await env.DB.prepare("UPDATE users SET role='owner' WHERE id=?").bind(user.id).run();
+      return Response.json({ok:true,user:{id:user.id,email:user.email,name:user.name,role:"owner"}});
+    }
+    if (request.method === "POST" && url.pathname === "/api/owner/users/role") {
+      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});
+      await ensureAuthTables(env);
+      const body=await request.json(),email=normalizeEmail(body?.email),role=String(body?.role||"user")==="owner"?"owner":"user";
+      if(!email)return Response.json({ok:false,error:"E-posta gerekli."},{status:400});
+      const result=await env.DB.prepare("UPDATE users SET role=? WHERE email=?").bind(role,email).run();
+      if(!result.meta?.changes)return Response.json({ok:false,error:"Bu e-posta ile kullanıcı bulunamadı."},{status:404});
+      return Response.json({ok:true,email,role});
+    }
+
     if (request.method === "GET" && url.pathname === "/api/calendar/events") {
       const isOwner=await verifyOwnerSession(request,env); const uid=isOwner?"owner":await getAuthenticatedUserId(request,env); if(!uid)return Response.json({ok:false,error:"Kullanıcı oturumu gerekli."},{status:400}); await ensureProductivityTables(env);
       const rows=await env.DB.prepare("SELECT id,title,start_at,end_at,description,location,created_at FROM calendar_events WHERE user_id=? ORDER BY start_at ASC LIMIT 100").bind(uid).all();
