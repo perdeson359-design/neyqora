@@ -792,6 +792,11 @@ async function enforceAuthRateLimit(env,request,scope,limit,windowSeconds){
   await env.DB.prepare("UPDATE auth_rate_limits SET count=count+1 WHERE id=?").bind(key).run();
   return {allowed:true,remaining:Math.max(0,limit-count-1)};
 }
+async function enforceApiRateLimit(env,request,scope,limit,windowSeconds){
+  const result=await enforceAuthRateLimit(env,request,"api:"+scope,limit,windowSeconds);
+  if(result.allowed)return null;
+  return Response.json({ok:false,error:"Çok fazla istek. Lütfen daha sonra tekrar dene.",retryAfter:result.retryAfter},{status:429,headers:{"retry-after":String(result.retryAfter)}});
+}
 function normalizeEmail(v){return String(v||"").trim().toLowerCase().slice(0,320)}
 function normalizeName(v){return String(v||"").trim().replace(/\s+/g," ").slice(0,100)}
 async function hashPassword(password,salt){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations:100000,hash:"SHA-256"},key,256);return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,"0")).join("")}
@@ -1999,6 +2004,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/audio/transcribe") {
+        const limited = await enforceApiRateLimit(env, request, "audio", 20, 3600); if (limited) return limited;
+
       try {
         const isOwner = await verifyOwnerSession(request, env);
         const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
@@ -2023,6 +2030,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/image/analyze") {
+        const limited = await enforceApiRateLimit(env, request, "image", 20, 3600); if (limited) return limited;
+
       try {
         const isOwner = await verifyOwnerSession(request, env);
         const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
@@ -2061,6 +2070,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/files/analyze") {
+        const limited = await enforceApiRateLimit(env, request, "files", 20, 3600); if (limited) return limited;
+
       try {
         const isOwner = await verifyOwnerSession(request, env);
         const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
@@ -2182,6 +2193,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/project") {
+        const limited = await enforceApiRateLimit(env, request, "project", 12, 3600); if (limited) return limited;
+
       try {
         const isOwner = await verifyOwnerSession(request, env);
         const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
@@ -2219,6 +2232,8 @@ export default {
     }
 
     if (request.method === "GET" && url.pathname === "/api/search") {
+      const limited = await enforceApiRateLimit(env, request, "search", 30, 60); if (limited) return limited;
+
       const q = (url.searchParams.get("q") || "").trim();
       const isOwner = await verifyOwnerSession(request, env);
       const authenticatedUserId = isOwner ? "owner" : await getAuthenticatedUserId(request, env);
@@ -2234,6 +2249,8 @@ export default {
     }
 
     if (request.method === "POST" && url.pathname === "/api/chat") {
+        const limited = await enforceApiRateLimit(env, request, "chat", 60, 60); if (limited) return limited;
+
       try {
         const isOwner = await verifyOwnerSession(request, env);
         const contentLength = Number(request.headers.get("content-length") || "0");
