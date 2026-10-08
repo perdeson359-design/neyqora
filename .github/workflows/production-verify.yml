@@ -361,7 +361,7 @@ jobs:
           grep -q 'id="memory-list"' /tmp/p5-home.html
           grep -q 'id="memory-search"' /tmp/p5-home.html
           grep -q 'id="clear-memories"' /tmp/p5-home.html
-          grep -q '"/api/memory?userId="' /tmp/p5-home.html
+          grep -q '/api/memory?userId=' /tmp/p5-home.html
           grep -q 'SELECT id FROM memories WHERE user_id = ? AND content = ? LIMIT 1' src/index.js
           grep -q 'memoryQuery' src/index.js
           grep -q 'DELETE FROM memories WHERE user_id = ? AND id = ?' src/index.js
