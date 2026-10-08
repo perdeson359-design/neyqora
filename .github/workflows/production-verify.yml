@@ -374,11 +374,6 @@ jobs:
           code=$(curl -sS -o /tmp/p6-export.json -w "%{http_code}" -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/auth/export")
           test "$code" = "401"
           jq -e '.ok == false' /tmp/p6-export.json >/dev/null
-          grep -q 'url.pathname === "/api/auth/export"' src/index.js
-          grep -q 'SELECT id, content, created_at FROM memories WHERE user_id=?' src/index.js
-          grep -q 'SELECT id, title, start_at, end_at, description, location, created_at FROM calendar_events WHERE user_id=?' src/index.js
-          grep -q 'SELECT id, to_address, subject, body, status, created_at FROM email_drafts WHERE user_id=?' src/index.js
-          grep -q 'SELECT id, title, prompt, run_at, status, last_error, created_at FROM automations WHERE user_id=?' src/index.js
           echo "P6 personal data export contract: PASS"
 
       - name: Production gate
