@@ -270,6 +270,21 @@ jobs:
           jq -e '.ok == false and .user == null' /tmp/auth-final-me.json >/dev/null
           echo "Production authentication contract: PASS"
 
+      - name: Verify owner panel boundary
+        shell: bash
+        run: |
+          set -euo pipefail
+          code=$(curl -sS -o /tmp/owner-page.html -w "%{http_code}" -A "NEYQORA-Production-Verify" "$NEYQORA_URL/owner")
+          test "$code" = "200"
+          grep -q "NEYQORA Owner Panel" /tmp/owner-page.html
+          code=$(curl -sS -o /tmp/owner-overview.json -w "%{http_code}" -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/owner/overview")
+          test "$code" = "401"
+          jq -e '.ok == false' /tmp/owner-overview.json >/dev/null
+          code=$(curl -sS -o /tmp/owner-users.json -w "%{http_code}" -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/owner/users")
+          test "$code" = "401"
+          jq -e '.ok == false' /tmp/owner-users.json >/dev/null
+          echo "Owner panel boundary: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
