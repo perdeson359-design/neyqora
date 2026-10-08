@@ -226,6 +226,39 @@ jobs:
           jq -e '.ok == true and .email.status == "sent" and (.email.id | type == "string") and (.email.id | length > 0)' /tmp/resend-email.json >/dev/null
           echo "Resend email contract: PASS"
 
+      - name: Verify production authentication contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          auth_email="neyqora-production-$(date +%s%N)@example.com"
+          auth_password="Aa1-$(date +%s%N)"
+          cat > /tmp/auth-register.json <<JSON
+          {"name":"NEYQORA Test","email":"$auth_email","password":"$auth_password"}
+          JSON
+          code=$(curl -sS -o /tmp/auth-register-response.json -w "%{http_code}" -c /tmp/auth.cookies -b /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/auth-register.json "$NEYQORA_URL/api/auth/register")
+          test "$code" = "201"
+          jq -e '.ok == true and (.user.id | type == "string") and .user.email == $email' --arg email "$auth_email" /tmp/auth-register-response.json >/dev/null
+          code=$(curl -sS -o /tmp/auth-me.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/auth/me")
+          test "$code" = "200"
+          jq -e '.ok == true and .user.email == $email' --arg email "$auth_email" /tmp/auth-me.json >/dev/null
+          code=$(curl -sS -o /tmp/auth-duplicate.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/auth-register.json "$NEYQORA_URL/api/auth/register")
+          test "$code" = "409"
+          code=$(curl -sS -o /tmp/auth-logout.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" -X POST "$NEYQORA_URL/api/auth/logout")
+          test "$code" = "200"
+          jq -e '.ok == true' /tmp/auth-logout.json >/dev/null
+          code=$(curl -sS -o /tmp/auth-login.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/auth-register.json "$NEYQORA_URL/api/auth/login")
+          test "$code" = "200"
+          jq -e '.ok == true and .user.email == $email' --arg email "$auth_email" /tmp/auth-login.json >/dev/null
+          code=$(curl -sS -o /tmp/auth-bad-login.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary "{\"email\":\"$auth_email\",\"password\":\"wrong\"}" "$NEYQORA_URL/api/auth/login")
+          test "$code" = "401"
+          code=$(curl -sS -o /tmp/auth-delete.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -X DELETE "$NEYQORA_URL/api/auth/account")
+          test "$code" = "200"
+          jq -e '.ok == true' /tmp/auth-delete.json >/dev/null
+          code=$(curl -sS -o /tmp/auth-final-me.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/auth/me")
+          test "$code" = "200"
+          jq -e '.ok == false and .user == null' /tmp/auth-final-me.json >/dev/null
+          echo "Production authentication contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
