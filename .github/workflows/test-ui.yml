@@ -38,25 +38,57 @@ jobs:
           done
           python - <<'PY'
           from pathlib import Path
-          import re
           source=Path("src/index.js").read_text(encoding="utf-8")
-          assert 'id="account-button"' in source
-          assert 'window.neyqoraAccount=function' in source
-          assert 'document.getElementById("account-button")?.addEventListener("click"' in source
-          assert source.count('id="account-button"') == 1
-          assert 'authPassword.required=!(forgot||profile)' in source
-          assert 'authPassword.hidden=forgot||profile' in source
-          assert 'authName.required=register||profile' in source
-          assert 'window.neyqoraLocalChat=async function' in source
-          assert 'localStorage.getItem("neyqora_local_ai_url")' in source
-          assert 'localStorage.getItem("neyqora_local_ai_model")' in source
-          assert source.count('accountButton?.addEventListener("click"') == 0
-          assert 'onpointerup=' not in source
-          assert 'auth-overlay' in source and '.auth-overlay.open{display:flex}' in source
-          assert 'register-tab' in source and '/?auth=register' in source
-          assert 'const authFromUrl=new URLSearchParams(location.search).get("auth")' in source
-          assert 'if(authFromUrl==="register"||authFromUrl==="login")' in source
-          assert 'max-height:calc(100dvh - 40px)' in source
-          assert 'overflow:auto;-webkit-overflow-scrolling:touch' in source
+          required=[
+            'id="account-button"',
+            'window.neyqoraAccount=function',
+            'authPassword.required=!(forgot||profile)',
+            'authPassword.hidden=forgot||profile',
+            'authName.required=register||profile',
+            'window.neyqoraLocalChat=async function',
+            'localStorage.getItem("neyqora_local_ai_url")',
+            'localStorage.getItem("neyqora_local_ai_model")',
+            'auth-overlay',
+            '.auth-overlay.open{display:flex}',
+            'register-tab',
+            '/?auth=register',
+            'const authFromUrl=new URLSearchParams(location.search).get("auth")',
+            'if(authFromUrl==="register"||authFromUrl==="login")',
+            'max-height:calc(100dvh - 40px)',
+            'overflow:auto;-webkit-overflow-scrolling:touch'
+          ]
+          missing=[item for item in required if item not in source]
+          if missing:
+              raise SystemExit("Missing UI contract(s): "+", ".join(missing))
+          if source.count('id="account-button"') != 1:
+              raise SystemExit("account-button must exist exactly once")
+          if 'accountButton?.addEventListener("click"' in source:
+              raise SystemExit("legacy accountButton listener must not exist")
+          if 'onpointerup=' in source:
+              raise SystemExit("inline pointerup handlers are forbidden")
           print("NEYQORA auth/mobile/local-AI UI contract: PASS")
+          PY
+      - name: Verify P3 native mobile contract
+        run: |
+          python - <<'PY'
+          from pathlib import Path
+          source=Path("src/index.js").read_text(encoding="utf-8")
+          required=[
+            'id="mobile-share"',
+            'id="mobile-camera"',
+            'id="mobile-save"',
+            'id="mobile-notifications"',
+            'id="mobile-reminder"',
+            'window.neyqoraMobile={haptic,share,camera,saveChat,notifications,reminder}',
+            'async function saveChat()',
+            'async function reminder()',
+            'nativePlugins().Filesystem',
+            'nativePlugins().LocalNotifications',
+            'neyqora-sohbet.txt',
+            '1 dakikalık hatırlatman hazır.'
+          ]
+          missing=[item for item in required if item not in source]
+          if missing:
+              raise SystemExit("Missing P3 native mobile contract(s): "+", ".join(missing))
+          print("NEYQORA P3 native mobile contract: PASS")
           PY
