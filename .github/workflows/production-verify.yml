@@ -376,6 +376,22 @@ jobs:
           jq -e '.ok == false' /tmp/p6-export.json >/dev/null
           echo "P6 personal data export contract: PASS"
 
+
+      - name: Verify P7 offline PWA contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/p7-home.html
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/sw.js" -o /tmp/p7-sw.js
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/manifest.webmanifest" -o /tmp/p7-manifest.json
+          grep -q 'id="network-status"' /tmp/p7-home.html
+          grep -q 'function updateNetworkStatus' /tmp/p7-home.html
+          grep -q 'addEventListener("offline",updateNetworkStatus)' /tmp/p7-home.html
+          grep -q 'NEYQORA' /tmp/p7-manifest.json
+          grep -q 'neyqora-shell-v5' /tmp/p7-sw.js
+          grep -q 'self.addEventListener("fetch"' /tmp/p7-sw.js
+          echo "P7 offline PWA contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
