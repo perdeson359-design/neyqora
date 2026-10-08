@@ -63,6 +63,10 @@ jobs:
           grep -qi '^x-frame-options: DENY' /tmp/headers.txt
           grep -qi '^referrer-policy: no-referrer' /tmp/headers.txt
           grep -qi '^permissions-policy:' /tmp/headers.txt
+          grep -qi '^cross-origin-opener-policy: same-origin' /tmp/headers.txt
+          grep -qi '^cross-origin-resource-policy: same-origin' /tmp/headers.txt
+          grep -qi '^x-permitted-cross-domain-policies: none' /tmp/headers.txt
+          grep -qi '^strict-transport-security:' /tmp/headers.txt
           echo "Security headers: PASS"
 
       - name: Verify agent routing and project tool
