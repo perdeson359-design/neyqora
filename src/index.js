@@ -1946,6 +1946,7 @@ export default {
         ok: true,
         name: "NEYQORA",
         version: VERSION,
+        commit: String(env.DEPLOY_COMMIT || ""),
         model: MODEL,
         memory: !!env.DB,
         router: true,
