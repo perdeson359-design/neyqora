@@ -9,6 +9,26 @@ async function fetchWithTimeout(url, options, timeoutMs = DEFAULT_TIMEOUT_MS) {
   return fetch(url, { ...options, signal });
 }
 
+function isTransientAIError(error) {
+  const message = String(error?.message || error || "").toLowerCase();
+  return /\b(429|500|502|503|504)\b/.test(message) || message.includes("timeout") || message.includes("timed out") || message.includes("abort");
+}
+
+async function runWithRetry(operation, options = {}) {
+  const retries = Math.max(0, Math.min(1, Number(options.retries ?? 1)));
+  let lastError;
+  for (let attempt = 0; attempt <= retries; attempt += 1) {
+    try {
+      return await operation();
+    } catch (error) {
+      lastError = error;
+      if (attempt >= retries || !isTransientAIError(error)) throw error;
+      await new Promise(resolve => setTimeout(resolve, 500 * (attempt + 1)));
+    }
+  }
+  throw lastError || new Error("AI provider failed.");
+}
+
 async function runOpenAICompatible(baseUrl, apiKey, model, options = {}) {
   const response = await fetchWithTimeout(baseUrl + "/chat/completions", {
     method: "POST",
@@ -62,7 +82,7 @@ export function createAIProvider(env) {
 
     if (mode === "cloud") {
       if (!cloud?.run) throw new Error("Cloud AI binding (env.AI) yapılandırılmamış.");
-      return { ...(await cloud.run(requestedModel, options)), provider: "cloud", model: requestedModel };
+      return { ...(await runWithRetry(() => cloud.run(requestedModel, options), { retries: 1 })), provider: "cloud", model: requestedModel };
     }
 
     if (cloud?.run) {
