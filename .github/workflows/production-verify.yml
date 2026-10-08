@@ -270,6 +270,27 @@ jobs:
           jq -e '.ok == false and .user == null' /tmp/auth-final-me.json >/dev/null
           echo "Production authentication contract: PASS"
 
+      - name: Verify Owner authenticated role contract
+        shell: bash
+        env:
+          OWNER_AUTH_TOKEN: ${{ secrets.OWNER_AUTH_TOKEN }}
+        run: |
+          set -euo pipefail
+          if [ -z "${OWNER_AUTH_TOKEN:-}" ]; then echo "OWNER_AUTH_TOKEN secret unavailable; authenticated Owner E2E skipped."; exit 0; fi
+          email="neyqora-owner-e2e-$(date +%s%N)@example.com"
+          password="Aa1-$(date +%s%N)"
+          printf '{"name":"Owner E2E","email":"%s","password":"%s"}' "$email" "$password" > /tmp/owner-register.json
+          code=$(curl -sS -o /tmp/owner-register-response.json -w "%{http_code}" -c /tmp/owner.cookies -b /tmp/owner.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/owner-register.json "$NEYQORA_URL/api/auth/register")
+          test "$code" = "201"
+          jq -e '.ok == true and .user.role == "user"' /tmp/owner-register-response.json >/dev/null
+          printf '{"token":"%s"}' "$OWNER_AUTH_TOKEN" > /tmp/owner-token.json
+          code=$(curl -sS -o /tmp/owner-login-response.json -w "%{http_code}" -c /tmp/owner.cookies -b /tmp/owner.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/owner-token.json "$NEYQORA_URL/api/auth/owner")
+          test "$code" = "200"
+          jq -e '.ok == true and .role == "owner" and .unlimited == true' /tmp/owner-login-response.json >/dev/null
+          code=$(curl -sS -o /tmp/owner-promote.json -w "%{http_code}" -b /tmp/owner.cookies -c /tmp/owner.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @<(printf '{"email":"%s","role":"owner"}' "$email") "$NEYQORA_URL/api/owner/users/role")
+          test "$code" = "200"
+          jq -e '.ok == true and .role == "owner"' /tmp/owner-promote.json >/dev/null
+          echo "Owner authenticated role contract: PASS"
       - name: Verify owner panel boundary
         shell: bash
         run: |
