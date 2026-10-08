@@ -28,7 +28,6 @@ jobs:
           echo "Deploy Production did not succeed; verification is not applicable."
           exit 0
 
-    steps:
       - name: Verification target
         run: |
           echo "Git commit under verification: $EXPECTED_COMMIT"
