@@ -335,6 +335,26 @@ jobs:
           jq -e '.ok == false' /tmp/owner-users.json >/dev/null
           echo "Owner panel boundary: PASS"
 
+
+      - name: Verify P4 media analysis contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/p4-home.html
+          for token in 'id="audio-input"' 'id="image-input"' 'id="analyze-files"' '/api/audio/transcribe' '/api/image/analyze' '/api/files/analyze'; do
+            grep -q "$token" /tmp/p4-home.html || { echo "Missing P4 UI contract: $token"; exit 1; }
+          done
+          for endpoint in /api/audio/transcribe /api/image/analyze /api/files/analyze; do
+            code=$(curl -sS -o /tmp/p4-response.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -X POST "$NEYQORA_URL$endpoint")
+            test "$code" = "401"
+            jq -e '.ok == false' /tmp/p4-response.json >/dev/null
+          done
+          echo "P4 media analysis authentication boundary: PASS"
+          grep -q 'const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";' src/index.js
+          grep -q 'const VISION_MODEL = "@cf/meta/llama-3.2-11b-vision-instruct";' src/index.js
+          grep -q 'function isAnalyzableFile(file)' src/index.js
+          echo "P4 media implementation contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
