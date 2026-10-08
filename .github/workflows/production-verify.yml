@@ -407,6 +407,19 @@ jobs:
           grep -q 'retry-after' src/index.js
           echo "P8 API abuse protection contract: PASS"
 
+      - name: Verify P9 resilience contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          grep -q 'runWithRetry' src/ai/provider.js
+          grep -q 'isTransientAIError' src/ai/provider.js
+          grep -q 'AI_TIMEOUT' src/index.js
+          grep -q 'AI_RATE_LIMIT' src/index.js
+          grep -q 'activeChatController' src/index.js
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/p9-home.html
+          grep -q 'activeChatController' /tmp/p9-home.html
+          echo "P9 resilience contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
