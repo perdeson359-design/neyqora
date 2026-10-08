@@ -247,6 +247,23 @@ jobs:
           jq -e '.ok == true and .email.status == "sent" and (.email.id | type == "string") and (.email.id | length > 0)' /tmp/resend-email.json >/dev/null
           echo "Resend email contract: PASS"
 
+      - name: Verify saved login UI contract
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/home.html
+          grep -q 'id="saved-login"' /tmp/home.html
+          grep -q 'id="saved-login-list"' /tmp/home.html
+          grep -q 'neyqora_saved_accounts' /tmp/home.html
+          grep -q 'saveLoginEmail' /tmp/home.html
+          grep -q 'removeSavedLoginEmail' /tmp/home.html
+          grep -q 'localStorage' /tmp/home.html
+          if grep -q 'localStorage.*auth.*password\|localStorage.*neyqora_password\|localStorage.*auth_token' /tmp/home.html; then
+            echo "Saved login must not persist passwords or auth tokens."
+            exit 1
+          fi
+          echo "Saved login UI contract: PASS"
+
       - name: Verify production authentication contract
         shell: bash
         run: |
