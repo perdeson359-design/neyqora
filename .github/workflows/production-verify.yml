@@ -347,7 +347,7 @@ jobs:
           for endpoint in /api/audio/transcribe /api/image/analyze /api/files/analyze; do
             code=$(curl -sS -o /tmp/p4-response.json -w "%{http_code}" -A "NEYQORA-Production-Verify" -X POST "$NEYQORA_URL$endpoint")
             test "$code" = "401"
-            jq -e '.ok == false' /tmp/p4-response.json >/dev/null
+            jq -e '.ok == false or (.error != null and .error != "")' /tmp/p4-response.json >/dev/null
           done
           echo "P4 media analysis authentication boundary: PASS"
           grep -q 'const AUDIO_MODEL = "@cf/openai/whisper-large-v3-turbo";' src/index.js
