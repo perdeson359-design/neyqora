@@ -10,12 +10,12 @@ on:
 
 concurrency:
   group: neyqora-production-verification
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   verify-production:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
       EXPECTED_VERSION: "6.3"
@@ -38,25 +38,37 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          for attempt in $(seq 1 30); do
-            echo "Production health check $attempt/30"
-            if curl -fsS -A "NEYQORA-Production-Verify" -H "Accept: application/json" "$NEYQORA_URL/api/health" > /tmp/health.json; then
+          for attempt in $(seq 1 60); do
+            echo "Production health check $attempt/60"
+            rm -f /tmp/health.json /tmp/session.json
+            curl_code=$(curl -4 -sS --connect-timeout 5 --max-time 15               -A "NEYQORA-Production-Verify"               -H "Accept: application/json"               -H "Cache-Control: no-cache"               -o /tmp/health.json               -w "%{http_code}"               "$NEYQORA_URL/api/health" || true)
+            echo "Health HTTP=$curl_code"
+            if [ -f /tmp/health.json ]; then
               cat /tmp/health.json
-              if jq -e --arg expected "$EXPECTED_VERSION" --arg commit "$EXPECTED_COMMIT" '.ok == true and .name == "NEYQORA" and .version == $expected and .commit == $commit and .router == true and .agent == true' /tmp/health.json >/dev/null; then
-                if curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json; then
-                  jq -e '.ok == true and (.userId | type == "string")' /tmp/session.json >/dev/null
-                  echo "Production health + session: PASS"
-                  exit 0
-                fi
-                echo "Worker version is ready but signed session endpoint is not deployed yet."
+              if jq -e . /tmp/health.json >/dev/null 2>&1; then
+                actual_version=$(jq -r '.version // empty' /tmp/health.json)
+                actual_commit=$(jq -r '.commit // empty' /tmp/health.json)
+                actual_router=$(jq -r '.router // empty' /tmp/health.json)
+                actual_agent=$(jq -r '.agent // empty' /tmp/health.json)
+                echo "Observed version=$actual_version commit=$actual_commit router=$actual_router agent=$actual_agent"
               fi
-              echo "Production not ready yet."
-            else
-              echo "Worker is not reachable yet."
             fi
-            sleep 20
+            if [ "$curl_code" = "200" ] && jq -e --arg expected "$EXPECTED_VERSION" --arg commit "$EXPECTED_COMMIT" '.ok == true and .name == "NEYQORA" and .version == $expected and .commit == $commit and .router == true and .agent == true' /tmp/health.json >/dev/null 2>&1; then
+              session_code=$(curl -4 -sS --connect-timeout 5 --max-time 15                 -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies                 -A "NEYQORA-Production-Verify"                 -H "Cache-Control: no-cache"                 -o /tmp/session.json                 -w "%{http_code}"                 "$NEYQORA_URL/api/session" || true)
+              echo "Session HTTP=$session_code"
+              cat /tmp/session.json || true
+              if [ "$session_code" = "200" ] && jq -e '.ok == true and (.userId | type == "string")' /tmp/session.json >/dev/null 2>&1; then
+                echo "Production health + session: PASS"
+                exit 0
+              fi
+              echo "Health is ready but session endpoint is not ready yet."
+            else
+              echo "Production not ready yet."
+            fi
+            sleep 10
           done
           echo "Production Worker did not become healthy in time."
+          echo "Expected version=$EXPECTED_VERSION commit=$EXPECTED_COMMIT"
           exit 1
 
       - name: Verify security headers
