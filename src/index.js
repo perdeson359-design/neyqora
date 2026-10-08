@@ -702,6 +702,48 @@ input.addEventListener("keydown",function(e){
 });
 </script>
 </body>
+</html>;
+
+
+const OWNER_HTML = `<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>NEYQORA Owner Panel</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#060a12;color:#eef3ff;font-family:Inter,system-ui,sans-serif}main{width:min(1180px,100%);margin:auto;padding:24px}.card{background:#0d1526;border:1px solid #22314d;border-radius:18px;padding:18px;box-shadow:0 14px 40px #0004;margin-bottom:16px}h1,h2{margin:0 0 10px}.muted{color:#8998b6;font-size:13px}.grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}.stat b{display:block;font-size:28px;margin-top:5px}.row{display:flex;gap:10px;align-items:center;justify-content:space-between;flex-wrap:wrap}input,button{font:inherit}input{width:100%;padding:12px;border-radius:10px;border:1px solid #2a3b5c;background:#09101e;color:#fff}button{border:0;border-radius:10px;padding:11px 14px;background:#7f91ff;color:#080d1a;font-weight:800;cursor:pointer}button.secondary{background:#1b2944;color:#eef3ff}.login{max-width:440px;margin:10vh auto}.error{color:#ff8f9c;margin-top:10px;min-height:20px}.hidden{display:none}table{width:100%;border-collapse:collapse}th,td{text-align:left;padding:10px;border-bottom:1px solid #1d2a43;font-size:13px}th{color:#9eacc7}.ok{color:#75e6ad}.bad{color:#ff8f9c}@media(max-width:800px){.grid{grid-template-columns:repeat(2,minmax(0,1fr))}main{padding:14px}}@media(max-width:500px){.grid{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main>
+<section id="login" class="card login">
+<h1>NEYQORA Owner Panel</h1><p class="muted">Yönetici erişimi. Owner token yalnızca HTTPS üzerinden gönderilir ve sunucuda oturum cookie'sine dönüştürülür.</p>
+<form id="loginForm"><input id="token" type="password" autocomplete="current-password" placeholder="Owner token" required><button style="margin-top:10px;width:100%">Owner olarak giriş yap</button><div id="loginError" class="error"></div></form>
+</section>
+<section id="panel" class="hidden">
+<div class="row card"><div><h1>NEYQORA Owner Panel</h1><div class="muted" id="status">Yükleniyor…</div></div><button class="secondary" id="logout">Çıkış yap</button></div>
+<div class="grid">
+<div class="card stat"><div class="muted">Kullanıcı</div><b id="users">—</b></div>
+<div class="card stat"><div class="muted">Takvim</div><b id="calendar">—</b></div>
+<div class="card stat"><div class="muted">E-posta</div><b id="emails">—</b></div>
+<div class="card stat"><div class="muted">Otomasyon</div><b id="automations">—</b></div>
+</div>
+<div class="card"><h2>Sistem durumu</h2><div id="system" class="muted">Yükleniyor…</div></div>
+<div class="card"><div class="row"><h2>Kullanıcılar</h2><button class="secondary" id="refresh">Yenile</button></div><div style="overflow:auto"><table><thead><tr><th>Ad</th><th>E-posta</th><th>Oluşturuldu</th><th>Son giriş</th></tr></thead><tbody id="userRows"></tbody></table></div></div>
+</section>
+</main>
+<script>
+const login=document.getElementById("login"),panel=document.getElementById("panel"),err=document.getElementById("loginError");
+async function api(path,options={}){const r=await fetch(path,{credentials:"same-origin",cache:"no-store",...options});const d=await r.json().catch(()=>({ok:false,error:"Geçersiz sunucu yanıtı."}));if(!r.ok||d.ok===false)throw new Error(d.error||("HTTP "+r.status));return d}
+async function load(){try{const d=await api("/api/owner/overview");document.getElementById("users").textContent=d.stats.users;document.getElementById("calendar").textContent=d.stats.calendarEvents;document.getElementById("emails").textContent=d.stats.emailDrafts;document.getElementById("automations").textContent=d.stats.automations;document.getElementById("status").textContent="Owner oturumu aktif · "+new Date().toLocaleString("tr-TR");document.getElementById("system").innerHTML=d.system.map(x=>"<div style='margin:7px 0'><b>"+x.name+"</b>: <span class='"+(x.ok?"ok":"bad")+"'>"+(x.ok?"OK":"Yapılandırılmamış")+"</span></div>").join("");const u=await api("/api/owner/users");document.getElementById("userRows").innerHTML=u.users.map(x=>"<tr><td>"+escapeHtml(x.name)+"</td><td>"+escapeHtml(x.email)+"</td><td>"+escapeHtml(x.createdAt||"—")+"</td><td>"+escapeHtml(x.lastLoginAt||"—")+"</td></tr>").join("")||"<tr><td colspan='4'>Kullanıcı yok.</td></tr>";login.classList.add("hidden");panel.classList.remove("hidden")}catch(e){if(panel.classList.contains("hidden"))err.textContent=e.message;else document.getElementById("status").textContent=e.message}}
+function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[m]))}
+document.getElementById("loginForm").addEventListener("submit",async e=>{e.preventDefault();err.textContent="";try{await api("/api/auth/owner",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:document.getElementById("token").value})});document.getElementById("token").value="";await load()}catch(x){err.textContent=x.message}});
+document.getElementById("refresh").addEventListener("click",load);
+document.getElementById("logout").addEventListener("click",async()=>{await fetch("/api/auth/owner/logout",{method:"POST",credentials:"same-origin"});location.reload()});
+load();
+</script>
+</body>
 </html>`;
 
 let productivityTablesPromise = null;
@@ -1696,6 +1738,12 @@ export default {
       return new Response(`const CACHE="neyqora-shell-v4";const SHELL=["/","/manifest.webmanifest","/icon.svg"];self.addEventListener("install",e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(SHELL)).then(()=>self.skipWaiting())));self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(k=>Promise.all(k.filter(x=>x!==CACHE).map(x=>caches.delete(x)))).then(()=>self.clients.claim())));self.addEventListener("fetch",e=>{if(e.request.method!=="GET")return;const u=new URL(e.request.url);if(u.pathname.startsWith("/api/"))return;e.respondWith(fetch(e.request).then(r=>{if(u.origin===self.location.origin&&(u.pathname==="/"||u.pathname==="/manifest.webmanifest")){const x=r.clone();caches.open(CACHE).then(c=>c.put(e.request,x));}return r}).catch(()=>caches.match(e.request).then(x=>x||caches.match("/"))))});`, { headers: { "content-type": "application/javascript; charset=UTF-8", "cache-control": "no-cache" } });
     }
 
+    if (request.method === "GET" && url.pathname === "/owner") {
+      const headers = new Headers({"content-type":"text/html; charset=UTF-8","cache-control":"no-store, no-cache, must-revalidate, max-age=0","x-content-type-options":"nosniff","x-frame-options":"DENY","referrer-policy":"no-referrer","permissions-policy":"camera=(), microphone=(), geolocation=()","cross-origin-opener-policy":"same-origin","cross-origin-resource-policy":"same-origin","x-permitted-cross-domain-policies":"none"});
+      if (url.protocol === "https:") headers.set("strict-transport-security","max-age=31536000; includeSubDomains");
+      return new Response(OWNER_HTML,{headers});
+    }
+
     if (request.method === "GET" && url.pathname === "/") {
       const headers = new Headers({
         "content-type": "text/html; charset=UTF-8",
@@ -1764,6 +1812,33 @@ export default {
       } catch {
         return Response.json({ ok: false, error: "Owner girişi işlenemedi." }, { status: 400 });
       }
+    }
+
+    if (request.method === "POST" && url.pathname === "/api/auth/owner/logout") {
+      return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":"neyqora_owner=; Path=/; HttpOnly; Secure; SameSite=Strict; Max-Age=0"}});
+    }
+    if (request.method === "GET" && url.pathname === "/api/owner/overview") {
+      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});
+      await ensureAuthTables(env); await ensureProductivityTables(env);
+      const [users,calendar,email,automations]=await Promise.all([
+        env.DB.prepare("SELECT COUNT(*) AS n FROM users").first(),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM calendar_events").first(),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM email_drafts").first(),
+        env.DB.prepare("SELECT COUNT(*) AS n FROM automations").first()
+      ]);
+      return Response.json({ok:true,stats:{users:Number(users?.n||0),calendarEvents:Number(calendar?.n||0),emailDrafts:Number(email?.n||0),automations:Number(automations?.n||0)},system:[
+        {name:"Cloudflare AI",ok:!!env.AI},
+        {name:"D1 database",ok:!!env.DB},
+        {name:"Owner auth",ok:!!env.OWNER_AUTH_TOKEN},
+        {name:"User session secret",ok:!!(env.USER_SESSION_SECRET||env.OWNER_AUTH_TOKEN)},
+        {name:"Resend",ok:!!env.RESEND_API_KEY}
+      ]});
+    }
+    if (request.method === "GET" && url.pathname === "/api/owner/users") {
+      if (!await verifyOwnerSession(request,env)) return Response.json({ok:false,error:"Owner oturumu gerekli."},{status:401});
+      await ensureAuthTables(env);
+      const rows=await env.DB.prepare("SELECT id,email,name,created_at,last_login_at FROM users ORDER BY created_at DESC LIMIT 100").all();
+      return Response.json({ok:true,users:(rows.results||[]).map(x=>({id:x.id,email:x.email,name:x.name,createdAt:x.created_at,lastLoginAt:x.last_login_at}))});
     }
 
     if (request.method === "GET" && url.pathname === "/api/calendar/events") {
