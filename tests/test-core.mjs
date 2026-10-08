@@ -15,7 +15,7 @@ assert.match(source, /async function generateCodingResponse/);
 assert.match(source, /if \(step\.tool === "coding"\)/);
 assert.match(source, /basicPythonValidation\(code\)/);
 assert.match(source, /temperature: 0\.1/);
-assert.match(source, /120000/);
+assert.match(source, /iterations:100000/);
 assert.match(source, /retry/);
 
 assert.match(source, /\/api\/health/);
