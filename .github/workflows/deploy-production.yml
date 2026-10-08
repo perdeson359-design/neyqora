@@ -29,6 +29,7 @@ jobs:
           apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           command: deploy --var DEPLOY_COMMIT:${{ github.sha }}
+
       - name: Sync Owner secret to Worker
         if: ${{ env.OWNER_AUTH_TOKEN != '' }}
         shell: bash
@@ -41,4 +42,4 @@ jobs:
             echo "OWNER_AUTH_TOKEN is empty; keeping existing Worker secret unchanged."
             exit 0
           fi
-          printf '%s' "$OWNER_AUTH_TOKEN" | npx wrangler secret put OWNER_AUTH_TOKEN --name neyqora --api-token "$CLOUDFLARE_API_TOKEN" --account-id "$CLOUDFLARE_ACCOUNT_ID"
+          printf '%s' "$OWNER_AUTH_TOKEN" | npx wrangler secret put OWNER_AUTH_TOKEN --name neyqora
