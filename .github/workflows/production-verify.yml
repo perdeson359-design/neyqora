@@ -42,7 +42,7 @@ jobs:
             echo "Production health check $attempt/30"
             if curl -fsS -A "NEYQORA-Production-Verify" -H "Accept: application/json" "$NEYQORA_URL/api/health" > /tmp/health.json; then
               cat /tmp/health.json
-              if jq -e --arg expected "$EXPECTED_VERSION" '.ok == true and .name == "NEYQORA" and .version == $expected and .router == true and .agent == true' /tmp/health.json >/dev/null; then
+              if jq -e --arg expected "$EXPECTED_VERSION" --arg commit "$EXPECTED_COMMIT" '.ok == true and .name == "NEYQORA" and .version == $expected and .commit == $commit and .router == true and .agent == true' /tmp/health.json >/dev/null; then
                 if curl -fsS -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/session" >/tmp/session.json; then
                   jq -e '.ok == true and (.userId | type == "string")' /tmp/session.json >/dev/null
                   echo "Production health + session: PASS"
@@ -276,7 +276,7 @@ jobs:
           OWNER_AUTH_TOKEN: ${{ secrets.OWNER_AUTH_TOKEN }}
         run: |
           set -euo pipefail
-          if [ -z "${OWNER_AUTH_TOKEN:-}" ]; then echo "OWNER_AUTH_TOKEN secret unavailable; authenticated Owner E2E skipped."; exit 0; fi
+          if [ -z "${OWNER_AUTH_TOKEN:-}" ]; then echo "OWNER_AUTH_TOKEN secret is required for the production Owner E2E gate."; exit 1; fi
           email="neyqora-owner-e2e-$(date +%s%N)@example.com"
           password="Aa1-$(date +%s%N)"
           printf '{"name":"Owner E2E","email":"%s","password":"%s"}' "$email" "$password" > /tmp/owner-register.json
