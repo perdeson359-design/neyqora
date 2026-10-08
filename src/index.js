@@ -638,6 +638,10 @@ if(authFromUrl==="register"||authFromUrl==="login"){openAuth(authFromUrl);histor
 const resetFromUrl=new URLSearchParams(location.search).get("reset");if(resetFromUrl){resetTokenInput.value=resetFromUrl;openAuth("reset")}const magicFromUrl=new URLSearchParams(location.search).get("magic");if(magicFromUrl){(async()=>{try{const r=await fetch("/api/auth/magic/consume",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({token:magicFromUrl})});const d=await r.json();if(!r.ok||!d.ok)throw new Error(d.error||"Giriş bağlantısı geçersiz.");if(d.user)renderAccount(d.user);history.replaceState({},document.title,location.pathname+location.hash);location.reload()}catch(e){openAuth("login");authError.textContent=e.message}})()}
 const sendButton=document.querySelector("#send");
 let sending=false;
+let activeChatController=null;
+let chatRequestKey="";
+function chatFingerprint(text){return String(text||"").trim().toLowerCase().replace(/\s+/g," ").slice(0,400);}
+
 async function sendMessage(){
   if(sending)return;
   const message=input.value.trim();
@@ -650,7 +654,12 @@ async function sendMessage(){
   input.value="";
   const pending=add("NEYQORA düşünüyor...","ai");
   const controller=new AbortController();
+  activeChatController=controller;
+  chatRequestKey=chatFingerprint(message);
   const timer=setTimeout(()=>controller.abort(),45000);
+  sendButton.textContent="Durdur";
+  sendButton.title="Uzun süren isteği iptal et";
+
   try{
     const sessionUserId=await ensureUserSession();
     if(sessionUserId){try{localStorage.setItem("neyqora_user_id",sessionUserId)}catch{}}
@@ -663,7 +672,11 @@ async function sendMessage(){
     const raw=await r.text();
     let data={};
     try{data=raw?JSON.parse(raw):{};}catch{data={error:raw||"Geçersiz sunucu yanıtı."};}
-    if(!r.ok){pending.textContent=data.error||("Sunucu hatası: "+r.status);return;}
+    if(!r.ok){
+      const statusMessage=data.error||("Sunucu hatası: "+r.status);
+      pending.textContent=statusMessage;
+      return;
+    }
     pending.textContent=data.reply||data.error||"Yanıt alınamadı.";
     if(data.reply)rememberTurn("assistant",data.reply);
     loadMemories();
@@ -696,6 +709,10 @@ async function sendMessage(){
       panel.scrollIntoView({behavior:"smooth",block:"end"});
     }
   }catch(err){
+    if(err?.name==="AbortError"){
+      pending.textContent="İstek iptal edildi.";
+      return;
+    }
     try{
       const localReply=await window.neyqoraLocalChat(message);
       pending.textContent="(Yerel AI) "+(localReply||"Yerel AI boş yanıt verdi.");
@@ -708,12 +725,20 @@ async function sendMessage(){
     sending=false;
     sendButton.disabled=false;
     sendButton.textContent="Gönder";
+    sendButton.title="Mesaj gönder";
+    activeChatController=null;
+    chatRequestKey="";
+
   }
 }
 window.neyqoraSend=function(){
+  if(sending && activeChatController){ activeChatController.abort(); return false; }
   sendMessage();
   return false;
 };
+sendButton.addEventListener("click",function(e){
+  if(sending && activeChatController){ e.preventDefault(); activeChatController.abort(); }
+});
 input.addEventListener("keydown",function(e){
   if(e.key==="Enter"){
     e.preventDefault();
@@ -792,6 +817,10 @@ async function enforceAuthRateLimit(env,request,scope,limit,windowSeconds){
   await env.DB.prepare("UPDATE auth_rate_limits SET count=count+1 WHERE id=?").bind(key).run();
   return {allowed:true,remaining:Math.max(0,limit-count-1)};
 }
+function apiError(message,status=500,code="API_ERROR",extra={}) {
+  return Response.json({ ok:false, error:String(message || "İşlem başarısız."), code, ...extra }, { status });
+}
+
 async function enforceApiRateLimit(env,request,scope,limit,windowSeconds){
   const result=await enforceAuthRateLimit(env,request,"api:"+scope,limit,windowSeconds);
   if(result.allowed)return null;
