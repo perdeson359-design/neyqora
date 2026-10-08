@@ -2259,10 +2259,33 @@ export default {
 
         let memories = [];
         if (env.DB) {
-          const result = await env.DB.prepare(
-            "SELECT content, created_at FROM memories WHERE user_id = ? ORDER BY created_at DESC LIMIT 12"
+          const recent = await env.DB.prepare(
+            "SELECT content, created_at FROM memories WHERE user_id = ? ORDER BY created_at DESC, id DESC LIMIT 12"
           ).bind(userId).all();
-          memories = result.results || [];
+          memories = recent.results || [];
+          const memoryQuery = String(message || "")
+            .toLocaleLowerCase("tr-TR")
+            .replace(/[^a-zA-ZÇĞİÖŞÜçğıöşü0-9\s]/g, " ")
+            .split(/\s+/)
+            .filter(word => word.length >= 4)
+            .filter((word, index, list) => list.indexOf(word) === index)
+            .slice(0, 4);
+          if (memoryQuery.length) {
+            const clauses = memoryQuery.map(() => "content LIKE ?").join(" OR ");
+            const values = memoryQuery.map(word => "%" + word + "%");
+            const relevant = await env.DB.prepare(
+              "SELECT content, created_at FROM memories WHERE user_id = ? AND (" + clauses + ") ORDER BY created_at DESC, id DESC LIMIT 8"
+            ).bind(userId, ...values).all();
+            const seen = new Set(memories.map(item => String(item.content || "")));
+            for (const item of relevant.results || []) {
+              const key = String(item.content || "");
+              if (key && !seen.has(key)) {
+                memories.push(item);
+                seen.add(key);
+              }
+            }
+          }
+          memories = memories.slice(0, 12);
         }
 
         const nameMemory = memories.find(m => String(m.content || "").startsWith("Kullanıcının adı:"));
@@ -2460,7 +2483,13 @@ export default {
             if (category === "identity") {
               await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content LIKE 'Kullanıcının adı:%'").bind(userId).run();
             } else {
-              await env.DB.prepare("DELETE FROM memories WHERE user_id = ? AND content = ?").bind(userId, memory).run();
+              const duplicate = await env.DB.prepare(
+                "SELECT id FROM memories WHERE user_id = ? AND content = ? LIMIT 1"
+              ).bind(userId, memory).first();
+              if (duplicate?.id) {
+                memorySaved = false;
+                return Response.json({ reply, intent, plan: agentPlan, toolResults: agentResults, audit: agentAudit, trace: agentTrace, agentStatus, memorySaved: false });
+              }
             }
             await env.DB.prepare(
               "INSERT INTO memories (user_id, content) VALUES (?, ?)"
