@@ -42,8 +42,8 @@ jobs:
           required=[
             'id="account-button"',
             'window.neyqoraAccount=function',
-            'authPassword.required=!(forgot||profile)',
-            'authPassword.hidden=forgot||profile',
+            'authPassword.required=!(forgot||profile||magic)',
+            'authPassword.hidden=forgot||profile||magic',
             'authName.required=register||profile',
             'window.neyqoraLocalChat=async function',
             'localStorage.getItem("neyqora_local_ai_url")',
