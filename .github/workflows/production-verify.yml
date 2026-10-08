@@ -245,6 +245,8 @@ jobs:
           {"name":"NEYQORA Test","email":"$auth_email","password":"$auth_password"}
           JSON
           code=$(curl -sS -o /tmp/auth-register-response.json -w "%{http_code}" -c /tmp/auth.cookies -b /tmp/auth.cookies -A "NEYQORA-Production-Verify" -H "Origin: $NEYQORA_URL" -H "Content-Type: application/json" --data-binary @/tmp/auth-register.json "$NEYQORA_URL/api/auth/register")
+          echo "Auth register HTTP=$code"
+          cat /tmp/auth-register-response.json
           test "$code" = "201"
           jq -e '.ok == true and (.user.id | type == "string") and .user.email == $email' --arg email "$auth_email" /tmp/auth-register-response.json >/dev/null
           code=$(curl -sS -o /tmp/auth-me.json -w "%{http_code}" -b /tmp/auth.cookies -c /tmp/auth.cookies -A "NEYQORA-Production-Verify" "$NEYQORA_URL/api/auth/me")
