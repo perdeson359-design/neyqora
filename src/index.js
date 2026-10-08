@@ -145,7 +145,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 </section>
 
 <section id="memory-view" class="view">
-<div class="hero"><h2>Kalıcı Hafıza</h2><p>Kayıtlı bilgilerini görüntüleyebilir veya silebilirsin.</p><div class="actions"><button id="clear-memories" class="danger" type="button">Tüm Hafızayı Sil</button></div></div>
+<div class="hero"><h2>Kalıcı Hafıza</h2><p>Kayıtlı bilgilerini görüntüleyebilir veya silebilirsin.</p><div class="actions"><button id="export-data" class="secondary" type="button">Verilerimi Dışa Aktar</button><button id="clear-memories" class="danger" type="button">Tüm Hafızayı Sil</button></div></div>
 <div id="memory-panel" class="panel"><div class="memory-tools"><input id="memory-search" class="field" placeholder="Hafızada ara..." aria-label="Hafızada ara"><button id="memory-refresh" class="secondary" type="button">Yenile</button></div><div id="memory-list">Hafıza yükleniyor...</div></div>
 </section>
 
@@ -540,6 +540,18 @@ function filterMemories(){
   const q=(document.querySelector("#memory-search")?.value||"").trim().toLowerCase();
   document.querySelectorAll("#memory-list .memory-row").forEach(row=>{row.hidden=!!q&&!row.textContent.toLowerCase().includes(q);});
 }
+document.querySelector("#export-data")?.addEventListener("click",async()=>{
+  const button=document.querySelector("#export-data"); if(button)button.disabled=true;
+  try{
+    const r=await fetch("/api/auth/export",{headers:{"accept":"application/json"}});
+    const data=await r.json();
+    if(!r.ok||!data.ok)throw new Error(data.error||"Veriler dışa aktarılamadı.");
+    const blob=new Blob([JSON.stringify(data,null,2)],{type:"application/json;charset=utf-8"});
+    const url=URL.createObjectURL(blob); const a=document.createElement("a");
+    a.href=url; a.download="neyqora-verilerim.json"; a.click(); URL.revokeObjectURL(url);
+  }catch(error){alert(error?.message||"Veriler dışa aktarılamadı.");}
+  finally{if(button)button.disabled=false;}
+});
 document.querySelector("#clear-memories")?.addEventListener("click",async()=>{
   if(!confirm("Kayıtlı tüm hafıza silinsin mi?"))return;
   const button=document.querySelector("#clear-memories");
@@ -1799,6 +1811,25 @@ export default {
     if (request.method === "POST" && url.pathname === "/api/auth/reset") {try{const rl=await enforceAuthRateLimit(env,request,"reset",10,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla sıfırlama denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});await ensureAuthTables(env);const b=await request.json(),token=String(b?.token||""),password=String(b?.password||"");if(password.length<8||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return Response.json({ok:false,error:"Şifre en az 8 karakter, bir harf ve bir rakam içermeli."},{status:400});const tokenHash=await hmacHex(getUserSessionSecret(env),token),row=await env.DB.prepare("SELECT id,user_id,expires_at,used_at FROM password_resets WHERE token_hash=?").bind(tokenHash).first();if(!row||row.used_at||Number(row.expires_at)<Math.floor(Date.now()/1000))return Response.json({ok:false,error:"Sıfırlama bağlantısı geçersiz veya süresi dolmuş."},{status:400});const salt=crypto.randomUUID(),hash=await hashPassword(password,salt);await env.DB.prepare("UPDATE users SET password_hash=?,password_salt=? WHERE id=?").bind(hash,salt,row.user_id).run();await env.DB.prepare("UPDATE password_resets SET used_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const user=await env.DB.prepare("SELECT id,email,name FROM users WHERE id=?").bind(row.user_id).first(),session=await createAccountSession(env,row.user_id);return new Response(JSON.stringify({ok:true,user}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error:e?.message||"Şifre değiştirilemedi."},{status:500})}}
     
     if (request.method === "GET" && url.pathname === "/api/auth/me") {const user=await getAccountUser(request,env);return Response.json({ok:!!user,user:user?{id:user.id,email:user.email,name:user.name,role:user.role||"user"}:null})}
+    if (request.method === "GET" && url.pathname === "/api/auth/export") {
+      try {
+        const user = await getAccountUser(request, env);
+        if (!user) return Response.json({ ok:false, error:"Oturum gerekli." }, { status:401 });
+        if (!env.DB) return Response.json({ ok:false, error:"Veritabanı bağlı değil." }, { status:503 });
+        await ensureProductivityTables(env);
+        const userId = user.id;
+        const [memories, calendar, drafts, automations] = await Promise.all([
+          env.DB.prepare("SELECT id, content, created_at FROM memories WHERE user_id=? ORDER BY created_at DESC, id DESC").bind(userId).all(),
+          env.DB.prepare("SELECT id, title, start_at, end_at, description, location, created_at FROM calendar_events WHERE user_id=? ORDER BY start_at ASC, id ASC").bind(userId).all(),
+          env.DB.prepare("SELECT id, to_address, subject, body, status, created_at FROM email_drafts WHERE user_id=? ORDER BY created_at DESC, id DESC").bind(userId).all(),
+          env.DB.prepare("SELECT id, title, prompt, run_at, status, last_error, created_at FROM automations WHERE user_id=? ORDER BY run_at ASC, id ASC").bind(userId).all()
+        ]);
+        return Response.json({ok:true,exportedAt:new Date().toISOString(),account:{id:user.id,email:user.email,name:user.name,role:user.role,created_at:user.created_at,last_login_at:user.last_login_at},memories:memories.results||[],calendar:calendar.results||[],emailDrafts:drafts.results||[],automations:automations.results||[]},{headers:{"cache-control":"no-store","content-disposition":"attachment; filename=neyqora-verilerim.json"}});
+      } catch (error) {
+        return Response.json({ ok:false, error:error?.message||"Veriler dışa aktarılamadı." },{status:500});
+      }
+    }
+
     if (request.method === "DELETE" && url.pathname === "/api/auth/account") {try{const user=await getAccountUser(request,env);if(!user)return Response.json({ok:false,error:"Oturum gerekli."},{status:401});await ensureProductivityTables(env);await env.DB.prepare("DELETE FROM memories WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM calendar_events WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM email_drafts WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM automations WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM password_resets WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM users WHERE id=?").bind(user.id).run();return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json","set-cookie":accountCookie("",0)}})}catch(e){return Response.json({ok:false,error:e?.message||"Hesap silinemedi."},{status:500})}}
     if (request.method === "GET" && url.pathname === "/api/session") {
       const isOwner = await verifyOwnerSession(request, env);
