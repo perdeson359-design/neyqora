@@ -2597,7 +2597,10 @@ export default {
           memorySaved
         });
       } catch (error) {
-        return Response.json({ error: "NEYQORA hatası: " + (error?.message || "Bilinmeyen hata") }, { status: 500 });
+        const message = String(error?.message || "Bilinmeyen hata");
+        if (/AbortError|timeout|timed out/i.test(message)) return apiError("AI isteği zaman aşımına uğradı. Lütfen tekrar dene.", 504, "AI_TIMEOUT");
+        if (/\b429\b/.test(message)) return apiError("AI servisi şu anda yoğun. Lütfen kısa süre sonra tekrar dene.", 429, "AI_RATE_LIMIT");
+        return apiError("NEYQORA şu anda yanıt üretemedi. Lütfen tekrar dene.", 502, "AI_ERROR");
       }
     }
 
