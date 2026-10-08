@@ -392,6 +392,22 @@ jobs:
           grep -q 'self.addEventListener("fetch"' /tmp/p7-sw.js
           echo "P7 offline PWA contract: PASS"
 
+
+      - name: Verify P8 API abuse protection contracts
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fsS -A "NEYQORA-Production-Verify" "$NEYQORA_URL/" -o /tmp/p8-home.html
+          grep -q 'enforceApiRateLimit' src/index.js
+          grep -q 'api:chat' src/index.js
+          grep -q 'api:search' src/index.js
+          grep -q 'api:project' src/index.js
+          grep -q 'api:audio' src/index.js
+          grep -q 'api:image' src/index.js
+          grep -q 'api:files' src/index.js
+          grep -q 'retry-after' src/index.js
+          echo "P8 API abuse protection contract: PASS"
+
       - name: Production gate
         run: |
           echo "NEYQORA production verification: PASS"
