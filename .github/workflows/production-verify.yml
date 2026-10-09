@@ -58,7 +58,7 @@ jobs:
                 echo "Observed version=$actual_version commit=$actual_commit router=$actual_router agent=$actual_agent"
               fi
             fi
-            if [ "$curl_code" = "200" ] && jq -e --arg expected "$EXPECTED_VERSION" --arg commit "$EXPECTED_COMMIT" '.ok == true and .name == "NEYQORA" and .version == $expected and .commit == $commit and .router == true and .agent == true' /tmp/health.json >/dev/null 2>&1; then
+            if [ "$curl_code" = "200" ] && jq -e --arg expected "$EXPECTED_VERSION" --arg commit "$EXPECTED_COMMIT" '.ok == true and .name == "NEYQORA" and .version == $expected and .commit == $commit and .router == true and .agent == true and .userSessionSecret == true' /tmp/health.json >/dev/null 2>&1; then
               session_code=$(curl -4 -sS --connect-timeout 5 --max-time 15                 -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies                 -A "NEYQORA-Production-Verify"                 -H "Cache-Control: no-cache"                 -o /tmp/session.json                 -w "%{http_code}"                 "$NEYQORA_URL/api/session" || true)
               echo "Session HTTP=$session_code"
               cat /tmp/session.json || true
