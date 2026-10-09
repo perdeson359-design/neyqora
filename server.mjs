@@ -9,6 +9,7 @@ const aiBaseUrl = String(process.env.NEYQORA_AI_BASE_URL || "").replace(/\/$/, "
 const aiModel = process.env.NEYQORA_AI_MODEL || "@cf/meta/llama-3.2-3b-instruct";
 const aiApiKey = process.env.NEYQORA_AI_API_KEY || "";
 const aiProviderMode = String(process.env.AI_PROVIDER_MODE || "auto").toLowerCase();
+const MAX_REQUEST_BODY_BYTES = 1024 * 1024;
 
 if (!process.env.OWNER_AUTH_TOKEN) {
   throw new Error("OWNER_AUTH_TOKEN is required");
@@ -64,11 +65,19 @@ const AI = (aiBaseUrl && aiApiKey) ? {
         messages: options?.messages || [],
         max_tokens: options?.max_tokens,
         temperature: options?.temperature
-      })
+      }),
+      signal: AbortSignal.timeout(30000)
     });
-    const text = await response.text();
-    if (!response.ok) throw new Error("AI provider error " + response.status + ": " + text.slice(0, 500));
-    const data = JSON.parse(text);
+    if (!response.ok) {
+      await response.body?.cancel().catch(() => {});
+      throw new Error("AI provider request failed with status " + response.status);
+    }
+    let data;
+    try {
+      data = await response.json();
+    } catch {
+      throw new Error("AI provider returned invalid JSON");
+    }
     return { response: data?.choices?.[0]?.message?.content || "" };
   }
 } : null;
@@ -90,11 +99,28 @@ const env = {
 
 const server = http.createServer(async (request, response) => {
   try {
-    const url = new URL(request.url || "/", "http://" + (request.headers.host || "localhost"));
-    const chunks = [];
-    for await (const chunk of request) chunks.push(chunk);
-    const body = Buffer.concat(chunks);
+    const declaredLength = Number(request.headers["content-length"] || 0);
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BODY_BYTES) {
+      response.writeHead(413, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", connection: "close" });
+      response.end(JSON.stringify({ ok: false, error: "Request body too large." }));
+      request.resume();
+      return;
+    }
 
+    const chunks = [];
+    let bodyBytes = 0;
+    for await (const chunk of request) {
+      bodyBytes += chunk.length;
+      if (bodyBytes > MAX_REQUEST_BODY_BYTES) {
+        response.writeHead(413, { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", connection: "close" });
+        response.end(JSON.stringify({ ok: false, error: "Request body too large." }));
+        request.resume();
+        return;
+      }
+      chunks.push(chunk);
+    }
+
+    const url = new URL(request.url || "/", "http://localhost");
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (Array.isArray(value)) headers.set(key, value.join(", "));
@@ -104,7 +130,7 @@ const server = http.createServer(async (request, response) => {
     const webRequest = new Request(url, {
       method: request.method,
       headers,
-      body: body.length && request.method !== "GET" && request.method !== "HEAD" ? body : undefined
+      body: bodyBytes && request.method !== "GET" && request.method !== "HEAD" ? Buffer.concat(chunks) : undefined
     });
 
     const result = await worker.fetch(webRequest, env);
@@ -112,12 +138,21 @@ const server = http.createServer(async (request, response) => {
     result.headers.forEach((value, key) => response.setHeader(key, value));
     const resultBody = Buffer.from(await result.arrayBuffer());
     response.end(resultBody);
-  } catch (error) {
+  } catch {
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     response.statusCode = 500;
     response.setHeader("content-type", "application/json; charset=utf-8");
-    response.end(JSON.stringify({ error: "NEYQORA self-host runtime error: " + (error?.message || "unknown") }));
+    response.setHeader("cache-control", "no-store");
+    response.end(JSON.stringify({ ok: false, error: "Internal server error." }));
   }
 });
+
+server.requestTimeout = 30000;
+server.headersTimeout = 10000;
+server.keepAliveTimeout = 5000;
 
 server.listen(port, host, () => {
   console.log("NEYQORA self-host listening on http://" + host + ":" + port);
