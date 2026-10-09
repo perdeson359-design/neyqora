@@ -12,12 +12,6 @@ permissions:
 
 jobs:
   generate-and-test-project:
-    if: >-
-      github.event_name == 'workflow_dispatch' ||
-      github.actor == 'github-actions[bot]' ||
-      contains(github.event.head_commit.message || '', 'Generate and test project') ||
-      contains(github.event.pull_request.title || '', 'Generate and test project') ||
-      contains(github.event.pull_request.body || '', 'Generate and test project')
     runs-on: ubuntu-latest
 
     steps:
@@ -67,7 +61,7 @@ jobs:
           TEST_COUNT=$(find . -type f \( -name 'test_*.py' -o -name '*_test.py' \) -not -path './.git/*' -not -path './node_modules/*' | wc -l)
           echo "Python test files: $TEST_COUNT"
           if [ "$TEST_COUNT" -gt 0 ]; then
-            python3 -m pytest -q
+            python3 -m pytest -q --import-mode=importlib
           else
             echo "No Python project tests found; Node core tests are authoritative."
           fi

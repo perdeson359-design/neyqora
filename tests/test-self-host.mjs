@@ -17,6 +17,14 @@ assert.match(server, /NEYQORA_AI_MODEL/);
 assert.match(server, /NEYQORA_DB_PATH/);
 assert.match(server, /worker\.fetch\(webRequest, env\)/);
 assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
+assert.match(server, /MAX_REQUEST_BODY_BYTES = 1024 \* 1024/);
+assert.match(server, /bodyBytes > MAX_REQUEST_BODY_BYTES/);
+assert.match(server, /writeHead\(413/);
+assert.match(server, /Internal server error\./);
+assert.doesNotMatch(server, /error\?\.message\s*\|\|\s*["']unknown/);
+assert.match(server, /server\.requestTimeout = 30000/);
+assert.match(server, /server\.headersTimeout = 10000/);
+assert.match(server, /AbortSignal\.timeout\(30000\)/);
 
 const sqlite = new Database(":memory:");
 sqlite.exec("CREATE TABLE memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -137,4 +145,4 @@ const deleteAccount = await request("/api/auth/account", {
 assert.equal(deleteAccount.status, 200);
 
 sqlite.close();
-console.log("NEYQORA self-host auth E2E: PASS"); // protocol-aware auth cookie regression covered
+console.log("NEYQORA self-host auth E2E + P0 hardening contracts: PASS");
