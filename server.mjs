@@ -1,6 +1,7 @@
 import http from "node:http";
 import Database from "better-sqlite3";
 import worker from "./src/index.js";
+import { validateSelfHostedSecrets } from "./src/security/secrets.js";
 
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || "0.0.0.0";
@@ -10,9 +11,7 @@ const aiModel = process.env.NEYQORA_AI_MODEL || "@cf/meta/llama-3.2-3b-instruct"
 const aiApiKey = process.env.NEYQORA_AI_API_KEY || "";
 const aiProviderMode = String(process.env.AI_PROVIDER_MODE || "auto").toLowerCase();
 
-if (!process.env.OWNER_AUTH_TOKEN) {
-  throw new Error("OWNER_AUTH_TOKEN is required");
-}
+validateSelfHostedSecrets(process.env);
 if (aiProviderMode === "cloud" && (!aiBaseUrl || !aiApiKey)) {
   throw new Error("AI_PROVIDER_MODE=cloud için NEYQORA_AI_BASE_URL ve NEYQORA_AI_API_KEY gerekli");
 }
@@ -77,7 +76,7 @@ const env = {
   AI,
   DB,
   OWNER_AUTH_TOKEN: process.env.OWNER_AUTH_TOKEN,
-  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,
+  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   RESEND_FROM: process.env.RESEND_FROM || "onboarding@resend.dev",
   AI_PROVIDER_MODE: aiProviderMode,
