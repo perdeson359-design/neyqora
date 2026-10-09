@@ -19,7 +19,7 @@ assert.match(server, /worker\.fetch\(webRequest, env\)/);
 assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
 assert.match(server, /MAX_REQUEST_BODY_BYTES = 1024 \* 1024/);
 assert.match(server, /bodyBytes > MAX_REQUEST_BODY_BYTES/);
-assert.match(server, /statusCode = 413/);
+assert.match(server, /writeHead\(413/);
 assert.match(server, /Internal server error\./);
 assert.doesNotMatch(server, /error\?\.message\s*\|\|\s*["']unknown/);
 assert.match(server, /server\.requestTimeout = 30000/);
