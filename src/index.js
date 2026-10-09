@@ -1,4 +1,5 @@
 import { withAIProvider } from "./ai/provider.js";
+import { getUserSessionSecret } from "./security/secrets.js";
 
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const VERSION = "6.3";
@@ -800,10 +801,10 @@ let productivityTablesPromise = null;
 let authTablesPromise=null;
 async function ensureAuthTables(env){if(!env.DB)return;if(!authTablesPromise){authTablesPromise=(async()=>{await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,name TEXT NOT NULL,password_hash TEXT NOT NULL,password_salt TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_login_at TEXT)").run();try{await env.DB.prepare("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'").run();}catch{}await env.DB.prepare("CREATE TABLE IF NOT EXISTS password_resets (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,used_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await env.DB.prepare("CREATE TABLE IF NOT EXISTS magic_links (id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT NOT NULL,name TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,used_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_rate_limits (id TEXT PRIMARY KEY,count INTEGER NOT NULL DEFAULT 0,window_started INTEGER NOT NULL)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_resets(token_hash)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_magic_link_token ON magic_links(token_hash)").run();})().catch(e=>{authTablesPromise=null;throw e;});}await authTablesPromise;}
 async function enforceAuthRateLimit(env,request,scope,limit,windowSeconds){
-  if(!env.DB)return {allowed:true};
+  if(!env.DB)return {allowed:false,retryAfter:60,unavailable:true};
   await ensureAuthTables(env);
   const secret=getUserSessionSecret(env)||String(env.OWNER_AUTH_TOKEN||"");
-  if(!secret)return {allowed:true};
+  if(!secret)return {allowed:false,retryAfter:60,unavailable:true};
   const ip=String(request.headers.get("CF-Connecting-IP")||request.headers.get("X-Forwarded-For")||"unknown").split(",")[0].trim().slice(0,128);
   const key=await hmacHex(secret,"rate|"+scope+"|"+ip);
   const now=Math.floor(Date.now()/1000);
@@ -830,7 +831,7 @@ function normalizeEmail(v){return String(v||"").trim().toLowerCase().slice(0,320
 function normalizeName(v){return String(v||"").trim().replace(/\s+/g," ").slice(0,100)}
 async function hashPassword(password,salt){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations:100000,hash:"SHA-256"},key,256);return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,"0")).join("")}
 async function createAccountSession(env,id){const secret=getUserSessionSecret(env);if(!secret)return null;const exp=Math.floor(Date.now()/1000)+2592000,payload="account."+id+"."+exp;return payload+"."+await hmacHex(secret,payload)}
-async function getAccountUser(request,env){if(!env.DB)return null;const secret=getUserSessionSecret(env),parts=getCookie(request,"neyqora_account").split(".");if(!secret||parts.length!==4||parts[0]!=="account")return null;const exp=Number(parts[2]);if(!/^[0-9a-f-]{36}$/.test(parts[1])||!Number.isInteger(exp)||exp<Math.floor(Date.now()/1000))return null;if(parts[3]!==await hmacHex(secret,parts[0]+"."+parts[1]+"."+parts[2]))return null;return await env.DB.prepare("SELECT id,email,name,role,created_at,last_login_at FROM users WHERE id=?").bind(parts[1]).first()||null}
+async function getAccountUser(request,env){if(!env.DB)return null;const secret=getUserSessionSecret(env),parts=getCookie(request,"neyqora_account").split(".");if(!secret||parts.length!==4||parts[0]!=="account")return null;const exp=Number(parts[2]);if(!/^[0-9a-f-]{36}$/.test(parts[1])||!Number.isInteger(exp)||exp<Math.floor(Date.now()/1000))return null;if(!constantTimeEqual(parts[3],await hmacHex(secret,parts[0]+"."+parts[1]+"."+parts[2])))return null;return await env.DB.prepare("SELECT id,email,name,role,created_at,last_login_at FROM users WHERE id=?").bind(parts[1]).first()||null}
 function accountCookie(session,maxAge=2592000,secure=true){return "neyqora_account="+encodeURIComponent(session)+"; Path=/; HttpOnly; "+(secure?"Secure; ":"")+"SameSite=Lax; Max-Age="+maxAge}
 
 async function ensureProductivityTables(env){
@@ -904,9 +905,7 @@ async function sendResendEmail(env, { to, subject, body }){
   }
 }
 
-function getUserSessionSecret(env) {
-  return String(env.USER_SESSION_SECRET || env.OWNER_AUTH_TOKEN || "");
-}
+
 
 async function createUserSession(secret, userId) {
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
@@ -925,7 +924,7 @@ async function getAuthenticatedUserId(request, env) {
   const expiresAt = Number(parts[2]);
   if (!/^[A-Za-z0-9._:-]{1,100}$/.test(userId) || !Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return "";
   const expected = await hmacHex(secret, parts[0] + "." + parts[1] + "." + parts[2]);
-  return parts[3] === expected ? userId : "";
+  return constantTimeEqual(parts[3], expected) ? userId : "";
 }
 
 async function issueUserSession(env) {
@@ -947,6 +946,17 @@ function getCookie(request, name) {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : "";
 }
 
+function constantTimeEqual(leftValue, rightValue) {
+  const left = String(leftValue ?? "");
+  const right = String(rightValue ?? "");
+  let difference = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i += 1) {
+    difference |= (left.charCodeAt(i) || 0) ^ (right.charCodeAt(i) || 0);
+  }
+  return difference === 0;
+}
+
 async function hmacHex(secret, value) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
@@ -963,14 +973,14 @@ async function verifyOwnerSession(request, env) {
   const secret = String(env.OWNER_AUTH_TOKEN || "");
   if (!secret) return false;
   const bearer = getBearerToken(request);
-  if (bearer && bearer === secret) return true;
+  if (bearer && constantTimeEqual(bearer, secret)) return true;
   const session = getCookie(request, "neyqora_owner");
   const parts = session.split(".");
   if (parts.length !== 3 || parts[0] !== "owner") return false;
   const expiresAt = Number(parts[1]);
   if (!Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
   const expected = await hmacHex(secret, parts[0] + "." + parts[1]);
-  return parts[2] === expected;
+  return constantTimeEqual(parts[2], expected);
 }
 
 function getFileExtension(name) {
@@ -1897,7 +1907,7 @@ export default {
         const body = await request.json();
         const token = String(body?.token || "");
         const secret = String(env.OWNER_AUTH_TOKEN || "");
-        if (!secret || !token || token !== secret) return Response.json({ ok: false, error: "Owner kimliği doğrulanamadı." }, { status: 401 });
+        if (!secret || !token || !constantTimeEqual(token, secret)) return Response.json({ ok: false, error: "Owner kimliği doğrulanamadı." }, { status: 401 });
         const session = await createOwnerSession(secret);
         return new Response(JSON.stringify({ ok: true, role: "owner", unlimited: true }), {
           status: 200,
@@ -2028,6 +2038,7 @@ export default {
         tools: ["calculator", "weather", "web", "coding", "project", "calendar", "email", "automation"],
         web: true,
         ownerAuth: !!env.OWNER_AUTH_TOKEN,
+        userSessionSecret: !!env.USER_SESSION_SECRET,
         aiProvider: env.AI?.info ? env.AI.info() : { mode: "cloud", cloud: !!env.AI, local: false, fallback: false }
       });
     }
@@ -2636,6 +2647,7 @@ export const __test = {
   executeToolStep,
   getBearerToken,
   getCookie,
+  constantTimeEqual,
   getFileExtension,
   isAnalyzableFile,
   normalizeFileText
