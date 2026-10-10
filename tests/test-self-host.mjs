@@ -24,6 +24,8 @@ assert.match(server, /NEYQORA_DB_PATH/);
 assert.match(server, /worker\.fetch\(webRequest, env\)/);
 assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
 assert.match(server, /MAX_REQUEST_BYTES/);
+assert.match(server, /headers\.delete\("x-forwarded-for"\)/);
+assert.match(server, /headers\.set\("cf-connecting-ip", request\.socket\.remoteAddress/);
 assert.match(server, /mkdirSync\(dirname\(resolve\(dbPath\)\)/);
 assert.match(server, /Sunucu hatası/);
 assert.equal(validateSelfHostedSecrets({ OWNER_AUTH_TOKEN: "owner-test-secret-value-32-characters-min", USER_SESSION_SECRET: "user-test-secret-value-32-characters-min" }), true);
