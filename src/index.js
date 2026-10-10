@@ -1655,22 +1655,73 @@ function isBlockedFetchUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
     if (!["http:", "https:"].includes(parsed.protocol)) return true;
-    const host = parsed.hostname.toLowerCase();
-    return host === "localhost" ||
-      host === "localhost.localdomain" ||
-      host === "metadata.google.internal" ||
-      host === "instance-data.ec2.internal" ||
-      host === "host.docker.internal" ||
-      host === "127.0.0.1" ||
-      host === "::1" ||
-      host === "[::1]" ||
-      host === "169.254.169.254" ||
-      /^10\./.test(host) ||
-      /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+    if (parsed.username || parsed.password) return true;
+    if (parsed.port && !["80", "443"].includes(parsed.port)) return true;
+
+    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    // Reject IPv6 literals entirely; this avoids loopback, link-local, ULA and
+    // IPv4-mapped IPv6 bypasses without relying on browser-specific IP parsing.
+    if (host.startsWith("[") || host.includes(":")) return true;
+    if (host === "localhost" || host.endsWith(".localhost") ||
+        host === "localhost.localdomain" || host.endsWith(".local") ||
+        host.endsWith(".internal") || host.endsWith(".test") ||
+        host.endsWith(".invalid") || host.endsWith(".example") ||
+        host === "metadata.google.internal" ||
+        host === "instance-data.ec2.internal" ||
+        host === "host.docker.internal") return true;
+
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+      const octets = host.split(".").map(Number);
+      if (octets.some(value => value < 0 || value > 255)) return true;
+      const [a, b, c, d] = octets;
+      if (a === 0 || a === 10 || a === 127 || a >= 224 ||
+          (a === 100 && b >= 64 && b <= 127) ||
+          (a === 169 && b === 254) ||
+          (a === 172 && b >= 16 && b <= 31) ||
+          (a === 192 && b === 168) ||
+          (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+          (a === 192 && b === 88 && c === 99) ||
+          (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
+          (a === 203 && b === 0 && c === 113) ||
+          (a === 255 && b === 255 && c === 255 && d === 255)) return true;
+    }
+    return false;
   } catch {
     return true;
   }
+}
+
+async function readTextLimited(response, maxBytes) {
+  const declaredLength = Number(response.headers.get("content-length") || "0");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    try { await response.body?.cancel(); } catch {}
+    throw new Error("Sayfa yanıtı çok büyük.");
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch {}
+        throw new Error("Sayfa yanıtı çok büyük.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function decodeHtml(s) {
@@ -1756,10 +1807,11 @@ async function webSearch(query) {
 
   if (isUrl) {
     if (isBlockedFetchUrl(clean)) throw new Error("Bu URL güvenlik politikası nedeniyle açılamıyor.");
-    const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" }, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error("Sayfa açılamadı.");
-    const html = await response.text();
-    if (html.length > 1_000_000) throw new Error("Sayfa yanıtı çok büyük.");
+    const response = await fetch(clean, { redirect: "manual", headers: { "user-agent": "NEYQORA/1.0" }, signal: AbortSignal.timeout(10000) });
+    // Redirects are intentionally rejected: every redirect target would need a
+    // fresh private-address check before it could be fetched safely.
+    if (!response.ok) throw new Error("Sayfa açılamadı veya yönlendirme güvenlik nedeniyle engellendi.");
+    const html = await readTextLimited(response, 1_000_000);
     const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || clean)
       .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     return [{ title, link: clean }];
@@ -2648,6 +2700,8 @@ export const __test = {
   getBearerToken,
   getCookie,
   constantTimeEqual,
+  isBlockedFetchUrl,
+  readTextLimited,
   getFileExtension,
   isAnalyzableFile,
   normalizeFileText
