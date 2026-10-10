@@ -1857,6 +1857,11 @@ export default {
   async fetch(request, env) {
     env = withAIProvider(env);
     const url = new URL(request.url);
+    const declaredBodyLength = Number(request.headers.get("content-length") || "0");
+    if (request.method !== "GET" && request.method !== "HEAD" &&
+        Number.isFinite(declaredBodyLength) && declaredBodyLength > 16 * 1024 * 1024) {
+      return Response.json({ ok: false, error: "İstek gövdesi çok büyük." }, { status: 413, headers: { "cache-control": "no-store" } });
+    }
 
     if (request.method === "GET" && url.pathname === "/manifest.webmanifest") {
       return new Response(JSON.stringify({
