@@ -100,7 +100,7 @@ jobs:
           set -euo pipefail
           dir="projects/issue-$ISSUE_NUMBER"
           if grep -RInE '\b(eval|exec)[[:space:]]*\(' "$dir" --include='*.py'; then echo "Forbidden dynamic execution found."; exit 1; fi
-          if grep -RInE '\b(os\.system|subprocess\.(run|Popen|call,check_output,check_call)|socket\.|ctypes\.|pickle\.loads|__import__)\s*\(' "$dir" --include='*.py'; then echo "Forbidden process/network/native/deserialization call found."; exit 1; fi
+          if grep -RInE '\b(os\.system|subprocess\.(run|Popen|call|check_output|check_call)|socket\.|ctypes\.|pickle\.loads|__import__)\s*\(' "$dir" --include='*.py'; then echo "Forbidden process/network/native/deserialization call found."; exit 1; fi
           if grep -RInE '^\s*(import|from)\s+(subprocess|socket|ctypes|pickle)\b' "$dir" --include='*.py'; then echo "Forbidden module import found."; exit 1; fi
 
       - name: Upload tested project
