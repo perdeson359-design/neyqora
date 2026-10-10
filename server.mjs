@@ -1,4 +1,6 @@
 import http from "node:http";
+import { chmodSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 import worker from "./src/index.js";
 import { validateSelfHostedSecrets } from "./src/security/secrets.js";
@@ -22,7 +24,9 @@ if (aiProviderMode === "auto" && (!aiBaseUrl || !aiApiKey) && !process.env.LOCAL
   throw new Error("AI_PROVIDER_MODE=auto için Cloud AI veya LOCAL_AI_BASE_URL yapılandırılmalı");
 }
 
+if (dbPath !== ":memory:") mkdirSync(dirname(resolve(dbPath)), { recursive: true, mode: 0o700 });
 const db = new Database(dbPath);
+if (dbPath !== ":memory:") { try { chmodSync(dbPath, 0o600); } catch {} }
 db.pragma("journal_mode = WAL");
 db.exec("CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_memories_user_created ON memories(user_id, created_at DESC)");
@@ -87,13 +91,37 @@ const env = {
   NEYQORA_SELF_HOSTED: "1"
 };
 
+const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const server = http.createServer(async (request, response) => {
   try {
-    const url = new URL(request.url || "/", "http://" + (request.headers.host || "localhost"));
-    const chunks = [];
-    for await (const chunk of request) chunks.push(chunk);
-    const body = Buffer.concat(chunks);
+    const declaredLength = Number(request.headers["content-length"] || "0");
+    if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
+      response.writeHead(413, { "content-type": "application/json; charset=utf-8", "connection": "close" });
+      response.end(JSON.stringify({ ok: false, error: "İstek gövdesi çok büyük." }));
+      request.resume();
+      return;
+    }
 
+    const chunks = [];
+    let totalBytes = 0;
+    let tooLarge = false;
+    for await (const chunk of request) {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_REQUEST_BYTES) {
+        tooLarge = true;
+        chunks.length = 0;
+        continue;
+      }
+      if (!tooLarge) chunks.push(chunk);
+    }
+    if (tooLarge) {
+      response.writeHead(413, { "content-type": "application/json; charset=utf-8", "connection": "close" });
+      response.end(JSON.stringify({ ok: false, error: "İstek gövdesi çok büyük." }));
+      return;
+    }
+
+    const url = new URL(request.url || "/", "http://" + (request.headers.host || "localhost"));
+    const body = Buffer.concat(chunks, totalBytes);
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (Array.isArray(value)) headers.set(key, value.join(", "));
@@ -112,12 +140,20 @@ const server = http.createServer(async (request, response) => {
     const resultBody = Buffer.from(await result.arrayBuffer());
     response.end(resultBody);
   } catch (error) {
+    console.error("NEYQORA request failed:", error);
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     response.statusCode = 500;
     response.setHeader("content-type", "application/json; charset=utf-8");
-    response.end(JSON.stringify({ error: "NEYQORA self-host runtime error: " + (error?.message || "unknown") }));
+    response.end(JSON.stringify({ ok: false, error: "Sunucu hatası." }));
   }
 });
 
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
+server.keepAliveTimeout = 5_000;
 server.listen(port, host, () => {
   console.log("NEYQORA self-host listening on http://" + host + ":" + port);
 });
