@@ -4,76 +4,115 @@ on:
   issues:
     types: [opened, reopened]
 
+permissions:
+  contents: read
+  issues: write
+
 jobs:
-  generate:
+  generate-and-test:
     if: github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR'
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    permissions:
-      contents: write
-      issues: write
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
       PROJECT_REQUEST: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
       ISSUE_NUMBER: ${{ github.event.issue.number }}
     steps:
-      - name: Checkout
+      - name: Checkout without persisted credentials
         uses: actions/checkout@v4
+        with:
+          persist-credentials: false
 
       - name: Health
         run: |
           set -euo pipefail
-          code=$(curl -sS -o /tmp/health.json -w "%{http_code}" -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/health")
+          code=$(curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/health.json -w "%{http_code}" -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/health")
           echo "Health HTTP=$code"
-          cat /tmp/health.json
-          test "$code" = "200"
+          jq -e '.ok == true and .name == "NEYQORA"' /tmp/health.json >/dev/null
 
       - name: Generate project
-        id: generate
         run: |
           set -euo pipefail
           python -c 'import json,os; json.dump({"request":os.environ["PROJECT_REQUEST"]},open("/tmp/request.json","w",encoding="utf-8"),ensure_ascii=False)'
-          session_code=$(curl -sS -o /tmp/session.json -w "%{http_code}" -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/session")
-          echo "Session HTTP=$session_code"
-          cat /tmp/session.json
+          session_code=$(curl --fail-with-body -sS --connect-timeout 5 --max-time 15 -o /tmp/session.json -w "%{http_code}" -c /tmp/neyqora.cookies -b /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" "$NEYQORA_URL/api/session")
           test "$session_code" = "200"
           python -c 'import json; d=json.load(open("/tmp/session.json")); assert d.get("ok") and isinstance(d.get("userId"),str), d'
-          code=$(curl -sS -o /tmp/response.json -w "%{http_code}" -b /tmp/neyqora.cookies -c /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Content-Type: application/json" --data-binary @/tmp/request.json "$NEYQORA_URL/api/project" || true)
+          code=$(curl -sS --connect-timeout 5 --max-time 120 -o /tmp/response.json -w "%{http_code}" -b /tmp/neyqora.cookies -c /tmp/neyqora.cookies -A "NEYQORA-GitHub-Actions" -H "Origin: https://neyqora.kosseofficial.workers.dev" -H "Content-Type: application/json" --data-binary @/tmp/request.json "$NEYQORA_URL/api/project")
           echo "Project API HTTP=$code"
-          cat /tmp/response.json || true
-          python -c 'import json; d=json.load(open("/tmp/response.json")); assert d.get("ok") and d.get("files"), d'
-          python -c 'import json,os,pathlib; d=json.load(open("/tmp/response.json")); root=(pathlib.Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"])).resolve(); base=pathlib.Path("projects").resolve(); root.mkdir(parents=True,exist_ok=True); files=d["files"]; assert files, "No project files"; [(lambda p,x: (p.parent.mkdir(parents=True,exist_ok=True),p.write_text(str(x.get("content","")),encoding="utf-8")))( (root/pathlib.Path(str(x["path"]).lstrip("/\"))).resolve(), x) if (root/pathlib.Path(str(x["path"]).lstrip("/\"))).resolve().is_relative_to(root) else (_ for _ in ()).throw(ValueError("Unsafe project path: "+str(x["path"]))) for x in files]; print(root)'
+          test "$code" = "200"
+          python -c 'import json; d=json.load(open("/tmp/response.json")); assert d.get("ok") and isinstance(d.get("files"),list) and d["files"], d'
+          python - <<'PY'
+          import json, os
+          from pathlib import Path, PurePosixPath
+          data=json.load(open("/tmp/response.json",encoding="utf-8"))
+          root=(Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"])).resolve()
+          base=Path("projects").resolve()
+          if not root.is_relative_to(base): raise SystemExit("Unsafe project output directory")
+          root.mkdir(parents=True,exist_ok=True)
+          if len(data["files"]) > 8: raise SystemExit("Too many generated files")
+          for item in data["files"]:
+              raw=str(item.get("path",""))
+              rel=PurePosixPath(raw)
+              if not raw or rel.is_absolute() or any(p in ("", ".", "..") for p in rel.parts) or "\\" in raw:
+                  raise SystemExit("Unsafe generated path: "+raw)
+              target=(root/Path(*rel.parts)).resolve()
+              if not target.is_relative_to(root): raise SystemExit("Generated path escapes output directory")
+              target.parent.mkdir(parents=True,exist_ok=True)
+              target.write_text(str(item.get("content","")),encoding="utf-8")
+          print("Generated files:",len(data["files"]))
+          PY
 
-      - name: Test
+      - name: Validate project paths
+        run: |
+          set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          root=Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"])
+          if not root.is_dir(): raise SystemExit("Generated project directory missing")
+          files=list(root.rglob("*"))
+          if not any(p.is_file() for p in files): raise SystemExit("No generated files")
+          for p in files:
+              if p.is_symlink(): raise SystemExit("Symlinks are forbidden")
+              if p.is_file() and (p.suffix == ".pyc" or "__pycache__" in p.parts): raise SystemExit("Generated bytecode is forbidden")
+          PY
+
+      - name: Test generated Python
         id: test
-        continue-on-error: true
+        timeout-minutes: 3
         run: |
           set -euo pipefail
-          files=$(find "projects/issue-$ISSUE_NUMBER" -type f -name 'test_*.py' | sort)
-          if [ -z "$files" ]; then
-            echo "No Python tests found; syntax and safety gates will still run."
-            exit 0
-          fi
-          while IFS= read -r file; do timeout 30s python "$file"; done <<< "$files"
+          mapfile -t files < <(find "projects/issue-$ISSUE_NUMBER" -type f -name 'test_*.py' | sort)
+          if [ "${#files[@]}" -eq 0 ]; then echo "No Python tests found; syntax and safety checks still run."; exit 0; fi
+          for file in "${files[@]}"; do timeout 30s python "$file"; done
 
-      - name: Syntax
+      - name: Compile generated Python
         id: syntax
-        continue-on-error: true
         run: |
           set -euo pipefail
-          files=$(find "projects/issue-$ISSUE_NUMBER" -type f -name '*.py' | sort)
-          while IFS= read -r file; do python -m py_compile "$file"; done <<< "$files"
+          mapfile -t files < <(find "projects/issue-$ISSUE_NUMBER" -type f -name '*.py' | sort)
+          if [ "${#files[@]}" -eq 0 ]; then echo "No Python files to compile."; exit 0; fi
+          python -m py_compile "${files[@]}"
 
-      - name: Safety
+      - name: Safety scan generated Python
         id: safety
-        continue-on-error: true
         run: |
           set -euo pipefail
-          ! grep -RInE '\\b(eval|exec)[[:space:]]*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
-          ! grep -RInE '\\b(os\\.system|subprocess\\.(run|Popen|call|check_output|check_call)|socket\\.|ctypes\\.|pickle\\.loads|__import__)\\s*\\(' "projects/issue-$ISSUE_NUMBER" --include='*.py'
-          ! grep -RInE '^\\s*(import|from)\\s+(subprocess|socket|ctypes|pickle)\\b' "projects/issue-$ISSUE_NUMBER" --include='*.py'
+          dir="projects/issue-$ISSUE_NUMBER"
+          if grep -RInE '\b(eval|exec)[[:space:]]*\(' "$dir" --include='*.py'; then echo "Forbidden dynamic execution found."; exit 1; fi
+          if grep -RInE '\b(os\.system|subprocess\.(run|Popen|call,check_output,check_call)|socket\.|ctypes\.|pickle\.loads|__import__)\s*\(' "$dir" --include='*.py'; then echo "Forbidden process/network/native/deserialization call found."; exit 1; fi
+          if grep -RInE '^\s*(import|from)\s+(subprocess|socket|ctypes|pickle)\b' "$dir" --include='*.py'; then echo "Forbidden module import found."; exit 1; fi
 
-      - name: Publish
+      - name: Upload tested project
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: neyqora-project-${{ github.event.issue.number }}
+          path: projects/issue-${{ github.event.issue.number }}/
+          if-no-files-found: error
+          retention-days: 1
+
+      - name: Publish test result
         if: always()
         env:
           GH_TOKEN: ${{ github.token }}
@@ -81,20 +120,59 @@ jobs:
           SYNTAX: ${{ steps.syntax.outcome }}
           SAFETY: ${{ steps.safety.outcome }}
         run: |
+          set -euo pipefail
           if [ "$TEST" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then status=passed; else status=failed; fi
-          printf '%s\n' '<!-- NEYQORA_CI_RESULT {"status":"'"$status"'","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"'"$TEST"'","final_gate":"'"$TEST"'"} -->' > /tmp/ci.md
+          printf '%s\n' '<!-- NEYQORA_CI_RESULT {"status":"'"$status"'","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"'"$TEST"'","final_gate":"'"$SAFETY"'"} -->' > /tmp/ci.md
           printf '%s\n' "NEYQORA CI sonucu: **$status**" "- Test: $TEST" "- Sözdizimi: $SYNTAX" "- Güvenlik: $SAFETY" >> /tmp/ci.md
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
 
-      - name: Commit
-        if: steps.test.outcome == 'success' && steps.syntax.outcome == 'success' && steps.safety.outcome == 'success'
+  commit-tested-project:
+    needs: generate-and-test
+    if: needs.generate-and-test.result == 'success'
+    runs-on: ubuntu-latest
+    timeout-minutes: 3
+    permissions:
+      contents: write
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+    steps:
+      - name: Checkout without persisted credentials
+        uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+
+      - name: Download tested artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: neyqora-project-${{ github.event.issue.number }}
+          path: projects/issue-${{ github.event.issue.number }}
+
+      - name: Validate artifact before commit
         run: |
           set -euo pipefail
+          python - <<'PY'
+          import os
+          from pathlib import Path
+          root=(Path("projects")/("issue-"+os.environ["ISSUE_NUMBER"])).resolve()
+          base=Path("projects").resolve()
+          if not root.is_relative_to(base) or not root.is_dir(): raise SystemExit("Unsafe artifact root")
+          files=list(root.rglob("*"))
+          if not files or not any(p.is_file() for p in files): raise SystemExit("Empty project artifact")
+          for p in files:
+              if p.is_symlink(): raise SystemExit("Symlinks are forbidden")
+              if not p.resolve().is_relative_to(root): raise SystemExit("Artifact path escapes root")
+              if p.is_file() and ("__pycache__" in p.parts or p.suffix == ".pyc"): raise SystemExit("Bytecode is forbidden")
+          PY
+
+      - name: Commit verified files
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git config core.hooksPath /dev/null
           git config user.name "NEYQORA"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          find "projects/issue-$ISSUE_NUMBER" -type d -name __pycache__ -prune -exec rm -rf {} +
-          find "projects/issue-$ISSUE_NUMBER" -type f -name '*.pyc' -delete
-          git add "projects/issue-$ISSUE_NUMBER"
-          git diff --cached --quiet && exit 0
-          git commit -m "Generate and test project from issue"
-          git push
+          git add -- "projects/issue-$ISSUE_NUMBER"
+          if git diff --cached --quiet; then echo "No project changes to commit."; exit 0; fi
+          git -c core.hooksPath=/dev/null commit -m "Generate and test project from issue"
+          git -c core.hooksPath=/dev/null -c credential.helper='!gh auth git-credential' push
