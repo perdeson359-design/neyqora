@@ -19,7 +19,25 @@ jobs:
     name: Deploy NEYQORA Worker
     env:
       OWNER_AUTH_TOKEN: ${{ secrets.OWNER_AUTH_TOKEN }}
+      USER_SESSION_SECRET: ${{ secrets.USER_SESSION_SECRET }}
     steps:
+      - name: Validate required security secrets
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ -z "${OWNER_AUTH_TOKEN:-}" ] || [ -z "${USER_SESSION_SECRET:-}" ]; then
+            echo "OWNER_AUTH_TOKEN and USER_SESSION_SECRET repository secrets are required."
+            exit 1
+          fi
+          if [ "${#OWNER_AUTH_TOKEN}" -lt 32 ] || [ "${#USER_SESSION_SECRET}" -lt 32 ]; then
+            echo "Both security secrets must be at least 32 characters."
+            exit 1
+          fi
+          if [ "$OWNER_AUTH_TOKEN" = "$USER_SESSION_SECRET" ]; then
+            echo "OWNER_AUTH_TOKEN and USER_SESSION_SECRET must be different values."
+            exit 1
+          fi
+
       - name: Checkout
         uses: actions/checkout@v4
 
@@ -36,6 +54,15 @@ jobs:
             exit 0
           fi
           printf '%s' "$OWNER_AUTH_TOKEN" | npx wrangler secret put OWNER_AUTH_TOKEN --name neyqora
+
+      - name: Sync user session secret to Worker
+        shell: bash
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          printf "%s" "$USER_SESSION_SECRET" | npx wrangler secret put USER_SESSION_SECRET --name neyqora
 
       - name: Deploy to Cloudflare Workers
         uses: cloudflare/wrangler-action@v4

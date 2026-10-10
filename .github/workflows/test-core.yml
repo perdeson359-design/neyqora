@@ -3,9 +3,9 @@ name: Core Tests
 on:
   workflow_dispatch:
   push:
-    paths: ["src/index.js","src/ai/**","wrangler.jsonc","tests/**","package.json",".github/workflows/test-core.yml"]
+    paths: ["src/index.js","src/ai/**","server.mjs","wrangler.jsonc","tests/**","package.json",".github/workflows/test-core.yml",".github/workflows/generate-project-from-issue-direct.yml"]
   pull_request:
-    paths: ["src/index.js","wrangler.jsonc","tests/**",".github/workflows/test-core.yml"]
+    paths: ["src/index.js","server.mjs","wrangler.jsonc","tests/**","package.json",".github/workflows/test-core.yml",".github/workflows/generate-project-from-issue-direct.yml"]
 
 jobs:
   core:
@@ -16,6 +16,8 @@ jobs:
         with:
           node-version: "20"
       - run: node --check src/index.js
+      - name: Validate generated-project workflow YAML
+        run: ruby -e 'require %q(yaml); YAML.load_file(%q(.github/workflows/generate-project-from-issue-direct.yml)); puts %q(workflow-yaml-pass)'
       - run: node tests/test-core.mjs
       - run: node tests/test-execution-contract.mjs
       - run: node tests/test-ai-provider.mjs

@@ -1,6 +1,9 @@
 import http from "node:http";
+import { chmodSync, mkdirSync } from "node:fs";
+import { dirname, resolve } from "node:path";
 import Database from "better-sqlite3";
 import worker from "./src/index.js";
+import { validateSelfHostedSecrets } from "./src/security/secrets.js";
 
 const port = Number(process.env.PORT || 8787);
 const host = process.env.HOST || "0.0.0.0";
@@ -10,9 +13,7 @@ const aiModel = process.env.NEYQORA_AI_MODEL || "@cf/meta/llama-3.2-3b-instruct"
 const aiApiKey = process.env.NEYQORA_AI_API_KEY || "";
 const aiProviderMode = String(process.env.AI_PROVIDER_MODE || "auto").toLowerCase();
 
-if (!process.env.OWNER_AUTH_TOKEN) {
-  throw new Error("OWNER_AUTH_TOKEN is required");
-}
+validateSelfHostedSecrets(process.env);
 if (aiProviderMode === "cloud" && (!aiBaseUrl || !aiApiKey)) {
   throw new Error("AI_PROVIDER_MODE=cloud için NEYQORA_AI_BASE_URL ve NEYQORA_AI_API_KEY gerekli");
 }
@@ -23,7 +24,9 @@ if (aiProviderMode === "auto" && (!aiBaseUrl || !aiApiKey) && !process.env.LOCAL
   throw new Error("AI_PROVIDER_MODE=auto için Cloud AI veya LOCAL_AI_BASE_URL yapılandırılmalı");
 }
 
+if (dbPath !== ":memory:") mkdirSync(dirname(resolve(dbPath)), { recursive: true, mode: 0o700 });
 const db = new Database(dbPath);
+if (dbPath !== ":memory:") { try { chmodSync(dbPath, 0o600); } catch {} }
 db.pragma("journal_mode = WAL");
 db.exec("CREATE TABLE IF NOT EXISTS memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
 db.exec("CREATE INDEX IF NOT EXISTS idx_memories_user_created ON memories(user_id, created_at DESC)");
@@ -77,7 +80,7 @@ const env = {
   AI,
   DB,
   OWNER_AUTH_TOKEN: process.env.OWNER_AUTH_TOKEN,
-  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET || process.env.OWNER_AUTH_TOKEN,
+  USER_SESSION_SECRET: process.env.USER_SESSION_SECRET,
   RESEND_API_KEY: process.env.RESEND_API_KEY || "",
   RESEND_FROM: process.env.RESEND_FROM || "onboarding@resend.dev",
   AI_PROVIDER_MODE: aiProviderMode,
@@ -88,18 +91,38 @@ const env = {
   NEYQORA_SELF_HOSTED: "1"
 };
 
+const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const server = http.createServer(async (request, response) => {
   try {
-    const url = new URL(request.url || "/", "http://" + (request.headers.host || "localhost"));
+    const declaredLength = Number(request.headers["content-length"] || "0");
     const chunks = [];
-    for await (const chunk of request) chunks.push(chunk);
-    const body = Buffer.concat(chunks);
+    let totalBytes = 0;
+    let tooLarge = Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES;
+    for await (const chunk of request) {
+      totalBytes += chunk.length;
+      if (totalBytes > MAX_REQUEST_BYTES) {
+        tooLarge = true;
+        chunks.length = 0;
+        continue;
+      }
+      if (!tooLarge) chunks.push(chunk);
+    }
+    if (tooLarge) {
+      response.writeHead(413, { "content-type": "application/json; charset=utf-8" });
+      response.end(JSON.stringify({ ok: false, error: "İstek gövdesi çok büyük." }));
+      return;
+    }
 
+    const url = new URL(request.url || "/", "http://" + (request.headers.host || "localhost"));
+    const body = Buffer.concat(chunks, totalBytes);
     const headers = new Headers();
     for (const [key, value] of Object.entries(request.headers)) {
       if (Array.isArray(value)) headers.set(key, value.join(", "));
       else if (value !== undefined) headers.set(key, value);
     }
+    // Never trust client-supplied forwarding headers for rate-limit identity.
+    headers.delete("x-forwarded-for");
+    headers.set("cf-connecting-ip", request.socket.remoteAddress || "unknown");
 
     const webRequest = new Request(url, {
       method: request.method,
@@ -113,12 +136,20 @@ const server = http.createServer(async (request, response) => {
     const resultBody = Buffer.from(await result.arrayBuffer());
     response.end(resultBody);
   } catch (error) {
+    console.error("NEYQORA request failed:", error);
+    if (response.headersSent) {
+      response.destroy();
+      return;
+    }
     response.statusCode = 500;
     response.setHeader("content-type", "application/json; charset=utf-8");
-    response.end(JSON.stringify({ error: "NEYQORA self-host runtime error: " + (error?.message || "unknown") }));
+    response.end(JSON.stringify({ ok: false, error: "Sunucu hatası." }));
   }
 });
 
+server.requestTimeout = 30_000;
+server.headersTimeout = 15_000;
+server.keepAliveTimeout = 5_000;
 server.listen(port, host, () => {
   console.log("NEYQORA self-host listening on http://" + host + ":" + port);
 });

@@ -124,6 +124,10 @@ Self-host için isteğe bağlı değişkenler:
 - `LOCAL_AI_API_KEY=`
 - `LOCAL_AI_MODEL=...`
 - `LOCAL_AI_TIMEOUT_MS=30000`
+- `OWNER_AUTH_TOKEN` (en az 32 karakter, gizli)
+- `USER_SESSION_SECRET` (OWNER_AUTH_TOKEN değerinden farklı, en az 32 karakter, gizli)
+
+Self-host başlangıcı ayrı ve güçlü iki güvenlik sırrı olmadan başlamaz. `USER_SESSION_SECRET`, kullanıcı oturumlarını ve ilgili imzaları korur; Owner tokenı ile aynı değer kullanılamaz.
 
 Tarayıcı tarafında PWA kabuğu `/manifest.webmanifest` ve `/sw.js` üzerinden kurulabilir. API çağrıları service-worker cache'ine alınmaz; çevrimdışı AI için yerel OpenAI-compatible endpoint kullanılmalıdır.
 

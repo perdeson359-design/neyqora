@@ -1,5 +1,6 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
+import worker, { __test } from "../src/index.js";
 
 const source = fs.readFileSync("src/index.js", "utf8");
 for (const name of ["routeMessage","isProjectRequest","sanitizeProjectName","validateAgentPlan","buildAgentPlan","shouldFallbackToChat","summarizeAgentStatus","safeCalculate","basicPythonValidation","executeAgentPlan"]) {
@@ -50,6 +51,10 @@ assert.match(source, /async function generateCodingResponse/);
 assert.match(source, /tool: "coding"/);
 assert.match(source, /ok: !!reply && validation.ok/);
 assert.match(source, /function verifyOwnerSession/);
+assert.match(source, /function constantTimeEqual\(/);
+assert.match(source, /getUserSessionSecret\(env\)/);
+assert.doesNotMatch(source, /USER_SESSION_SECRET\s*\|\|\s*env\.OWNER_AUTH_TOKEN/);
+assert.doesNotMatch(source, /getUserSessionSecret\(env\)\s*\|\|\s*String\(env\.OWNER_AUTH_TOKEN/);
 assert.match(source, /\/api\/auth\/owner/);
 assert.match(source, /async function enforceAuthRateLimit/);
 assert.match(source, /auth_rate_limits/);
@@ -130,4 +135,23 @@ assert.match(source, /create-event/);
 assert.match(source, /save-email/);
 assert.match(source, /create-automation/);
 
+assert.equal(__test.isBlockedFetchUrl("http://127.0.0.1"), true);
+assert.equal(__test.isBlockedFetchUrl("http://10.0.0.1"), true);
+assert.equal(__test.isBlockedFetchUrl("http://172.16.0.1"), true);
+assert.equal(__test.isBlockedFetchUrl("http://192.168.1.2"), true);
+assert.equal(__test.isBlockedFetchUrl("http://169.254.169.254"), true);
+assert.equal(__test.isBlockedFetchUrl("http://[::1]"), true);
+assert.equal(__test.isBlockedFetchUrl("http://foo.localhost"), true);
+assert.equal(__test.isBlockedFetchUrl("http://user:pass@example.com"), true);
+assert.equal(__test.isBlockedFetchUrl("ftp://example.com"), true);
+assert.equal(__test.isBlockedFetchUrl("http://8.8.8.8:8080"), true);
+assert.equal(__test.isBlockedFetchUrl("https://example.com"), false);
+const oversizedWorkerResponse = await worker.fetch(new Request("https://neyqora.test/api/chat", {
+  method: "POST",
+  headers: { "content-length": String(16 * 1024 * 1024 + 1) },
+  body: "x"
+}), {});
+assert.equal(oversizedWorkerResponse.status, 413);
+
+await assert.rejects(() => __test.readTextLimited(new Response("12345"), 4), /çok büyük/i);
 console.log("NEYQORA core contract tests: PASS");

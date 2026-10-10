@@ -1,4 +1,5 @@
 import { withAIProvider } from "./ai/provider.js";
+import { getUserSessionSecret } from "./security/secrets.js";
 
 const MODEL = "@cf/meta/llama-3.2-3b-instruct";
 const VERSION = "6.3";
@@ -159,7 +160,7 @@ button:disabled{opacity:.55;cursor:not-allowed}
 <div class="settings-grid"><div class="setting-card"><h3>👤 Hesap</h3><p>Profilini, şifreni ve hesabını yönet.</p><div class="actions"><button id="settings-profile" class="secondary" type="button">Profil / Hesap</button></div></div><div class="setting-card"><h3>🤖 AI Sağlayıcı</h3><p>Bulut AI, yerel AI ve otomatik geçiş yapılandırmasını yönet.</p></div><div class="setting-card"><h3>🧠 Hafıza</h3><p>Kalıcı hafıza yönetimini Hafıza sayfasından yap.</p></div><div class="setting-card"><h3>📱 Mobil</h3><p>Native uygulamada titreşim, paylaşım, kamera, sohbet kaydetme ve yerel bildirim desteği bulunur.</p><div class="actions"><button id="install-app" class="secondary" type="button" hidden>Uygulamayı yükle</button><button id="mobile-share" class="secondary" type="button">Paylaş</button><button id="mobile-camera" class="secondary" type="button">Kamera</button><button id="mobile-save" class="secondary" type="button">Sohbeti kaydet</button><button id="mobile-notifications" class="secondary" type="button">Bildirimleri aç</button><button id="mobile-reminder" class="secondary" type="button">1 dk hatırlat</button><button id="mobile-haptic" class="secondary" type="button">Titreşim testi</button></div><div id="mobile-status" class="result" hidden></div></div><div class="setting-card"><h3>🔐 Güvenlik</h3><p>Üretim doğrulaması ve güvenlik başlıkları aktif.</p></div></div>
 </section>
 </main>
-<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button" onclick="return window.neyqoraSend()">Gönder</button></div><div class="auth-overlay" id="auth-overlay" aria-hidden="true"><div class="auth-card"><button class="auth-close" id="auth-close" type="button">×</button><div class="hero-mark" style="margin-bottom:12px">N</div><h2 id="auth-title">NEYQORA’ya giriş yap</h2><p id="auth-subtitle">Hesabınla giriş yap veya yeni hesap oluştur.</p><div class="auth-tabs"><button class="auth-tab active" id="login-tab" type="button">Giriş Yap</button><button class="auth-tab" id="register-tab" type="button" onclick="location.href='/?auth=register';return false">Kayıt Ol</button></div><div id="saved-login" class="panel" hidden style="margin:0 0 10px;padding:12px"><strong style="font-size:12px">Kayıtlı girişler</strong><div id="saved-login-list" class="actions" style="margin-top:8px"></div></div><div class="auth-forgot"><button id="forgot-password" type="button">Şifremi unuttum</button><br><button id="magic-login" type="button">✉️ Şifresiz e-posta ile giriş</button></div><form id="auth-form"><input id="auth-name" class="field" placeholder="Adın" autocomplete="name" hidden><input id="auth-email" class="field" type="email" placeholder="E-posta" autocomplete="email" required><input id="auth-password" class="field" type="password" placeholder="Şifre" autocomplete="current-password" minlength="8" required><div class="auth-actions"><button class="primary" id="auth-submit" type="submit">Giriş Yap</button></div><div class="auth-error" id="auth-error"></div></form><p class="auth-note">Hafızan ve çalışma verilerin hesabına bağlanır.</p><div id="reset-token-wrap" hidden><input id="reset-token" class="field" placeholder="Sıfırlama kodu" autocomplete="one-time-code"></div></div></div><div class="profile-menu" id="profile-menu"><strong id="profile-name">Misafir</strong><span id="profile-email">Oturum açılmadı</span><button class="secondary" id="profile-button" type="button">Profil / Hesap</button><button class="danger" id="delete-account-button" type="button">Hesabı sil</button><button class="secondary" id="logout-button" type="button">Çıkış yap</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')"><span>💻</span>Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')"><span>🧠</span>Hafıza</button><button data-view="settings-view" type="button" onclick="return window.neyqoraNavigate('settings-view')"><span>⚙️</span>Ayarlar</button></nav>
+<div id="form" role="form"><input id="input" name="message" placeholder="NEYQORA'ya bir şey sor..." autocomplete="off"><button id="send" type="button">Gönder</button></div><div class="auth-overlay" id="auth-overlay" aria-hidden="true"><div class="auth-card"><button class="auth-close" id="auth-close" type="button">×</button><div class="hero-mark" style="margin-bottom:12px">N</div><h2 id="auth-title">NEYQORA’ya giriş yap</h2><p id="auth-subtitle">Hesabınla giriş yap veya yeni hesap oluştur.</p><div class="auth-tabs"><button class="auth-tab active" id="login-tab" type="button">Giriş Yap</button><button class="auth-tab" id="register-tab" type="button" onclick="location.href='/?auth=register';return false">Kayıt Ol</button></div><div id="saved-login" class="panel" hidden style="margin:0 0 10px;padding:12px"><strong style="font-size:12px">Kayıtlı girişler</strong><div id="saved-login-list" class="actions" style="margin-top:8px"></div></div><div class="auth-forgot"><button id="forgot-password" type="button">Şifremi unuttum</button><br><button id="magic-login" type="button">✉️ Şifresiz e-posta ile giriş</button></div><form id="auth-form"><input id="auth-name" class="field" placeholder="Adın" autocomplete="name" hidden><input id="auth-email" class="field" type="email" placeholder="E-posta" autocomplete="email" required><input id="auth-password" class="field" type="password" placeholder="Şifre" autocomplete="current-password" minlength="8" required><div class="auth-actions"><button class="primary" id="auth-submit" type="submit">Giriş Yap</button></div><div class="auth-error" id="auth-error"></div></form><p class="auth-note">Hafızan ve çalışma verilerin hesabına bağlanır.</p><div id="reset-token-wrap" hidden><input id="reset-token" class="field" placeholder="Sıfırlama kodu" autocomplete="one-time-code"></div></div></div><div class="profile-menu" id="profile-menu"><strong id="profile-name">Misafir</strong><span id="profile-email">Oturum açılmadı</span><button class="secondary" id="profile-button" type="button">Profil / Hesap</button><button class="danger" id="delete-account-button" type="button">Hesabı sil</button><button class="secondary" id="logout-button" type="button">Çıkış yap</button></div><nav class="mobile-nav" aria-label="Mobil menü" style="touch-action:manipulation;"><button class="active" data-view="chat-view" type="button" onclick="return window.neyqoraNavigate('chat-view')"><span>💬</span>Sohbet</button><button data-view="tools-view" type="button" onclick="return window.neyqoraNavigate('tools-view')"><span>🧰</span>Araçlar</button><button data-view="project-view" type="button" onclick="return window.neyqoraNavigate('project-view')"><span>💻</span>Proje</button><button data-view="memory-view" type="button" onclick="return window.neyqoraNavigate('memory-view')"><span>🧠</span>Hafıza</button><button data-view="settings-view" type="button" onclick="return window.neyqoraNavigate('settings-view')"><span>⚙️</span>Ayarlar</button></nav>
 </div>
 <script>
 function updateNetworkStatus(){
@@ -737,7 +738,9 @@ window.neyqoraSend=function(){
   return false;
 };
 sendButton.addEventListener("click",function(e){
-  if(sending && activeChatController){ e.preventDefault(); activeChatController.abort(); }
+  e.preventDefault();
+  if(sending && activeChatController){ activeChatController.abort(); return; }
+  sendMessage();
 });
 input.addEventListener("keydown",function(e){
   if(e.key==="Enter"){
@@ -800,10 +803,10 @@ let productivityTablesPromise = null;
 let authTablesPromise=null;
 async function ensureAuthTables(env){if(!env.DB)return;if(!authTablesPromise){authTablesPromise=(async()=>{await env.DB.prepare("CREATE TABLE IF NOT EXISTS users (id TEXT PRIMARY KEY,email TEXT NOT NULL UNIQUE,name TEXT NOT NULL,password_hash TEXT NOT NULL,password_salt TEXT NOT NULL,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,last_login_at TEXT)").run();try{await env.DB.prepare("ALTER TABLE users ADD COLUMN role TEXT NOT NULL DEFAULT 'user'").run();}catch{}await env.DB.prepare("CREATE TABLE IF NOT EXISTS password_resets (id INTEGER PRIMARY KEY AUTOINCREMENT,user_id TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,used_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await env.DB.prepare("CREATE TABLE IF NOT EXISTS magic_links (id INTEGER PRIMARY KEY AUTOINCREMENT,email TEXT NOT NULL,name TEXT NOT NULL,token_hash TEXT NOT NULL UNIQUE,expires_at INTEGER NOT NULL,used_at TEXT,created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)").run();await env.DB.prepare("CREATE TABLE IF NOT EXISTS auth_rate_limits (id TEXT PRIMARY KEY,count INTEGER NOT NULL DEFAULT 0,window_started INTEGER NOT NULL)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_password_reset_token ON password_resets(token_hash)").run();await env.DB.prepare("CREATE INDEX IF NOT EXISTS idx_magic_link_token ON magic_links(token_hash)").run();})().catch(e=>{authTablesPromise=null;throw e;});}await authTablesPromise;}
 async function enforceAuthRateLimit(env,request,scope,limit,windowSeconds){
-  if(!env.DB)return {allowed:true};
+  if(!env.DB)return {allowed:false,retryAfter:60,unavailable:true};
   await ensureAuthTables(env);
-  const secret=getUserSessionSecret(env)||String(env.OWNER_AUTH_TOKEN||"");
-  if(!secret)return {allowed:true};
+  const secret=getUserSessionSecret(env);
+  if(!secret)return {allowed:false,retryAfter:60,unavailable:true};
   const ip=String(request.headers.get("CF-Connecting-IP")||request.headers.get("X-Forwarded-For")||"unknown").split(",")[0].trim().slice(0,128);
   const key=await hmacHex(secret,"rate|"+scope+"|"+ip);
   const now=Math.floor(Date.now()/1000);
@@ -830,7 +833,7 @@ function normalizeEmail(v){return String(v||"").trim().toLowerCase().slice(0,320
 function normalizeName(v){return String(v||"").trim().replace(/\s+/g," ").slice(0,100)}
 async function hashPassword(password,salt){const key=await crypto.subtle.importKey("raw",new TextEncoder().encode(password),"PBKDF2",false,["deriveBits"]);const bits=await crypto.subtle.deriveBits({name:"PBKDF2",salt:new TextEncoder().encode(salt),iterations:100000,hash:"SHA-256"},key,256);return Array.from(new Uint8Array(bits)).map(b=>b.toString(16).padStart(2,"0")).join("")}
 async function createAccountSession(env,id){const secret=getUserSessionSecret(env);if(!secret)return null;const exp=Math.floor(Date.now()/1000)+2592000,payload="account."+id+"."+exp;return payload+"."+await hmacHex(secret,payload)}
-async function getAccountUser(request,env){if(!env.DB)return null;const secret=getUserSessionSecret(env),parts=getCookie(request,"neyqora_account").split(".");if(!secret||parts.length!==4||parts[0]!=="account")return null;const exp=Number(parts[2]);if(!/^[0-9a-f-]{36}$/.test(parts[1])||!Number.isInteger(exp)||exp<Math.floor(Date.now()/1000))return null;if(parts[3]!==await hmacHex(secret,parts[0]+"."+parts[1]+"."+parts[2]))return null;return await env.DB.prepare("SELECT id,email,name,role,created_at,last_login_at FROM users WHERE id=?").bind(parts[1]).first()||null}
+async function getAccountUser(request,env){if(!env.DB)return null;const secret=getUserSessionSecret(env),parts=getCookie(request,"neyqora_account").split(".");if(!secret||parts.length!==4||parts[0]!=="account")return null;const exp=Number(parts[2]);if(!/^[0-9a-f-]{36}$/.test(parts[1])||!Number.isInteger(exp)||exp<Math.floor(Date.now()/1000))return null;if(!constantTimeEqual(parts[3],await hmacHex(secret,parts[0]+"."+parts[1]+"."+parts[2])))return null;return await env.DB.prepare("SELECT id,email,name,role,created_at,last_login_at FROM users WHERE id=?").bind(parts[1]).first()||null}
 function accountCookie(session,maxAge=2592000,secure=true){return "neyqora_account="+encodeURIComponent(session)+"; Path=/; HttpOnly; "+(secure?"Secure; ":"")+"SameSite=Lax; Max-Age="+maxAge}
 
 async function ensureProductivityTables(env){
@@ -904,9 +907,7 @@ async function sendResendEmail(env, { to, subject, body }){
   }
 }
 
-function getUserSessionSecret(env) {
-  return String(env.USER_SESSION_SECRET || env.OWNER_AUTH_TOKEN || "");
-}
+
 
 async function createUserSession(secret, userId) {
   const expiresAt = Math.floor(Date.now() / 1000) + 60 * 60 * 24 * 30;
@@ -925,7 +926,7 @@ async function getAuthenticatedUserId(request, env) {
   const expiresAt = Number(parts[2]);
   if (!/^[A-Za-z0-9._:-]{1,100}$/.test(userId) || !Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return "";
   const expected = await hmacHex(secret, parts[0] + "." + parts[1] + "." + parts[2]);
-  return parts[3] === expected ? userId : "";
+  return constantTimeEqual(parts[3], expected) ? userId : "";
 }
 
 async function issueUserSession(env) {
@@ -947,6 +948,17 @@ function getCookie(request, name) {
   return match ? decodeURIComponent(match.slice(name.length + 1)) : "";
 }
 
+function constantTimeEqual(leftValue, rightValue) {
+  const left = String(leftValue ?? "");
+  const right = String(rightValue ?? "");
+  let difference = left.length ^ right.length;
+  const length = Math.max(left.length, right.length);
+  for (let i = 0; i < length; i += 1) {
+    difference |= (left.charCodeAt(i) || 0) ^ (right.charCodeAt(i) || 0);
+  }
+  return difference === 0;
+}
+
 async function hmacHex(secret, value) {
   const key = await crypto.subtle.importKey("raw", new TextEncoder().encode(secret), { name: "HMAC", hash: "SHA-256" }, false, ["sign"]);
   const signature = await crypto.subtle.sign("HMAC", key, new TextEncoder().encode(value));
@@ -963,14 +975,14 @@ async function verifyOwnerSession(request, env) {
   const secret = String(env.OWNER_AUTH_TOKEN || "");
   if (!secret) return false;
   const bearer = getBearerToken(request);
-  if (bearer && bearer === secret) return true;
+  if (bearer && constantTimeEqual(bearer, secret)) return true;
   const session = getCookie(request, "neyqora_owner");
   const parts = session.split(".");
   if (parts.length !== 3 || parts[0] !== "owner") return false;
   const expiresAt = Number(parts[1]);
   if (!Number.isInteger(expiresAt) || expiresAt < Math.floor(Date.now() / 1000)) return false;
   const expected = await hmacHex(secret, parts[0] + "." + parts[1]);
-  return parts[2] === expected;
+  return constantTimeEqual(parts[2], expected);
 }
 
 function getFileExtension(name) {
@@ -1645,22 +1657,73 @@ function isBlockedFetchUrl(rawUrl) {
   try {
     const parsed = new URL(rawUrl);
     if (!["http:", "https:"].includes(parsed.protocol)) return true;
-    const host = parsed.hostname.toLowerCase();
-    return host === "localhost" ||
-      host === "localhost.localdomain" ||
-      host === "metadata.google.internal" ||
-      host === "instance-data.ec2.internal" ||
-      host === "host.docker.internal" ||
-      host === "127.0.0.1" ||
-      host === "::1" ||
-      host === "[::1]" ||
-      host === "169.254.169.254" ||
-      /^10\./.test(host) ||
-      /^192\.168\./.test(host) ||
-      /^172\.(1[6-9]|2\d|3[0-1])\./.test(host);
+    if (parsed.username || parsed.password) return true;
+    if (parsed.port && !["80", "443"].includes(parsed.port)) return true;
+
+    const host = parsed.hostname.toLowerCase().replace(/\.$/, "");
+    // Reject IPv6 literals entirely; this avoids loopback, link-local, ULA and
+    // IPv4-mapped IPv6 bypasses without relying on browser-specific IP parsing.
+    if (host.startsWith("[") || host.includes(":")) return true;
+    if (host === "localhost" || host.endsWith(".localhost") ||
+        host === "localhost.localdomain" || host.endsWith(".local") ||
+        host.endsWith(".internal") || host.endsWith(".test") ||
+        host.endsWith(".invalid") || host.endsWith(".example") ||
+        host === "metadata.google.internal" ||
+        host === "instance-data.ec2.internal" ||
+        host === "host.docker.internal") return true;
+
+    if (/^(\d{1,3}\.){3}\d{1,3}$/.test(host)) {
+      const octets = host.split(".").map(Number);
+      if (octets.some(value => value < 0 || value > 255)) return true;
+      const [a, b, c, d] = octets;
+      if (a === 0 || a === 10 || a === 127 || a >= 224 ||
+          (a === 100 && b >= 64 && b <= 127) ||
+          (a === 169 && b === 254) ||
+          (a === 172 && b >= 16 && b <= 31) ||
+          (a === 192 && b === 168) ||
+          (a === 192 && b === 0 && (c === 0 || c === 2)) ||
+          (a === 192 && b === 88 && c === 99) ||
+          (a === 198 && (b === 18 || b === 19 || (b === 51 && c === 100))) ||
+          (a === 203 && b === 0 && c === 113) ||
+          (a === 255 && b === 255 && c === 255 && d === 255)) return true;
+    }
+    return false;
   } catch {
     return true;
   }
+}
+
+async function readTextLimited(response, maxBytes) {
+  const declaredLength = Number(response.headers.get("content-length") || "0");
+  if (Number.isFinite(declaredLength) && declaredLength > maxBytes) {
+    try { await response.body?.cancel(); } catch {}
+    throw new Error("Sayfa yanıtı çok büyük.");
+  }
+  if (!response.body) return "";
+  const reader = response.body.getReader();
+  const chunks = [];
+  let total = 0;
+  try {
+    while (true) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > maxBytes) {
+        try { await reader.cancel(); } catch {}
+        throw new Error("Sayfa yanıtı çok büyük.");
+      }
+      chunks.push(value);
+    }
+  } finally {
+    reader.releaseLock();
+  }
+  const bytes = new Uint8Array(total);
+  let offset = 0;
+  for (const chunk of chunks) {
+    bytes.set(chunk, offset);
+    offset += chunk.byteLength;
+  }
+  return new TextDecoder().decode(bytes);
 }
 
 function decodeHtml(s) {
@@ -1746,10 +1809,11 @@ async function webSearch(query) {
 
   if (isUrl) {
     if (isBlockedFetchUrl(clean)) throw new Error("Bu URL güvenlik politikası nedeniyle açılamıyor.");
-    const response = await fetch(clean, { headers: { "user-agent": "NEYQORA/1.0" }, signal: AbortSignal.timeout(10000) });
-    if (!response.ok) throw new Error("Sayfa açılamadı.");
-    const html = await response.text();
-    if (html.length > 1_000_000) throw new Error("Sayfa yanıtı çok büyük.");
+    const response = await fetch(clean, { redirect: "manual", headers: { "user-agent": "NEYQORA/1.0" }, signal: AbortSignal.timeout(10000) });
+    // Redirects are intentionally rejected: every redirect target would need a
+    // fresh private-address check before it could be fetched safely.
+    if (!response.ok) throw new Error("Sayfa açılamadı veya yönlendirme güvenlik nedeniyle engellendi.");
+    const html = await readTextLimited(response, 1_000_000);
     const title = (html.match(/<title[^>]*>([\s\S]*?)<\/title>/i)?.[1] || clean)
       .replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
     return [{ title, link: clean }];
@@ -1795,6 +1859,11 @@ export default {
   async fetch(request, env) {
     env = withAIProvider(env);
     const url = new URL(request.url);
+    const declaredBodyLength = Number(request.headers.get("content-length") || "0");
+    if (request.method !== "GET" && request.method !== "HEAD" &&
+        Number.isFinite(declaredBodyLength) && declaredBodyLength > 16 * 1024 * 1024) {
+      return Response.json({ ok: false, error: "İstek gövdesi çok büyük." }, { status: 413, headers: { "cache-control": "no-store" } });
+    }
 
     if (request.method === "GET" && url.pathname === "/manifest.webmanifest") {
       return new Response(JSON.stringify({
@@ -1843,14 +1912,14 @@ export default {
       return new Response(HTML, { headers });
     }
 
-    if (request.method === "POST" && url.pathname === "/api/auth/register") {try{const rl=await enforceAuthRateLimit(env,request,"register",6,3600);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla kayıt denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),name=normalizeName(b?.name),email=normalizeEmail(b?.email),password=String(b?.password||"");if(name.length<2)return Response.json({ok:false,error:"Ad en az 2 karakter olmalı."},{status:400});if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return Response.json({ok:false,error:"Geçerli bir e-posta gir."},{status:400});if(password.length<8||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return Response.json({ok:false,error:"Şifre en az 8 karakter, bir harf ve bir rakam içermeli."},{status:400});if(await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return Response.json({ok:false,error:"Bu e-posta zaten kayıtlı."},{status:409});const id=crypto.randomUUID(),salt=crypto.randomUUID(),hash=await hashPassword(password,salt);await env.DB.prepare("INSERT INTO users (id,email,name,password_hash,password_salt,last_login_at) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)").bind(id,email,name,hash,salt).run();const session=await createAccountSession(env,id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user:{id,email,name,role:"user"}}),{status:201,headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error:e?.message||"Kayıt başarısız."},{status:500})}}
-    if (request.method === "POST" && url.pathname === "/api/auth/login") {try{const rl=await enforceAuthRateLimit(env,request,"login",10,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla giriş denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),email=normalizeEmail(b?.email),password=String(b?.password||""),row=await env.DB.prepare("SELECT id,email,name,password_hash,password_salt,role FROM users WHERE email=?").bind(email).first();if(!row||await hashPassword(password,row.password_salt)!==row.password_hash)return Response.json({ok:false,error:"E-posta veya şifre hatalı."},{status:401});await env.DB.prepare("UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const session=await createAccountSession(env,row.id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user:{id:row.id,email:row.email,name:row.name,role:row.role||"user"}}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error:e?.message||"Giriş başarısız."},{status:500})}}
+    if (request.method === "POST" && url.pathname === "/api/auth/register") {try{const rl=await enforceAuthRateLimit(env,request,"register",6,3600);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla kayıt denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),name=normalizeName(b?.name),email=normalizeEmail(b?.email),password=String(b?.password||"");if(name.length<2)return Response.json({ok:false,error:"Ad en az 2 karakter olmalı."},{status:400});if(!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email))return Response.json({ok:false,error:"Geçerli bir e-posta gir."},{status:400});if(password.length<8||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return Response.json({ok:false,error:"Şifre en az 8 karakter, bir harf ve bir rakam içermeli."},{status:400});if(await env.DB.prepare("SELECT id FROM users WHERE email=?").bind(email).first())return Response.json({ok:false,error:"Bu e-posta zaten kayıtlı."},{status:409});const id=crypto.randomUUID(),salt=crypto.randomUUID(),hash=await hashPassword(password,salt);await env.DB.prepare("INSERT INTO users (id,email,name,password_hash,password_salt,last_login_at) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)").bind(id,email,name,hash,salt).run();const session=await createAccountSession(env,id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user:{id,email,name,role:"user"}}),{status:201,headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error: "Kayıt başarısız."},{status:500})}}
+    if (request.method === "POST" && url.pathname === "/api/auth/login") {try{const rl=await enforceAuthRateLimit(env,request,"login",10,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla giriş denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),email=normalizeEmail(b?.email),password=String(b?.password||""),row=await env.DB.prepare("SELECT id,email,name,password_hash,password_salt,role FROM users WHERE email=?").bind(email).first();if(!row||await hashPassword(password,row.password_salt)!==row.password_hash)return Response.json({ok:false,error:"E-posta veya şifre hatalı."},{status:401});await env.DB.prepare("UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const session=await createAccountSession(env,row.id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user:{id:row.id,email:row.email,name:row.name,role:row.role||"user"}}),{status:200,headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error: "Giriş başarısız."},{status:500})}}
     if (request.method === "POST" && url.pathname === "/api/auth/magic/request") {try{const rl=await enforceAuthRateLimit(env,request,"magic",5,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla şifresiz giriş isteği. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB||!env.RESEND_API_KEY)return Response.json({ok:true});await ensureAuthTables(env);const b=await request.json(),email=normalizeEmail(b?.email),name=normalizeName(b?.name);if(!/^[^\\s@]+@[^\\s@]+\\.[^\\s@]+$/.test(email))return Response.json({ok:false,error:"Geçerli bir e-posta gir."},{status:400});if(name && name.length<2)return Response.json({ok:false,error:"Ad en az 2 karakter olmalı."},{status:400});const rawToken=crypto.randomUUID()+crypto.randomUUID(),tokenHash=await hmacHex(getUserSessionSecret(env),rawToken),expires=Math.floor(Date.now()/1000)+900;await env.DB.prepare("DELETE FROM magic_links WHERE email=? OR expires_at<?").bind(email,Math.floor(Date.now()/1000)).run();await env.DB.prepare("INSERT INTO magic_links (email,name,token_hash,expires_at) VALUES (?,?,?,?)").bind(email,name||"NEYQORA kullanıcısı",tokenHash,expires).run();const link=new URL(request.url);link.searchParams.set("magic",rawToken);await sendResendEmail(env,{to:email,subject:"NEYQORA şifresiz giriş bağlantın",body:"Merhaba"+(name?" "+name:"")+",\\n\\nNEYQORA hesabına güvenli giriş yapmak için bu bağlantıyı aç:\\n"+link.toString()+"\\n\\nBu bağlantı 15 dakika geçerlidir ve tek kullanımlıktır."});return Response.json({ok:true})}catch(e){return Response.json({ok:false,error:"Giriş bağlantısı gönderilemedi."},{status:500})}}
-    if (request.method === "POST" && url.pathname === "/api/auth/magic/consume") {try{const rl=await enforceAuthRateLimit(env,request,"magic-consume",12,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla giriş bağlantısı denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),token=String(b?.token||"");if(!token||token.length>200)return Response.json({ok:false,error:"Giriş bağlantısı geçersiz."},{status:400});const tokenHash=await hmacHex(getUserSessionSecret(env),token),row=await env.DB.prepare("SELECT id,email,name,expires_at,used_at FROM magic_links WHERE token_hash=?").bind(tokenHash).first();if(!row||row.used_at||Number(row.expires_at)<Math.floor(Date.now()/1000))return Response.json({ok:false,error:"Giriş bağlantısı geçersiz veya süresi dolmuş."},{status:400});let user=await env.DB.prepare("SELECT id,email,name,role FROM users WHERE email=?").bind(row.email).first();if(!user){const id=crypto.randomUUID(),salt=crypto.randomUUID(),hash=await hashPassword(crypto.randomUUID()+crypto.randomUUID(),salt);await env.DB.prepare("INSERT INTO users (id,email,name,password_hash,password_salt,last_login_at) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)").bind(id,row.email,row.name||"NEYQORA kullanıcısı",hash,salt).run();user=await env.DB.prepare("SELECT id,email,name,role FROM users WHERE id=?").bind(id).first();}else{await env.DB.prepare("UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?").bind(user.id).run();}await env.DB.prepare("UPDATE magic_links SET used_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const session=await createAccountSession(env,user.id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error:e?.message||"Şifresiz giriş başarısız."},{status:500})}}
+    if (request.method === "POST" && url.pathname === "/api/auth/magic/consume") {try{const rl=await enforceAuthRateLimit(env,request,"magic-consume",12,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla giriş bağlantısı denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});if(!env.DB)return Response.json({ok:false,error:"Veritabanı gerekli."},{status:503});await ensureAuthTables(env);const b=await request.json(),token=String(b?.token||"");if(!token||token.length>200)return Response.json({ok:false,error:"Giriş bağlantısı geçersiz."},{status:400});const tokenHash=await hmacHex(getUserSessionSecret(env),token),row=await env.DB.prepare("SELECT id,email,name,expires_at,used_at FROM magic_links WHERE token_hash=?").bind(tokenHash).first();if(!row||row.used_at||Number(row.expires_at)<Math.floor(Date.now()/1000))return Response.json({ok:false,error:"Giriş bağlantısı geçersiz veya süresi dolmuş."},{status:400});let user=await env.DB.prepare("SELECT id,email,name,role FROM users WHERE email=?").bind(row.email).first();if(!user){const id=crypto.randomUUID(),salt=crypto.randomUUID(),hash=await hashPassword(crypto.randomUUID()+crypto.randomUUID(),salt);await env.DB.prepare("INSERT INTO users (id,email,name,password_hash,password_salt,last_login_at) VALUES (?,?,?,?,?,CURRENT_TIMESTAMP)").bind(id,row.email,row.name||"NEYQORA kullanıcısı",hash,salt).run();user=await env.DB.prepare("SELECT id,email,name,role FROM users WHERE id=?").bind(id).first();}else{await env.DB.prepare("UPDATE users SET last_login_at=CURRENT_TIMESTAMP WHERE id=?").bind(user.id).run();}await env.DB.prepare("UPDATE magic_links SET used_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const session=await createAccountSession(env,user.id);if(!session)return Response.json({ok:false,error:"Oturum anahtarı yapılandırılmamış."},{status:503});return new Response(JSON.stringify({ok:true,user}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error: "Şifresiz giriş başarısız."},{status:500})}}
     if (request.method === "POST" && url.pathname === "/api/auth/logout") return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json","set-cookie":accountCookie("",0,new URL(request.url).protocol==="https:")}});
-    if (request.method === "POST" && url.pathname === "/api/auth/profile") {try{const user=await getAccountUser(request,env);if(!user)return Response.json({ok:false,error:"Oturum gerekli."},{status:401});const b=await request.json(),name=normalizeName(b?.name);if(name.length<2)return Response.json({ok:false,error:"Ad en az 2 karakter olmalı."},{status:400});await env.DB.prepare("UPDATE users SET name=? WHERE id=?").bind(name,user.id).run();return Response.json({ok:true,user:{id:user.id,email:user.email,name}})}catch(e){return Response.json({ok:false,error:e?.message||"Profil güncellenemedi."},{status:500})}}
+    if (request.method === "POST" && url.pathname === "/api/auth/profile") {try{const user=await getAccountUser(request,env);if(!user)return Response.json({ok:false,error:"Oturum gerekli."},{status:401});const b=await request.json(),name=normalizeName(b?.name);if(name.length<2)return Response.json({ok:false,error:"Ad en az 2 karakter olmalı."},{status:400});await env.DB.prepare("UPDATE users SET name=? WHERE id=?").bind(name,user.id).run();return Response.json({ok:true,user:{id:user.id,email:user.email,name}})}catch(e){return Response.json({ok:false,error: "Profil güncellenemedi."},{status:500})}}
     if (request.method === "POST" && url.pathname === "/api/auth/forgot") {try{const rl=await enforceAuthRateLimit(env,request,"forgot",5,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla sıfırlama isteği. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});await ensureAuthTables(env);const b=await request.json(),email=normalizeEmail(b?.email),user=await env.DB.prepare("SELECT id,email,name FROM users WHERE email=?").bind(email).first();if(user&&env.RESEND_API_KEY){const rawToken=crypto.randomUUID()+crypto.randomUUID(),tokenHash=await hmacHex(getUserSessionSecret(env),rawToken);const expires=Math.floor(Date.now()/1000)+900;await env.DB.prepare("DELETE FROM password_resets WHERE user_id=?").bind(user.id).run();await env.DB.prepare("INSERT INTO password_resets (user_id,token_hash,expires_at) VALUES (?,?,?)").bind(user.id,tokenHash,expires).run();const resetUrl=new URL(request.url);resetUrl.searchParams.set("reset",rawToken);await sendResendEmail(env,{to:user.email,subject:"NEYQORA şifre sıfırlama",body:"Merhaba "+user.name+",\n\nŞifreni yenilemek için bu bağlantıyı kullan:\n"+resetUrl.toString()+"\n\nBağlantı 15 dakika geçerlidir ve tek kullanımlıktır."});}return Response.json({ok:true})}catch(e){return Response.json({ok:false,error:"Sıfırlama e-postası gönderilemedi."},{status:500})}}
-    if (request.method === "POST" && url.pathname === "/api/auth/reset") {try{const rl=await enforceAuthRateLimit(env,request,"reset",10,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla sıfırlama denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});await ensureAuthTables(env);const b=await request.json(),token=String(b?.token||""),password=String(b?.password||"");if(password.length<8||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return Response.json({ok:false,error:"Şifre en az 8 karakter, bir harf ve bir rakam içermeli."},{status:400});const tokenHash=await hmacHex(getUserSessionSecret(env),token),row=await env.DB.prepare("SELECT id,user_id,expires_at,used_at FROM password_resets WHERE token_hash=?").bind(tokenHash).first();if(!row||row.used_at||Number(row.expires_at)<Math.floor(Date.now()/1000))return Response.json({ok:false,error:"Sıfırlama bağlantısı geçersiz veya süresi dolmuş."},{status:400});const salt=crypto.randomUUID(),hash=await hashPassword(password,salt);await env.DB.prepare("UPDATE users SET password_hash=?,password_salt=? WHERE id=?").bind(hash,salt,row.user_id).run();await env.DB.prepare("UPDATE password_resets SET used_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const user=await env.DB.prepare("SELECT id,email,name FROM users WHERE id=?").bind(row.user_id).first(),session=await createAccountSession(env,row.user_id);return new Response(JSON.stringify({ok:true,user}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error:e?.message||"Şifre değiştirilemedi."},{status:500})}}
+    if (request.method === "POST" && url.pathname === "/api/auth/reset") {try{const rl=await enforceAuthRateLimit(env,request,"reset",10,900);if(!rl.allowed)return Response.json({ok:false,error:"Çok fazla sıfırlama denemesi. Daha sonra tekrar dene.",retryAfter:rl.retryAfter},{status:429,headers:{"retry-after":String(rl.retryAfter)}});await ensureAuthTables(env);const b=await request.json(),token=String(b?.token||""),password=String(b?.password||"");if(password.length<8||password.length>128||!/[A-Za-z]/.test(password)||!/[0-9]/.test(password))return Response.json({ok:false,error:"Şifre en az 8 karakter, bir harf ve bir rakam içermeli."},{status:400});const tokenHash=await hmacHex(getUserSessionSecret(env),token),row=await env.DB.prepare("SELECT id,user_id,expires_at,used_at FROM password_resets WHERE token_hash=?").bind(tokenHash).first();if(!row||row.used_at||Number(row.expires_at)<Math.floor(Date.now()/1000))return Response.json({ok:false,error:"Sıfırlama bağlantısı geçersiz veya süresi dolmuş."},{status:400});const salt=crypto.randomUUID(),hash=await hashPassword(password,salt);await env.DB.prepare("UPDATE users SET password_hash=?,password_salt=? WHERE id=?").bind(hash,salt,row.user_id).run();await env.DB.prepare("UPDATE password_resets SET used_at=CURRENT_TIMESTAMP WHERE id=?").bind(row.id).run();const user=await env.DB.prepare("SELECT id,email,name FROM users WHERE id=?").bind(row.user_id).first(),session=await createAccountSession(env,row.user_id);return new Response(JSON.stringify({ok:true,user}),{headers:{"content-type":"application/json","cache-control":"no-store","set-cookie":accountCookie(session,2592000,new URL(request.url).protocol==="https:")}})}catch(e){return Response.json({ok:false,error: "Şifre değiştirilemedi."},{status:500})}}
     
     if (request.method === "GET" && url.pathname === "/api/auth/me") {const user=await getAccountUser(request,env);return Response.json({ok:!!user,user:user?{id:user.id,email:user.email,name:user.name,role:user.role||"user"}:null})}
     if (request.method === "GET" && url.pathname === "/api/auth/export") {
@@ -1868,11 +1937,11 @@ export default {
         ]);
         return Response.json({ok:true,exportedAt:new Date().toISOString(),account:{id:user.id,email:user.email,name:user.name,role:user.role,created_at:user.created_at,last_login_at:user.last_login_at},memories:memories.results||[],calendar:calendar.results||[],emailDrafts:drafts.results||[],automations:automations.results||[]},{headers:{"cache-control":"no-store","content-disposition":"attachment; filename=neyqora-verilerim.json"}});
       } catch (error) {
-        return Response.json({ ok:false, error:error?.message||"Veriler dışa aktarılamadı." },{status:500});
+        return Response.json({ ok:false, error: "Veriler dışa aktarılamadı." },{status:500});
       }
     }
 
-    if (request.method === "DELETE" && url.pathname === "/api/auth/account") {try{const user=await getAccountUser(request,env);if(!user)return Response.json({ok:false,error:"Oturum gerekli."},{status:401});await ensureProductivityTables(env);await env.DB.prepare("DELETE FROM memories WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM calendar_events WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM email_drafts WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM automations WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM password_resets WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM users WHERE id=?").bind(user.id).run();return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json","set-cookie":accountCookie("",0)}})}catch(e){return Response.json({ok:false,error:e?.message||"Hesap silinemedi."},{status:500})}}
+    if (request.method === "DELETE" && url.pathname === "/api/auth/account") {try{const user=await getAccountUser(request,env);if(!user)return Response.json({ok:false,error:"Oturum gerekli."},{status:401});await ensureProductivityTables(env);await env.DB.prepare("DELETE FROM memories WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM calendar_events WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM email_drafts WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM automations WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM password_resets WHERE user_id=?").bind(user.id).run();await env.DB.prepare("DELETE FROM users WHERE id=?").bind(user.id).run();return new Response(JSON.stringify({ok:true}),{headers:{"content-type":"application/json","set-cookie":accountCookie("",0)}})}catch(e){return Response.json({ok:false,error: "Hesap silinemedi."},{status:500})}}
     if (request.method === "GET" && url.pathname === "/api/session") {
       const isOwner = await verifyOwnerSession(request, env);
       if (isOwner) return Response.json({ ok: true, userId: "owner", role: "owner" });
@@ -1897,7 +1966,7 @@ export default {
         const body = await request.json();
         const token = String(body?.token || "");
         const secret = String(env.OWNER_AUTH_TOKEN || "");
-        if (!secret || !token || token !== secret) return Response.json({ ok: false, error: "Owner kimliği doğrulanamadı." }, { status: 401 });
+        if (!secret || !token || !constantTimeEqual(token, secret)) return Response.json({ ok: false, error: "Owner kimliği doğrulanamadı." }, { status: 401 });
         const session = await createOwnerSession(secret);
         return new Response(JSON.stringify({ ok: true, role: "owner", unlimited: true }), {
           status: 200,
@@ -1996,9 +2065,9 @@ export default {
           draft: { id: result.meta.last_row_id, status: "sent" }
         });
       } catch (error) {
-        const message = String(error?.message || "E-posta gönderilemedi.");
+        const message = String(error?.message || "");
         if (/AbortError|timeout/i.test(message)) return Response.json({ ok: false, error: "Resend isteği zaman aşımına uğradı." }, { status: 504 });
-        return Response.json({ ok: false, error: message }, { status: 502 });
+        return Response.json({ ok: false, error: "E-posta gönderilemedi." }, { status: 502 });
       }
     }
 
@@ -2028,6 +2097,7 @@ export default {
         tools: ["calculator", "weather", "web", "coding", "project", "calendar", "email", "automation"],
         web: true,
         ownerAuth: !!env.OWNER_AUTH_TOKEN,
+        userSessionSecret: !!env.USER_SESSION_SECRET,
         aiProvider: env.AI?.info ? env.AI.info() : { mode: "cloud", cloud: !!env.AI, local: false, fallback: false }
       });
     }
@@ -2054,7 +2124,7 @@ export default {
         if (!text) return Response.json({ ok: false, error: "Ses çözümlenemedi." }, { status: 422 });
         return Response.json({ ok: true, model: AUDIO_MODEL, file: file.name, text });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Ses analizi başarısız." }, { status: 500 });
+        return Response.json({ ok: false, error: "Ses analizi başarısız." }, { status: 500 });
       }
     }
 
@@ -2094,7 +2164,7 @@ export default {
         if (!analysis) return Response.json({ ok: false, error: "Görsel analiz edilemedi." }, { status: 422 });
         return Response.json({ ok: true, model: VISION_MODEL, file: file.name, analysis });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Görsel analizi başarısız." }, { status: 500 });
+        return Response.json({ ok: false, error: "Görsel analizi başarısız." }, { status: 500 });
       }
     }
 
@@ -2127,7 +2197,7 @@ export default {
         const analysis = result?.response || result?.choices?.[0]?.message?.content || "Dosya analizi üretilemedi.";
         return Response.json({ ok: true, files: documents.map(file => ({ name: file.name, type: file.type, size: file.size, characters: file.content.length })), analysis });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Dosya analizi başarısız." }, { status: 500 });
+        return Response.json({ ok: false, error: "Dosya analizi başarısız." }, { status: 500 });
       }
     }
 
@@ -2145,7 +2215,7 @@ export default {
         ).bind(userId, limit).all();
         return Response.json({ ok: true, userId, memories: result.results || [] });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Hafıza okunamadı." }, { status: 500 });
+        return Response.json({ ok: false, error: "Hafıza okunamadı." }, { status: 500 });
       }
     }
 
@@ -2172,7 +2242,7 @@ export default {
         ).bind(userId, id).run();
         return Response.json({ ok: true, deleted: Number(result.meta?.changes || 0) > 0 });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Hafıza silinemedi." }, { status: 500 });
+        return Response.json({ ok: false, error: "Hafıza silinemedi." }, { status: 500 });
       }
     }
 
@@ -2217,7 +2287,7 @@ export default {
           finalGate: result.final_gate || null
         });
       } catch (error) {
-        return Response.json({ ok: false, status: "pending", tested: false, error: error?.message || "CI sonucu okunamadı." }, { status: 502 });
+        return Response.json({ ok: false, status: "pending", tested: false, error: "CI sonucu okunamadı." }, { status: 502 });
       }
     }
 
@@ -2256,7 +2326,7 @@ export default {
           note: "NEYQORA proje dosyalarını üretti. GitHub'a yazma işlemi GitHub Actions workflow'u üzerinden yapılır."
         });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Proje oluşturulamadı." }, { status: 500 });
+        return Response.json({ ok: false, error: "Proje oluşturulamadı." }, { status: 500 });
       }
     }
 
@@ -2273,7 +2343,7 @@ export default {
         const results = await webSearch(q);
         return Response.json({ ok: true, query: q, results });
       } catch (error) {
-        return Response.json({ ok: false, error: error?.message || "Arama başarısız." }, { status: 502 });
+        return Response.json({ ok: false, error: "Arama başarısız." }, { status: 502 });
       }
     }
 
@@ -2636,6 +2706,9 @@ export const __test = {
   executeToolStep,
   getBearerToken,
   getCookie,
+  constantTimeEqual,
+  isBlockedFetchUrl,
+  readTextLimited,
   getFileExtension,
   isAnalyzableFile,
   normalizeFileText

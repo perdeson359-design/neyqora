@@ -7,7 +7,7 @@
   },
   "scripts": {
     "start": "node server.mjs",
-    "check": "node --check server.mjs && node --check src/index.js && node tests/test-ai-provider.mjs",
+    "check": "node --check server.mjs && node --check src/index.js && node --check src/security/secrets.js && node --check tests/test-security-secrets.mjs && node --check tests/test-core.mjs && node --check tests/test-self-host.mjs && node tests/test-ai-provider.mjs && node tests/test-security-secrets.mjs && node tests/test-core.mjs && node tests/test-execution-contract.mjs && node tests/test-self-host.mjs",
     "test:provider": "node tests/test-ai-provider.mjs"
   },
   "dependencies": {
