@@ -803,7 +803,7 @@ async function ensureAuthTables(env){if(!env.DB)return;if(!authTablesPromise){au
 async function enforceAuthRateLimit(env,request,scope,limit,windowSeconds){
   if(!env.DB)return {allowed:false,retryAfter:60,unavailable:true};
   await ensureAuthTables(env);
-  const secret=getUserSessionSecret(env)||String(env.OWNER_AUTH_TOKEN||"");
+  const secret=getUserSessionSecret(env);
   if(!secret)return {allowed:false,retryAfter:60,unavailable:true};
   const ip=String(request.headers.get("CF-Connecting-IP")||request.headers.get("X-Forwarded-For")||"unknown").split(",")[0].trim().slice(0,128);
   const key=await hmacHex(secret,"rate|"+scope+"|"+ip);
