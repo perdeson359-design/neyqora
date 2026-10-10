@@ -49,3 +49,31 @@ const fallbackProvider = createAIProvider({
 assert.equal(fallbackProvider.info().fallback, true);
 assert.equal(fallbackProvider.info().primary, "cloud");
 console.log("NEYQORA AI provider metadata tests: PASS");
+const originalFetch = globalThis.fetch;
+try {
+  globalThis.fetch = async (url, options) => {
+    assert.match(String(url), /127\\.0\\.0\\.1:1\\/v1\\/chat\\/completions$/);
+    assert.equal(options.method, "POST");
+    return new Response(JSON.stringify({ choices: [{ message: { content: "local-fallback-ok" } }] }), {
+      status: 200,
+      headers: { "content-type": "application/json" }
+    });
+  };
+  const fallbackResult = await fallbackProvider.run("cloud-model", { messages: [{ role: "user", content: "test" }] });
+  assert.equal(fallbackResult.response, "local-fallback-ok");
+  assert.equal(fallbackResult.provider, "local");
+  assert.equal(fallbackResult.fallbackFrom, "cloud");
+
+  let cloudAttempts = 0;
+  const retryProvider = createAIProvider({
+    AI: { async run() { cloudAttempts += 1; if (cloudAttempts === 1) throw new Error("503 temporary"); return { response: "retry-ok" }; } },
+    AI_PROVIDER_MODE: "cloud"
+  });
+  const retryResult = await retryProvider.run("cloud-model", { messages: [] });
+  assert.equal(retryResult.response, "retry-ok");
+  assert.equal(cloudAttempts, 2);
+} finally {
+  globalThis.fetch = originalFetch;
+}
+console.log("NEYQORA AI provider fallback/retry tests: PASS");
+
