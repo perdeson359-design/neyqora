@@ -53,7 +53,7 @@ jobs:
           for item in data["files"]:
               raw=str(item.get("path",""))
               rel=PurePosixPath(raw)
-              if not raw or rel.is_absolute() or any(p in ("", ".", "..") for p in rel.parts) or "\\" in raw:
+              if not raw or rel.is_absolute() or any(p in ("", ".", "..", ".git", "__pycache__") for p in rel.parts) or "\\" in raw:
                   raise SystemExit("Unsafe generated path: "+raw)
               target=(root/Path(*rel.parts)).resolve()
               if not target.is_relative_to(root): raise SystemExit("Generated path escapes output directory")
@@ -161,7 +161,7 @@ jobs:
           for p in files:
               if p.is_symlink(): raise SystemExit("Symlinks are forbidden")
               if not p.resolve().is_relative_to(root): raise SystemExit("Artifact path escapes root")
-              if p.is_file() and ("__pycache__" in p.parts or p.suffix == ".pyc"): raise SystemExit("Bytecode is forbidden")
+              if p.is_file() and ("__pycache__" in p.parts or ".git" in p.parts or p.suffix == ".pyc"): raise SystemExit("Bytecode is forbidden")
           PY
 
       - name: Commit verified files
