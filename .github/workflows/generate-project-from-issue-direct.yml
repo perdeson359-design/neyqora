@@ -121,7 +121,7 @@ jobs:
 
   publish-test-result:
     needs: generate-and-test
-    if: always()
+    if: always() && (needs.generate-and-test.result == 'success' || needs.generate-and-test.result == 'failure')
     runs-on: ubuntu-latest
     permissions:
       issues: write
