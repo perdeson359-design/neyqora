@@ -52,7 +52,7 @@ console.log("NEYQORA AI provider metadata tests: PASS");
 const originalFetch = globalThis.fetch;
 try {
   globalThis.fetch = async (url, options) => {
-    assert.match(String(url), /127\\.0\\.0\\.1:1\\/v1\\/chat\\/completions$/);
+    assert.ok(String(url).endsWith("127.0.0.1:1/v1/chat/completions"));
     assert.equal(options.method, "POST");
     return new Response(JSON.stringify({ choices: [{ message: { content: "local-fallback-ok" } }] }), {
       status: 200,
