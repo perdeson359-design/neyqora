@@ -13,6 +13,12 @@ jobs:
     if: github.event.issue.author_association == 'OWNER' || github.event.issue.author_association == 'MEMBER' || github.event.issue.author_association == 'COLLABORATOR'
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: read
+    outputs:
+      test: ${{ steps.test.outcome }}
+      syntax: ${{ steps.syntax.outcome }}
+      safety: ${{ steps.safety.outcome }}
     env:
       NEYQORA_URL: https://neyqora.kosseofficial.workers.dev
       PROJECT_REQUEST: ${{ format('{0}\n\n{1}', github.event.issue.title, github.event.issue.body) }}
@@ -112,18 +118,26 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
+
+  publish-test-result:
+    needs: generate-and-test
+    if: always()
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+    env:
+      ISSUE_NUMBER: ${{ github.event.issue.number }}
+      GH_TOKEN: ${{ github.token }}
+      TEST: ${{ needs.generate-and-test.outputs.test }}
+      SYNTAX: ${{ needs.generate-and-test.outputs.syntax }}
+      SAFETY: ${{ needs.generate-and-test.outputs.safety }}
+    steps:
       - name: Publish test result
-        if: always()
-        env:
-          GH_TOKEN: ${{ github.token }}
-          TEST: ${{ steps.test.outcome }}
-          SYNTAX: ${{ steps.syntax.outcome }}
-          SAFETY: ${{ steps.safety.outcome }}
         run: |
           set -euo pipefail
-          if [ "$TEST" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ]; then status=passed; else status=failed; fi
-          printf '%s\n' '<!-- NEYQORA_CI_RESULT {"status":"'"$status"'","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"'"$TEST"'","final_gate":"'"$SAFETY"'"} -->' > /tmp/ci.md
-          printf '%s\n' "NEYQORA CI sonucu: **$status**" "- Test: $TEST" "- Sözdizimi: $SYNTAX" "- Güvenlik: $SAFETY" >> /tmp/ci.md
+          if [ "$TEST" = "success" ] && [ "$SYNTAX" = "success" ] && [ "$SAFETY" = "success" ] && [ "${{ needs.generate-and-test.result }}" = "success" ]; then status=passed; else status=failed; fi
+          printf '%s\\n' '<!-- NEYQORA_CI_RESULT {"status":"'"$status"'","tested":true,"run_id":"${{ github.run_id }}","sha":"${{ github.sha }}","first_test":"'"$TEST"'","final_gate":"'"$SAFETY"'"} -->' > /tmp/ci.md
+          printf '%s\\n' "NEYQORA CI sonucu: **$status**" "- Test: $TEST" "- Sözdizimi: $SYNTAX" "- Güvenlik: $SAFETY" >> /tmp/ci.md
           gh issue comment "$ISSUE_NUMBER" --repo "${{ github.repository }}" --body-file /tmp/ci.md
 
   commit-tested-project:
