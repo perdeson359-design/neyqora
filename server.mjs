@@ -95,16 +95,9 @@ const MAX_REQUEST_BYTES = 16 * 1024 * 1024;
 const server = http.createServer(async (request, response) => {
   try {
     const declaredLength = Number(request.headers["content-length"] || "0");
-    if (Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES) {
-      response.writeHead(413, { "content-type": "application/json; charset=utf-8", "connection": "close" });
-      response.end(JSON.stringify({ ok: false, error: "İstek gövdesi çok büyük." }));
-      request.resume();
-      return;
-    }
-
     const chunks = [];
     let totalBytes = 0;
-    let tooLarge = false;
+    let tooLarge = Number.isFinite(declaredLength) && declaredLength > MAX_REQUEST_BYTES;
     for await (const chunk of request) {
       totalBytes += chunk.length;
       if (totalBytes > MAX_REQUEST_BYTES) {
@@ -115,7 +108,7 @@ const server = http.createServer(async (request, response) => {
       if (!tooLarge) chunks.push(chunk);
     }
     if (tooLarge) {
-      response.writeHead(413, { "content-type": "application/json; charset=utf-8", "connection": "close" });
+      response.writeHead(413, { "content-type": "application/json; charset=utf-8" });
       response.end(JSON.stringify({ ok: false, error: "İstek gövdesi çok büyük." }));
       return;
     }
