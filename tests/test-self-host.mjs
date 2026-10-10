@@ -2,6 +2,7 @@ import fs from "node:fs";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import worker from "../src/index.js";
+import { validateSelfHostedSecrets } from "../src/security/secrets.js";
 
 const server = fs.readFileSync("server.mjs", "utf8");
 const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
@@ -17,6 +18,10 @@ assert.match(server, /NEYQORA_AI_MODEL/);
 assert.match(server, /NEYQORA_DB_PATH/);
 assert.match(server, /worker\.fetch\(webRequest, env\)/);
 assert.match(server, /CREATE TABLE IF NOT EXISTS memories/);
+assert.match(server, /MAX_REQUEST_BYTES/);
+assert.match(server, /mkdirSync\(dirname\(resolve\(dbPath\)\)/);
+assert.match(server, /Sunucu hatası/);
+assert.equal(validateSelfHostedSecrets({ OWNER_AUTH_TOKEN: "owner-test-secret-value-32-characters-min", USER_SESSION_SECRET: "user-test-secret-value-32-characters-min" }), true);
 
 const sqlite = new Database(":memory:");
 sqlite.exec("CREATE TABLE memories (id INTEGER PRIMARY KEY AUTOINCREMENT, user_id TEXT NOT NULL, content TEXT NOT NULL, created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP)");
@@ -46,8 +51,8 @@ const DB = {
 
 const env = {
   DB,
-  OWNER_AUTH_TOKEN: "auth-e2e-test-secret",
-  USER_SESSION_SECRET: "auth-e2e-test-secret",
+  OWNER_AUTH_TOKEN: "owner-auth-e2e-test-secret-value-long-enough",
+  USER_SESSION_SECRET: "user-session-e2e-test-secret-value-long-enough",
   NEYQORA_SELF_HOSTED: "1"
 };
 
