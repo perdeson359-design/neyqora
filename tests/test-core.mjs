@@ -1,6 +1,6 @@
 import fs from "node:fs";
 import assert from "node:assert/strict";
-import { __test } from "../src/index.js";
+import worker, { __test } from "../src/index.js";
 
 const source = fs.readFileSync("src/index.js", "utf8");
 for (const name of ["routeMessage","isProjectRequest","sanitizeProjectName","validateAgentPlan","buildAgentPlan","shouldFallbackToChat","summarizeAgentStatus","safeCalculate","basicPythonValidation","executeAgentPlan"]) {
@@ -145,5 +145,12 @@ assert.equal(__test.isBlockedFetchUrl("http://user:pass@example.com"), true);
 assert.equal(__test.isBlockedFetchUrl("ftp://example.com"), true);
 assert.equal(__test.isBlockedFetchUrl("http://8.8.8.8:8080"), true);
 assert.equal(__test.isBlockedFetchUrl("https://example.com"), false);
+const oversizedWorkerResponse = await worker.fetch(new Request("https://neyqora.test/api/chat", {
+  method: "POST",
+  headers: { "content-length": String(16 * 1024 * 1024 + 1) },
+  body: "x"
+}), {});
+assert.equal(oversizedWorkerResponse.status, 413);
+
 await assert.rejects(() => __test.readTextLimited(new Response("12345"), 4), /çok büyük/i);
 console.log("NEYQORA core contract tests: PASS");
