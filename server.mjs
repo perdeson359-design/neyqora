@@ -120,6 +120,9 @@ const server = http.createServer(async (request, response) => {
       if (Array.isArray(value)) headers.set(key, value.join(", "));
       else if (value !== undefined) headers.set(key, value);
     }
+    // Never trust client-supplied forwarding headers for rate-limit identity.
+    headers.delete("x-forwarded-for");
+    headers.set("cf-connecting-ip", request.socket.remoteAddress || "unknown");
 
     const webRequest = new Request(url, {
       method: request.method,
