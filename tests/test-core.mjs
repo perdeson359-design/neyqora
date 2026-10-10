@@ -54,6 +54,7 @@ assert.match(source, /function verifyOwnerSession/);
 assert.match(source, /function constantTimeEqual\(/);
 assert.match(source, /getUserSessionSecret\(env\)/);
 assert.doesNotMatch(source, /USER_SESSION_SECRET\s*\|\|\s*env\.OWNER_AUTH_TOKEN/);
+assert.doesNotMatch(source, /getUserSessionSecret\(env\)\s*\|\|\s*String\(env\.OWNER_AUTH_TOKEN/);
 assert.match(source, /\/api\/auth\/owner/);
 assert.match(source, /async function enforceAuthRateLimit/);
 assert.match(source, /auth_rate_limits/);
