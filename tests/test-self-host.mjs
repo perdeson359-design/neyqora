@@ -1,4 +1,9 @@
 import fs from "node:fs";
+import { spawn, spawnSync } from "node:child_process";
+import { createServer } from "node:net";
+import { mkdtempSync, rmSync } from "node:fs";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import assert from "node:assert/strict";
 import Database from "better-sqlite3";
 import worker from "../src/index.js";
@@ -143,3 +148,80 @@ assert.equal(deleteAccount.status, 200);
 
 sqlite.close();
 console.log("NEYQORA self-host auth E2E: PASS"); // protocol-aware auth cookie regression covered
+const missingSecretEnv = { ...process.env };
+delete missingSecretEnv.OWNER_AUTH_TOKEN;
+delete missingSecretEnv.USER_SESSION_SECRET;
+const missingSecrets = spawnSync(process.execPath, ["server.mjs"], { cwd: process.cwd(), env: missingSecretEnv, encoding: "utf8", timeout: 5000 });
+assert.notEqual(missingSecrets.status, 0, "Self-host must refuse to start without security secrets");
+assert.match(missingSecrets.stderr, /OWNER_AUTH_TOKEN/);
+
+const portProbe = createServer();
+await new Promise((resolve, reject) => {
+  portProbe.once("error", reject);
+  portProbe.listen(0, "127.0.0.1", resolve);
+});
+const port = portProbe.address().port;
+await new Promise((resolve, reject) => portProbe.close(error => error ? reject(error) : resolve()));
+
+const runtimeDir = mkdtempSync(join(tmpdir(), "neyqora-self-host-"));
+const runtimeDb = join(runtimeDir, "data", "neyqora.db");
+const runtimeEnv = {
+  ...process.env,
+  PORT: String(port),
+  HOST: "127.0.0.1",
+  NEYQORA_DB_PATH: runtimeDb,
+  OWNER_AUTH_TOKEN: "owner-runtime-test-secret-value-long-enough",
+  USER_SESSION_SECRET: "user-runtime-test-secret-value-long-enough",
+  AI_PROVIDER_MODE: "local",
+  LOCAL_AI_BASE_URL: "http://127.0.0.1:11434/v1",
+  NEYQORA_SELF_HOSTED: "1"
+};
+const runtime = spawn(process.execPath, ["server.mjs"], {
+  cwd: process.cwd(),
+  env: runtimeEnv,
+  stdio: ["ignore", "pipe", "pipe"]
+});
+let runtimeOutput = "";
+runtime.stdout.on("data", chunk => { runtimeOutput += chunk.toString(); });
+runtime.stderr.on("data", chunk => { runtimeOutput += chunk.toString(); });
+try {
+  await new Promise((resolve, reject) => {
+    const timeout = setTimeout(() => reject(new Error("Self-host runtime startup timed out: " + runtimeOutput)), 10000);
+    runtime.stdout.on("data", chunk => {
+      if (chunk.toString().includes("listening on")) {
+        clearTimeout(timeout);
+        resolve();
+      }
+    });
+    runtime.once("error", error => { clearTimeout(timeout); reject(error); });
+    runtime.once("exit", code => {
+      clearTimeout(timeout);
+      reject(new Error("Self-host runtime exited before listening (" + code + "): " + runtimeOutput));
+    });
+  });
+  const health = await fetch("http://127.0.0.1:" + port + "/api/health");
+  assert.equal(health.status, 200, "Self-host health endpoint must respond");
+  const healthBody = await health.json();
+  assert.equal(healthBody.ok, true);
+  assert.equal(healthBody.name, "NEYQORA");
+  assert.equal(healthBody.userSessionSecret, true);
+  assert.ok(fs.existsSync(runtimeDb), "Self-host must create nested database directory and file");
+
+  const tooLarge = await fetch("http://127.0.0.1:" + port + "/api/chat", {
+    method: "POST",
+    headers: { "content-type": "application/octet-stream" },
+    body: Buffer.alloc(16 * 1024 * 1024 + 1)
+  });
+  assert.equal(tooLarge.status, 413, "Self-host must reject oversized requests before forwarding to Worker");
+  assert.equal((await tooLarge.json()).ok, false);
+} finally {
+  runtime.kill("SIGTERM");
+  await new Promise(resolve => {
+    if (runtime.exitCode !== null) return resolve();
+    runtime.once("exit", resolve);
+    setTimeout(() => { runtime.kill("SIGKILL"); resolve(); }, 3000);
+  });
+  rmSync(runtimeDir, { recursive: true, force: true });
+}
+console.log("NEYQORA self-host real HTTP runtime + request-limit E2E: PASS");
+
