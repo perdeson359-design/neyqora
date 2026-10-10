@@ -140,7 +140,7 @@ assert.equal(__test.isBlockedFetchUrl("http://172.16.0.1"), true);
 assert.equal(__test.isBlockedFetchUrl("http://192.168.1.2"), true);
 assert.equal(__test.isBlockedFetchUrl("http://169.254.169.254"), true);
 assert.equal(__test.isBlockedFetchUrl("http://[::1]"), true);
-assert.equal(__test.isBlockedFetchUrl("http://localhost.evil"), true);
+assert.equal(__test.isBlockedFetchUrl("http://foo.localhost"), true);
 assert.equal(__test.isBlockedFetchUrl("http://user:pass@example.com"), true);
 assert.equal(__test.isBlockedFetchUrl("ftp://example.com"), true);
 assert.equal(__test.isBlockedFetchUrl("http://8.8.8.8:8080"), true);
